@@ -180,6 +180,20 @@ textarea.fi{resize:vertical}
 .active-filter-chip button:hover{color:#ef4444}
 @media(max-width:768px){#catalogSidebar{display:none}}
 
+/* ── DUAL SEND BUTTONS (Mailto / Gmail) ── */
+.btn-send-mail{display:flex;align-items:center;gap:.7rem;width:100%;padding:.6rem .85rem;border-radius:9px;cursor:pointer;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.03);transition:all .2s;text-align:left;font-family:Inter,sans-serif}
+.btn-send-mail:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,.3)}
+.btn-send-mail.mailto{border-color:rgba(0,168,243,.2);background:rgba(0,168,243,.06)}
+.btn-send-mail.mailto:hover{border-color:rgba(0,168,243,.4);background:rgba(0,168,243,.1);box-shadow:0 6px 20px rgba(0,168,243,.15)}
+.btn-send-mail.gmail{border-color:rgba(234,67,53,.2);background:rgba(234,67,53,.05)}
+.btn-send-mail.gmail:hover{border-color:rgba(234,67,53,.4);background:rgba(234,67,53,.1);box-shadow:0 6px 20px rgba(234,67,53,.12)}
+.btn-send-icon{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+.btn-send-mail.mailto .btn-send-icon{background:rgba(0,168,243,.1);border-color:rgba(0,168,243,.2);color:#00a8f3}
+.btn-send-mail.gmail .btn-send-icon{background:rgba(255,255,255,.07);border-color:rgba(234,67,53,.15)}
+.btn-send-text{display:flex;flex-direction:column;gap:1px;min-width:0}
+.btn-send-text strong{font-size:.82rem;font-weight:700;color:rgba(255,255,255,.85);line-height:1.1}
+.btn-send-text small{font-size:.65rem;color:rgba(255,255,255,.35);font-weight:400;line-height:1}
+
 /* ── WORKFLOW STEPPER ── */
 .wf-panel{background:rgba(0,168,243,.04);border:1px solid rgba(0,168,243,.12);border-radius:12px;padding:1.2rem 1rem;margin-bottom:1rem}
 .wf-title{font-family:'Inter',sans-serif;font-size:.62rem;text-transform:uppercase;letter-spacing:.16em;color:rgba(0,168,243,.6);font-weight:700;margin-bottom:1rem}
@@ -1195,7 +1209,16 @@ function doRegister(){
   /* Stocker le pwd chiffré en base64 pour la transmission */
   const pwdEnc=btoa(unescape(encodeURIComponent(pwd)));
   pendingRequests.push({id:'req'+Date.now(),first,last,email,tel,addr,company,reason:'',date:today(),_pwdEnc:pwdEnc});
-  saveUsersDB();updateAdminCounters();closeOverlay('login');toast('Demande envoyée ! En attente de validation 📬','success');
+  saveUsersDB();
+  /* ── Notification admin : nouvelle demande d'accès ── */
+  addNotif('access',
+    '🆕 Nouvelle demande d\'accès',
+    first+' '+last+' ('+email+') souhaite rejoindre l\'espace pro.',
+    null
+  );
+  updateAdminCounters();
+  closeOverlay('login');
+  toast('Demande envoyée ! En attente de validation 📬','success');
 }
 function doForgotPwd(){
   const email=document.getElementById('forgotEmail')&&document.getElementById('forgotEmail').value.trim().toLowerCase();
@@ -2282,9 +2305,29 @@ function renderAdminModeles(){
     +'<button class="btn btn-outline w-full" onclick="printPdf()">'
     +'<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>'
     +'Imprimer</button>'
-    +'<button class="btn btn-ghost w-full" onclick="sendDocumentEmail()">'
-    +'<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>'
-    +'Générer PDF + Envoyer email</button>'
+    /* ── Dual send buttons ── */
+    +'</div>'
+    +'<div style="height:1px;background:rgba(255,255,255,.06);margin:.2rem 0"></div>'
+    +'<p style="font-family:Inter,sans-serif;font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.3);font-weight:600;padding:.1rem 0">PDF + Email au client</p>'
+    +'<div style="display:flex;flex-direction:column;gap:.4rem">'
+    +'<button class="btn-send-mail mailto" onclick="traiterDocument(window._pdfType||\'facture\',\'mailto\')">'
+      +'<span class="btn-send-icon">'
+        +'<svg style="width:16px;height:16px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>'
+      +'</span>'
+      +'<span class="btn-send-text"><strong>Outlook / Mail</strong><small>Ouvre votre logiciel mail</small></span>'
+    +'</button>'
+    +'<button class="btn-send-mail gmail" onclick="traiterDocument(window._pdfType||\'facture\',\'gmail\')">'
+      +'<span class="btn-send-icon">'
+        /* Gmail SVG logo */
+        +'<svg style="width:18px;height:18px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">'
+          +'<path d="M3 5.5L12 13.5L21 5.5" stroke="#EA4335" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+          +'<path d="M3 5.5h18v13a1 1 0 01-1 1H4a1 1 0 01-1-1V5.5z" stroke="#4285F4" stroke-width="2"/>'
+          +'<path d="M3 5.5L12 13.5" stroke="#34A853" stroke-width="1.5" stroke-linecap="round"/>'
+          +'<path d="M21 5.5L12 13.5" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/>'
+        +'</svg>'
+      +'</span>'
+      +'<span class="btn-send-text"><strong>Gmail</strong><small>Ouvre Gmail dans le navigateur</small></span>'
+    +'</button>'
     +'</div></div>'
 
     /* Variables rapides */
@@ -2488,17 +2531,30 @@ function resolveMailVars(template, order, docType, docNum, acomptePct){
 }
 
 /**
- * Retourne l'email expéditeur depuis CONTACT_INFO (admin > Infos Contact > Emails)
- * Priorité : premier email de CONTACT_INFO, sinon EMAIL_SETTINGS.docCc, sinon fallback.
+ * Retourne l'email expéditeur.
+ * Priorité :
+ *   1. localStorage.getItem('email_admin')    — réglé manuellement dans l'admin
+ *   2. CONTACT_INFO.emails[0].address         — admin > Infos Contact
+ *   3. EMAIL_SETTINGS.docCc                   — admin > Paramètres email
+ *   4. Fallback hardcodé
  */
 function getSenderEmail(){
-  if(typeof CONTACT_INFO!=='undefined'&&CONTACT_INFO.emails&&CONTACT_INFO.emails.length){
-    return CONTACT_INFO.emails[0].address||'';
+  var ls=typeof localStorage!=='undefined'?localStorage.getItem('email_admin'):'';
+  if(ls&&ls.trim())return ls.trim();
+  if(typeof CONTACT_INFO!=='undefined'&&CONTACT_INFO.emails&&CONTACT_INFO.emails.length&&CONTACT_INFO.emails[0].address){
+    return CONTACT_INFO.emails[0].address;
   }
   if(typeof EMAIL_SETTINGS!=='undefined'&&EMAIL_SETTINGS.docCc){
     return EMAIL_SETTINGS.docCc;
   }
   return 'contact@decooman.be';
+}
+
+/** Persiste email_admin dans localStorage (appelé depuis renderAdminEmailSettings / renderAdminContactInfo) */
+function saveSenderEmail(email){
+  if(typeof localStorage!=='undefined'&&email&&email.trim()){
+    localStorage.setItem('email_admin',email.trim());
+  }
 }
 
 /**
@@ -2617,6 +2673,125 @@ function sendDocumentEmail(){
   if(!ordId){toast('Sélectionnez une commande','error');return;}
   var pct=document.getElementById('pdf-pct')&&document.getElementById('pdf-pct').value;
   genererEtEnvoyer(window._pdfType||'facture', ordId, pct||30);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   traiterDocument(type, methode)
+   Point d'entrée unique depuis les boutons dual-send.
+   methode: 'mailto' | 'gmail'
+══════════════════════════════════════════════════════════════ */
+function traiterDocument(type, methode){
+  var ordId=document.getElementById('pdf-order')&&document.getElementById('pdf-order').value;
+  if(!ordId){toast('Sélectionnez une commande pour continuer','error');return;}
+  var o=ORDERS.find(function(x){return x.id===ordId;});
+  if(!o){toast('Commande introuvable','error');return;}
+
+  var docTypeNorm=type||window._pdfType||'facture';
+  var pct=parseFloat(
+    (document.getElementById('pdf-pct')&&document.getElementById('pdf-pct').value)||30
+  )||30;
+
+  /* ── Préparer les données email ── */
+  var user=USERS.find(function(u){return u.id===o.userId;})||{};
+  var pfx={commande:'BC',livraison:'BL',facture:'FAC',devis:'DEV',acompte:'ACP',avoir:'AVO'};
+  var docNum=(pfx[docTypeNorm]||docTypeNorm.slice(0,3).toUpperCase())+'-'+o.id+'-'+new Date().getFullYear();
+
+  /* Résolution template + variables */
+  var tpl=docTemplates[docTypeNorm]||docTemplates.facture;
+  var emailSubject=buildEmailSubject(docTypeNorm,docNum,o);
+  var emailBody=resolveMailVars(tpl.body,o,docTypeNorm,docNum,pct);
+
+  /* Signature */
+  var ci=CONTACT_INFO||{};
+  var senderEmail=getSenderEmail();
+  emailBody+='\n\n──────────────────────────────\n'
+    +(ci.companyName||'De Cooman Racing Performance')
+    +'\n'+senderEmail
+    +((ci.phones&&ci.phones[0])?'\n'+ci.phones[0].number:'')
+    +'\n──────────────────────────────';
+
+  var emailTo=user.email||o.userEmail||'';
+
+  /* ── 1. Générer et télécharger le PDF ── */
+  var htmlDoc=buildPdfHtml(docTypeNorm,ordId,pct);
+  if(!htmlDoc){toast('Erreur génération PDF','error');return;}
+  var lbl=DOC_TYPES.find(function(d){return d.id===docTypeNorm;})||{label:docTypeNorm};
+  var filename=lbl.label.replace(/\s/g,'_')+'_'+docNum+'_'+new Date().toISOString().slice(0,10)+'.pdf';
+
+  function ouvrirEmail(){
+    if(methode==='gmail'){
+      ouvrirGmail(emailTo, senderEmail, emailSubject, emailBody);
+    } else {
+      ouvrirMailto(emailTo, senderEmail, emailSubject, emailBody);
+    }
+  }
+
+  if(typeof html2pdf!=='undefined'){
+    toast('Génération du PDF…','info');
+    var container=document.createElement('div');
+    container.innerHTML=htmlDoc;
+    container.style.cssText='position:fixed;left:-9999px;top:0;width:210mm';
+    document.body.appendChild(container);
+    html2pdf().set({
+      margin:0,filename:filename,
+      image:{type:'jpeg',quality:0.98},
+      html2canvas:{scale:2,useCORS:true,letterRendering:true,logging:false,allowTaint:true},
+      jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
+    }).from(container).save().then(function(){
+      document.body.removeChild(container);
+      toast('PDF téléchargé ✓ — Glissez-le dans votre email','success');
+      setTimeout(ouvrirEmail, 600);
+    }).catch(function(err){
+      if(document.body.contains(container))document.body.removeChild(container);
+      console.warn('html2pdf:',err);
+      /* Fallback popup */
+      var blob=new Blob([htmlDoc],{type:'text/html;charset=utf-8'});
+      var url=URL.createObjectURL(blob);
+      window.open(url,'_blank','width=900,height=720');
+      setTimeout(function(){URL.revokeObjectURL(url);},15000);
+      ouvrirEmail();
+    });
+  } else {
+    var blob=new Blob([htmlDoc],{type:'text/html;charset=utf-8'});
+    var url=URL.createObjectURL(blob);
+    window.open(url,'_blank','width=900,height=720');
+    setTimeout(function(){URL.revokeObjectURL(url);},15000);
+    ouvrirEmail();
+  }
+}
+
+/* ── mailto: classique (Outlook, Apple Mail, Thunderbird) ── */
+function ouvrirMailto(to, from, subject, body){
+  var href='mailto:'+encodeURIComponent(to)
+    +'?cc='+encodeURIComponent(from)
+    +'&subject='+encodeURIComponent(subject)
+    +'&body='+encodeURIComponent(body);
+  var a=document.createElement('a');
+  a.href=href;a.style.display='none';
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){document.body.removeChild(a);},500);
+  toast('Client mail ouvert (Outlook / Mail)','info');
+}
+
+/* ── Gmail URL : sauts de ligne encodés %0D%0A, corps UTF-8 ── */
+function ouvrirGmail(to, from, subject, body){
+  /* Gmail exige %0D%0A pour les sauts de ligne dans le corps */
+  var bodyEncoded=body
+    .replace(/\r\n/g,'\n')       /* normalize */
+    .replace(/\n/g,'%0D%0A')     /* CRLF pour RFC 2822 */
+    .replace(/[&=?%]/g,function(c){
+      if(c==='%')return c;        /* already encoded */
+      return encodeURIComponent(c);
+    });
+  /* Gmail ne supporte pas encodeURIComponent classique sur le body — on encode manuellement */
+  var subjectEncoded=encodeURIComponent(subject);
+  var url='https://mail.google.com/mail/?view=cm&fs=1'
+    +'&to='+encodeURIComponent(to)
+    +'&su='+subjectEncoded
+    +'&body='+bodyEncoded
+    +(from?'&from='+encodeURIComponent(from):'');
+  window.open(url,'_blank','noopener,noreferrer');
+  toast('Gmail ouvert dans un nouvel onglet','info');
 }
 
 /* ── sendOrderEmail — used by doCheckout (panier) ── */
@@ -4348,6 +4523,10 @@ function saveContactInfo(){
   if(g('ci-company'))CONTACT_INFO.companyName=g('ci-company').value;
   if(g('ci-addr'))CONTACT_INFO.address=g('ci-addr').value;
   if(g('ci-hours'))CONTACT_INFO.hours=g('ci-hours').value;
+  /* Persist primary email to localStorage for email generation */
+  if(CONTACT_INFO.emails&&CONTACT_INFO.emails.length&&CONTACT_INFO.emails[0].address){
+    saveSenderEmail(CONTACT_INFO.emails[0].address);
+  }
   renderContactBanner();
   toast('Informations de contact enregistrées ✓','success');
 }
