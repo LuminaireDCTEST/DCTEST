@@ -504,6 +504,14 @@ textarea.fi{resize:vertical}
       Test overlay directement
     </button>
   </div>
+  <!-- Back to catalog chooser button (hidden by default) -->
+  <div id="catalogBackBtn" style="display:none;align-items:center;gap:.5rem;margin-bottom:1rem;cursor:pointer" onclick="backToCatalogChooser()">
+    <div style="display:flex;align-items:center;gap:.5rem;padding:.45rem .85rem;border-radius:9px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);transition:all .2s" onmouseover="this.style.borderColor='rgba(0,168,243,.4)'" onmouseout="this.style.borderColor='rgba(255,255,255,.1)'">
+      <svg style="width:14px;height:14px;color:rgba(255,255,255,.5)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      <span style="font-family:'Inter',sans-serif;font-size:.75rem;font-weight:600;color:rgba(255,255,255,.5)">Changer de catalogue</span>
+    </div>
+  </div>
+
   <!-- Catalog chooser — rendered by renderCatalogChooser() -->
   <div id="catalogChooser" style="display:none;margin-bottom:1.5rem"></div>
 
@@ -1103,6 +1111,7 @@ const LS_HERO     ='dcorp_hero_v1';
 const LS_CONTACT  ='dcorp_contact_v1';
 const LS_SHIPPING ='dcorp_shipping_v1';
 const LS_BG       ='site_bg';
+const LS_CHAT     ='dcorp_chat_v1';
 
 /* ── Persistence helpers ── */
 function lsSave(key,val){try{localStorage.setItem(key,JSON.stringify(val));}catch(e){console.warn('LS save failed',key,e);}}
@@ -1116,6 +1125,7 @@ function persistAll(){
   lsSave(LS_HERO,HERO_DESIGN);
   lsSave(LS_CONTACT,CONTACT_INFO);
   lsSave(LS_SHIPPING,SHIPPING_SETTINGS);
+  lsSave(LS_CHAT,CHAT_MESSAGES);
   saveUsersDB();
 }
 
@@ -1127,26 +1137,39 @@ function hydrateFromLS(){
   var h=lsLoad(LS_HERO,null);     if(h)Object.assign(HERO_DESIGN,h);
   var ci=lsLoad(LS_CONTACT,null); if(ci)Object.assign(CONTACT_INFO,ci);
   var sh=lsLoad(LS_SHIPPING,null);if(sh)Object.assign(SHIPPING_SETTINGS,sh);
+  var ch=lsLoad(LS_CHAT,null);    if(ch)CHAT_MESSAGES=ch;
 }
 
 /* ── syncAppData: rafraîchit l'UI après tout changement de données ── */
 function syncAppData(){
   hydrateFromLS();
-  /* Rebuild any visible view */
   renderCatalog(currentCatalogFilter||'all');
   renderContactBanner&&renderContactBanner();
   applyBgFromLS();
   updateCartBadge&&updateCartBadge();
+  updateAdminCounters&&updateAdminCounters();
+  /* Refresh open chat panels if client is viewing an order */
+  if(typeof _openChatOrderId!=='undefined'&&_openChatOrderId){
+    var chatEl=document.getElementById('chatMsgs-'+_openChatOrderId);
+    if(chatEl)renderChatMessages(_openChatOrderId,chatEl);
+  }
+  /* Refresh admin chat if open */
+  if(typeof adminCurrentTab!=='undefined'&&adminCurrentTab==='chat'){
+    if(typeof _adminChatOrderId!=='undefined'&&_adminChatOrderId)openAdminChatFor(_adminChatOrderId);
+  }
   if(typeof adminCurrentTab!=='undefined'&&adminCurrentTab){
     var renders2={dashboard:renderAdminDashboard,orders:renderAdminOrders,
-      clients:renderAdminClients,catalog:renderAdminCatalog,stock:renderAdminStock};
+      clients:renderAdminClients,catalog:renderAdminCatalog,stock:renderAdminStock,
+      chat:renderAdminChat};
     if(renders2[adminCurrentTab])renders2[adminCurrentTab]();
   }
 }
 
+/* ── syncAppData: rafraîchit l'UI après tout changement de données ── */
+
 /* ── Cross-tab sync via storage event ── */
 window.addEventListener('storage',function(e){
-  if([LS_ORDERS,LS_PRODUCTS,LS_CATALOGS,LS_HERO,LS_CONTACT,LS_SHIPPING,DB_KEY].indexOf(e.key)>=0){
+  if([LS_ORDERS,LS_PRODUCTS,LS_CATALOGS,LS_HERO,LS_CONTACT,LS_SHIPPING,LS_CHAT,DB_KEY].indexOf(e.key)>=0){
     syncAppData();
   }
   if(e.key===LS_BG){applyBgFromLS();}
@@ -3934,6 +3957,8 @@ function toggleOrderAccordion(orderId){
     if(o)acc.innerHTML=buildOrderDetailHTML(o);
     acc.style.display='block';
     if(arrow)arrow.style.transform='rotate(180deg)';
+    /* Init chat messages in the newly rendered section */
+    initChatSection(orderId);
     /* Smooth scroll into view */
     setTimeout(function(){acc.scrollIntoView({behavior:'smooth',block:'nearest'});},50);
   }
@@ -4321,6 +4346,39 @@ function renderAdminEmailSettings(){
 }
 
 /* ══ renderAdminHeroDesign ══ */
+
+/* ── Hero Design live apply ── */
+function liveApplyHeroDesign(){
+  var g=function(id){return document.getElementById(id);};
+  var d=HERO_DESIGN;
+  if(g('hd-title'))d.titleText=g('hd-title').value;
+  if(g('hd-tag'))d.tagText=g('hd-tag').value;
+  if(g('hd-delivery'))d.deliveryText=g('hd-delivery').value;
+  if(g('hd-cta1'))d.cta1Text=g('hd-cta1').value;
+  if(g('hd-cta2'))d.cta2Text=g('hd-cta2').value;
+  if(g('hd-titlecolor'))d.titleColor=g('hd-titlecolor').value;
+  if(g('hd-accentcolor'))d.titleAccentColor=g('hd-accentcolor').value;
+  if(g('hd-font'))d.titleFont=g('hd-font').value;
+  if(g('hd-overlay'))d.overlayOpacity=parseFloat(g('hd-overlay').value)||0.5;
+  if(g('hd-brightness'))d.videoBrightness=parseInt(g('hd-brightness').value)||32;
+  applyHeroDesignToPage();
+}
+function liveApply(){liveApplyHeroDesign();}
+function applyHeroDesignToPage(){
+  var d=HERO_DESIGN;
+  var t=document.getElementById('heroTitle');if(t){t.style.fontFamily="'"+d.titleFont+"',serif";t.style.color=d.titleColor;}
+  var c1=document.getElementById('heroCta1');if(c1)c1.textContent=d.cta1Text||'Voir le catalogue';
+  var c2=document.getElementById('heroCta2');if(c2)c2.textContent=d.cta2Text||'Accès espace pro';
+  var vid=document.getElementById('heroVideo');if(vid)vid.style.filter='brightness('+((d.videoBrightness||32)/100)+') saturate(.65)';
+}
+function saveHeroDesign(){
+  liveApplyHeroDesign();persistAll();
+  toast('Design de l\'accueil enregistré ✓','success');
+}
+function openHeroPanelAdmin(){
+  openAdminPanel();setTimeout(function(){adminTab('herodesign');},150);
+}
+
 function renderAdminHeroDesign(){
   const ct=document.getElementById('adminContent');
   const d=HERO_DESIGN;
@@ -4349,62 +4407,6 @@ function renderAdminHeroDesign(){
 }
 
 /* ══ renderAdminChat ══ */
-function renderAdminChat(){
-  const ct=document.getElementById('adminContent');
-  /* Group chat messages by order */
-  const orderIds=[...new Set(CHAT_MESSAGES.map(m=>m.orderId))];
-  const withChat=ORDERS.filter(o=>orderIds.includes(o.id));
-  const unreadByOrder={};
-  CHAT_MESSAGES.filter(m=>m.role==='client'&&!m.readByAdmin).forEach(m=>{unreadByOrder[m.orderId]=(unreadByOrder[m.orderId]||0)+1;});
-
-  let html='<div class="mb-5"><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Communications</p>'
-    +'<h2 class="font-display text-2xl font-bold text-white uppercase">Chat <span style="color:#00a8f3">commandes</span></h2>'
-    +'<p class="text-white/35 text-sm mt-1">Échangez directement avec vos clients sur leurs commandes — envoi email automatique</p></div>';
-
-  if(!withChat.length){
-    html+='<div class="empty-state"><svg class="w-14 h-14 mx-auto mb-3" fill="none" stroke="rgba(0,168,243,.2)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"/></svg><p class="text-white/40 font-display font-bold text-xl mb-1">Aucune conversation</p><p>Les chats initiés depuis les commandes clients apparaîtront ici.</p></div>';
-  } else {
-    html+='<div style="display:flex;gap:1rem;height:calc(100vh - 220px)">';
-    /* Left: order list */
-    html+='<div style="width:260px;flex-shrink:0;display:flex;flex-direction:column;gap:.4rem;overflow-y:auto" id="chatOrderList">';
-    withChat.forEach(function(o){
-      const unread=unreadByOrder[o.id]||0;
-      const last=CHAT_MESSAGES.filter(m=>m.orderId===o.id).slice(-1)[0];
-      html+='<div onclick="openAdminChatFor(\''+o.id+'\')" id="chatorder-'+o.id+'" style="padding:.8rem 1rem;border-radius:10px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);cursor:pointer;transition:all .2s" onmouseover="this.style.background=\'rgba(255,255,255,.05)\'" onmouseout="this.style.background=\'rgba(255,255,255,.02)\'">'
-        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.25rem">'
-        +'<span style="font-family:\'Rajdhani\',sans-serif;font-weight:700;font-size:.82rem;color:'+(unread?'white':'rgba(255,255,255,.55)')+'">'+o.id+'</span>'
-        +(unread?'<span style="background:#a855f7;color:white;border-radius:50%;width:18px;height:18px;font-size:.6rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;font-family:\'Rajdhani\',sans-serif">'+unread+'</span>':'')
-        +'</div>'
-        +'<p style="font-family:\'Exo 2\',sans-serif;font-size:.7rem;color:rgba(255,255,255,.35)">'+o.userName+'</p>'
-        +(last?'<p style="font-family:\'Exo 2\',sans-serif;font-size:.68rem;color:rgba(255,255,255,.25);margin-top:.2rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">'+last.text.slice(0,40)+'</p>':'')
-        +'</div>';
-    });
-    /* All orders without chat — can start chat from any order */
-    ORDERS.filter(function(o){return !orderIds.includes(o.id);}).slice(0,10).forEach(function(o){
-      html+='<div onclick="openAdminChatFor(\''+o.id+'\')" style="padding:.65rem 1rem;border-radius:10px;border:1px dashed rgba(255,255,255,.06);cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor=\'rgba(0,168,243,.25)\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,.06)\'">'
-        +'<p style="font-family:\'Rajdhani\',sans-serif;font-weight:600;font-size:.78rem;color:rgba(255,255,255,.35)">'+o.id+'</p>'
-        +'<p style="font-family:\'Exo 2\',sans-serif;font-size:.68rem;color:rgba(255,255,255,.2)">'+o.userName+' — Démarrer le chat</p>'
-        +'</div>';
-    });
-    html+='</div>';
-    /* Right: chat window */
-    html+='<div style="flex:1;display:flex;flex-direction:column;border:1px solid rgba(255,255,255,.07);border-radius:14px;overflow:hidden" id="adminChatWindow">'
-      +'<div style="padding:1rem 1.2rem;border-bottom:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.3)" id="adminChatHeader"><p style="color:rgba(255,255,255,.3);font-family:\'Exo 2\',sans-serif;font-size:.82rem">Sélectionnez une commande pour démarrer ou voir une conversation</p></div>'
-      +'<div style="flex:1;overflow-y:auto;padding:1rem" id="adminChatMessages"></div>'
-      +'<div style="padding:.75rem 1rem;border-top:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.2);display:flex;gap:.6rem" id="adminChatInput">'
-      +'<input type="text" id="adminChatText" class="fi" placeholder="Répondre au client... (Entrée pour envoyer)" style="flex:1" disabled onkeydown="if(event.key===\'Enter\')sendAdminChat()"/>'
-      +'<button class="btn btn-primary btn-sm" onclick="sendAdminChat()" disabled id="adminChatSendBtn">Envoyer</button>'
-      +'</div></div>';
-    html+='</div>';
-  }
-  ct.innerHTML=html;
-  /* Auto-open first unread */
-  if(withChat.length){
-    const firstUnread=withChat.find(function(o){return unreadByOrder[o.id]>0;});
-    if(firstUnread)openAdminChatFor(firstUnread.id);
-    else openAdminChatFor(withChat[0].id);
-  }
-}
 
 function renderAdminEmailSettings(){
   const ct=document.getElementById('adminContent');
@@ -5070,49 +5072,72 @@ function renderCatalogChooser(){
   var el=document.getElementById('catalogChooser');if(!el)return;
   var allowedIds=getUserCatalogs();
   var available=CATALOGS.filter(function(c){return allowedIds.indexOf(c.id)>=0;});
-
-  if(available.length<=1){
-    /* Single catalog or none — hide chooser, just show the grid */
+  if(available.length===0){el.style.display='none';return;}
+  if(available.length===1&&!window._activeCatalogId){
+    window._activeCatalogId=available[0].id;
     el.style.display='none';
-    return;
+    renderCatalog(available[0].filterValue||'all');return;
   }
-
+  if(available.length<=1&&window._activeCatalogId){el.style.display='none';return;}
   el.style.display='block';
-  /* Responsive grid: 1 col if 1, 2 cols if 2, 3+ cols if 3+ */
-  var cols=available.length>=3?'repeat(3,1fr)':available.length===2?'repeat(2,1fr)':'1fr';
-
-  el.innerHTML='<p class="fl mb-3">Choisissez votre catalogue</p>'
-    +'<div style="display:grid;grid-template-columns:'+cols+';gap:1rem">'
-    +available.map(function(c){
-      var isActive=window._activeCatalogId===c.id;
-      return '<div onclick="selectCatalog(\''+c.id+'\')" style="'
-        +'cursor:pointer;padding:1.2rem 1.4rem;border-radius:14px;border:2px solid '+(isActive?c.color:'rgba(255,255,255,.08)')+';'
-        +'background:'+(isActive?'rgba('+hexToRgbStr(c.color||'#00a8f3')+', .08)':'rgba(255,255,255,.02)')+';'
-        +'transition:all .25s;display:flex;flex-direction:column;gap:.5rem" '
-        +'onmouseover="this.style.borderColor=\''+c.color+'\';this.style.background=\'rgba('+hexToRgbStr(c.color||'#00a8f3')+', .06)\'" '
-        +'onmouseout="if(window._activeCatalogId!==\''+c.id+'\'){this.style.borderColor=\'rgba(255,255,255,.08)\';this.style.background=\'rgba(255,255,255,.02)\'}">'
-        +'<div style="display:flex;align-items:center;gap:.75rem">'
-          +'<div style="width:40px;height:40px;border-radius:10px;background:rgba('+hexToRgbStr(c.color||'#00a8f3')+', .12);border:1px solid rgba('+hexToRgbStr(c.color||'#00a8f3')+', .25);display:flex;align-items:center;justify-content:center;flex-shrink:0">'
-            +'<svg style="width:18px;height:18px;color:'+c.color+'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="'+c.icon+'"/></svg>'
-          +'</div>'
-          +'<div>'
-            +'<p style="font-family:\'Bebas Neue\',sans-serif;font-size:1rem;letter-spacing:.06em;color:white">'+c.label+'</p>'
-            +'<p style="font-family:Inter,sans-serif;font-size:.72rem;color:rgba(255,255,255,.4)">'+c.desc+'</p>'
-          +'</div>'
-        +'</div>'
-        +(isActive?'<div style="font-family:Inter,sans-serif;font-size:.65rem;font-weight:700;color:'+c.color+';letter-spacing:.1em;text-transform:uppercase">✓ Catalogue actif</div>':'')
-      +'</div>';
-    }).join('')
+  var pgrid=document.getElementById('productGrid');
+  var psb=document.getElementById('catalogSidebar');
+  if(pgrid)pgrid.style.display=window._activeCatalogId?'grid':'none';
+  if(psb)psb.style.display=window._activeCatalogId?'':'none';
+  var cards=available.map(function(c,idx){
+    var isActive=window._activeCatalogId===c.id;
+    var col=c.color||'#00a8f3';
+    var rgb=hexToRgbStr&&hexToRgbStr(col)||'0,168,243';
+    return '<div class="cat-chooser-card'+(isActive?' active':'')+'" data-catid="'+c.id+'" data-color="'+col+'" data-rgb="'+rgb+'" style="border-color:'+(isActive?col:'rgba(255,255,255,.08)')+';background:'+(isActive?'rgba('+rgb+',.08)':'rgba(255,255,255,.025)')+'">'
+      +'<div style="width:60px;height:60px;border-radius:15px;background:rgba('+rgb+',.15);border:1px solid rgba('+rgb+',.3);display:flex;align-items:center;justify-content:center;margin:0 auto .85rem">'
+        +'<svg style="width:26px;height:26px;color:'+col+'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="'+c.icon+'"/></svg>'
+      +'</div>'
+      +'<p style="font-family:Bebas Neue,sans-serif;font-size:1.2rem;letter-spacing:.08em;color:white;margin-bottom:.35rem">'+c.label+'</p>'
+      +'<p style="font-family:Inter,sans-serif;font-size:.73rem;color:rgba(255,255,255,.4);line-height:1.5;margin-bottom:.85rem">'+c.desc+'</p>'
+      +(isActive?'<span style="background:rgba('+rgb+',.15);color:'+col+';border-radius:20px;padding:2px 9px;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-family:Inter,sans-serif">✓ Actif</span>':'<span style="font-family:Inter,sans-serif;font-size:.7rem;font-weight:600;color:rgba(255,255,255,.3)">→ Accéder</span>')
     +'</div>';
+  }).join('');
+  var cols=available.length>=3?'repeat(3,1fr)':available.length===2?'repeat(2,1fr)':'1fr';
+  el.innerHTML='<p style="font-family:Cormorant Garamond,serif;font-style:italic;font-size:1rem;color:rgba(255,255,255,.4);margin-bottom:1.4rem;text-align:center">Sélectionnez votre espace catalogue</p>'
+    +'<div style="display:grid;grid-template-columns:'+cols+';gap:1.2rem;max-width:900px;margin:0 auto">'+cards+'</div>';
+  /* Wire click events after DOM is built */
+  el.querySelectorAll('.cat-chooser-card').forEach(function(card){
+    card.addEventListener('click',function(){selectCatalog(card.getAttribute('data-catid'));});
+    card.addEventListener('mouseenter',function(){
+      if(card.getAttribute('data-catid')!==window._activeCatalogId){
+        card.style.borderColor=card.getAttribute('data-color');
+        card.style.background='rgba('+card.getAttribute('data-rgb')+',.05)';
+      }
+    });
+    card.addEventListener('mouseleave',function(){
+      if(card.getAttribute('data-catid')!==window._activeCatalogId){
+        card.style.borderColor='rgba(255,255,255,.08)';
+        card.style.background='rgba(255,255,255,.025)';
+      }
+    });
+  });
 }
 
 function selectCatalog(catId){
   var cat=CATALOGS.find(function(c){return c.id===catId;});if(!cat)return;
   window._activeCatalogId=catId;
-  /* Apply the catalog's filter to the product grid */
+  var backBtn=document.getElementById('catalogBackBtn');
+  if(backBtn)backBtn.style.display='flex';
+  var chooser=document.getElementById('catalogChooser');
+  if(chooser)chooser.style.display='none';
+  var grid=document.getElementById('productGrid');if(grid)grid.style.display='grid';
+  var sidebar=document.getElementById('catalogSidebar');if(sidebar)sidebar.style.display='';
   renderCatalog(cat.filterValue||'all');
+}
+
+function backToCatalogChooser(){
+  window._activeCatalogId=null;
+  var backBtn=document.getElementById('catalogBackBtn');if(backBtn)backBtn.style.display='none';
+  var grid=document.getElementById('productGrid');if(grid)grid.style.display='none';
+  var sidebar=document.getElementById('catalogSidebar');if(sidebar)sidebar.style.display='none';
   renderCatalogChooser();
 }
+
 
 /* ══ ADMIN: CATALOGUES ══ */
 function renderAdminCatalogs(){
@@ -5204,26 +5229,194 @@ function toggleClientCatalog(userId,catId){
   toast('Accès mis à jour pour '+u.first,'success');
 }
 
-/* ══ FAQ ══ */
-const FAQS=[
-  {q:'Comment fonctionne l\'achat en gros ?',a:'Cliquez sur un produit → sélectionnez votre quantité (boutons rapides 10/100/500/1000 ou saisie libre) → le prix HT, TVA et TTC se calculent instantanément.'},
-  {q:'Comment voir mes prix préférentiels ?',a:'Les remises sont appliquées automatiquement dès votre connexion. Le pourcentage s\'affiche sur chaque carte produit et dans la fenêtre de commande.'},
-  {q:'Modes de paiement acceptés ?',a:'Carte bancaire, facture proforma, virement bancaire, paiement fin de mois (compte pro) et chèque.'},
-  {q:'Comment suivre mes commandes ?',a:'Menu utilisateur → "Mes commandes". Chaque commande est clickable pour accéder au détail complet et à l\'historique de statut.'},
-  {q:'Politique de retour ?',a:'30 jours satisfait ou remboursé, produits en emballage d\'origine non installés.'},
-];
-function renderFaq(){
-  document.getElementById('faqList').innerHTML=FAQS.map((f,i)=>`
-    <div class="card p-5 cursor-pointer reveal" style="transition-delay:${i*.09}s" onclick="toggleFaq(this)">
-      <div class="flex justify-between items-center"><span class="font-display font-semibold text-white text-sm tracking-wide">${f.q}</span><svg class="w-5 h-5 text-accent flex-shrink-0 transition-transform faq-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></div>
-      <p class="text-white/40 text-sm mt-0 max-h-0 overflow-hidden transition-all duration-300 faq-answer leading-relaxed">${f.a}</p>
-    </div>`).join('');
-  setTimeout(initReveal,100);
-}
-function toggleFaq(el){const a=el.querySelector('.faq-answer'),ar=el.querySelector('.faq-arrow'),open=a.style.maxHeight&&a.style.maxHeight!=='0px';a.style.maxHeight=open?'0':'200px';a.style.marginTop=open?'0':'12px';ar.style.transform=open?'':'rotate(180deg)';}
+/* ══════════════════════════════════════════════════════════════
+   CHAT COMMANDE — Temps réel via localStorage events
+   LS key: dcorp_chat_v1
+══════════════════════════════════════════════════════════════ */
 
-/* ══ SCROLL REVEAL ══ */
-function initReveal(){const io=new IntersectionObserver(en=>en.forEach(e=>{if(e.isIntersecting){e.target.classList.add('v');io.unobserve(e.target);}}),{threshold:.07,rootMargin:'0px 0px -20px 0px'});document.querySelectorAll('.reveal:not(.v)').forEach(el=>io.observe(el));}
+var _openChatOrderId=null;   /* orderId of chat currently open (client) */
+var _adminChatOrderId=null;  /* orderId of chat currently open (admin) */
+
+/* ── Core: send a message ── */
+function sendChatMsg(orderId,text,role){
+  text=(text||'').trim();if(!text)return false;
+  var msg={
+    id:'CM'+Date.now()+Math.random().toString(36).slice(2,5),
+    orderId:orderId,
+    from:currentUser?currentUser.id:'?',
+    role:role||'client',
+    text:text,
+    date:new Date().toISOString(),
+    readByAdmin:role==='admin',
+    readByClient:role==='client'
+  };
+  CHAT_MESSAGES.push(msg);
+  persistAll(); /* triggers storage event on other tabs */
+  /* Notify admin if client message */
+  if(role==='client'){
+    addNotif('chat','Nouveau message — '+orderId,
+      (currentUser?currentUser.first+' '+currentUser.last:'Client')+' : '+text.slice(0,60),
+      orderId);
+    updateAdminCounters();
+  }
+  /* Notify client if admin message */
+  if(role==='admin'){
+    addUserNotif('chat','Réponse sur votre commande '+orderId,text.slice(0,80),orderId);
+  }
+  return msg;
+}
+
+/* ── Render messages for a given orderId into a container el ── */
+function renderChatMessages(orderId,containerEl){
+  if(!containerEl)return;
+  var msgs=CHAT_MESSAGES.filter(function(m){return m.orderId===orderId;});
+  if(!msgs.length){
+    containerEl.innerHTML='<div style="text-align:center;padding:2rem 1rem;color:rgba(255,255,255,.2);font-family:Inter,sans-serif;font-size:.78rem">Aucun message — envoyez votre premier message ci-dessous.</div>';
+    return;
+  }
+  containerEl.innerHTML=msgs.map(function(m){
+    var isAdmin=m.role==='admin';
+    var d=new Date(m.date);
+    var ts=d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    return '<div style="display:flex;justify-content:'+(isAdmin?'flex-start':'flex-end')+';margin-bottom:.7rem">'
+      +'<div style="max-width:75%;'+(isAdmin?'':'order:2')+'">'+
+        '<div style="background:'+(isAdmin?'rgba(0,168,243,.12)':'rgba(255,255,255,.08)')+';border:1px solid '+(isAdmin?'rgba(0,168,243,.25)':'rgba(255,255,255,.12)')+';border-radius:'+(isAdmin?'4px 14px 14px 14px':'14px 4px 14px 14px')+';padding:.55rem .85rem;font-family:Inter,sans-serif;font-size:.8rem;color:'+(isAdmin?'rgba(0,168,243,.9)':'rgba(255,255,255,.85)')+';">'
+          +escHtml(m.text)
+        +'</div>'
+        +'<p style="font-family:Inter,sans-serif;font-size:.6rem;color:rgba(255,255,255,.25);margin-top:2px;text-align:'+(isAdmin?'left':'right')+'">'
+          +(isAdmin?'<span style="font-weight:700;color:rgba(0,168,243,.5)">Support</span> · ':'')+ts
+        +'</p>'
+      +'</div></div>';
+  }).join('');
+  /* Scroll to bottom */
+  containerEl.scrollTop=containerEl.scrollHeight;
+  /* Mark as read */
+  msgs.forEach(function(m){
+    if(currentUser&&currentUser.role==='admin')m.readByAdmin=true;
+    else m.readByClient=true;
+  });
+  persistAll();
+}
+
+function escHtml(str){
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+/* ── Client: chat section inside order accordion ── */
+function renderOrderChatSection(orderId){
+  _openChatOrderId=orderId;
+  var msgs=CHAT_MESSAGES.filter(function(m){return m.orderId===orderId;});
+  var unread=msgs.filter(function(m){return m.role==='admin'&&!m.readByClient;}).length;
+  return '<div style="border-top:1px solid rgba(255,255,255,.06);padding-top:1rem;margin-top:.5rem" id="chat-section-'+orderId+'">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.65rem">'
+      +'<p class="fl" style="margin:0">💬 Support commande'+(unread>0?' <span style="background:#a855f7;color:white;border-radius:50%;padding:1px 7px;font-size:.65rem;margin-left:.3rem">'+unread+'</span>':'')+'</p>'
+    +'</div>'
+    +'<div id="chatMsgs-'+orderId+'" style="height:200px;overflow-y:auto;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:.75rem;margin-bottom:.6rem;scroll-behavior:smooth"></div>'
+    +'<div style="display:flex;gap:.4rem">'
+      +'<input type="text" id="chatInp-'+orderId+'" class="fi" placeholder="Votre message…" style="flex:1;font-size:.8rem" onkeydown="if(event.key===\'Enter\'){clientSendChat(\''+orderId+'\');}" />'
+      +'<button onclick="clientSendChat(\''+orderId+'\')" class="btn btn-primary btn-sm" style="white-space:nowrap">Envoyer</button>'
+    +'</div>'
+    +'</div>';
+}
+
+/* Render messages after the section is injected into DOM */
+function initChatSection(orderId){
+  var el=document.getElementById('chatMsgs-'+orderId);
+  if(el)renderChatMessages(orderId,el);
+}
+
+function clientSendChat(orderId){
+  var inp=document.getElementById('chatInp-'+orderId);
+  if(!inp||!inp.value.trim())return;
+  sendChatMsg(orderId,inp.value,'client');
+  inp.value='';
+  var el=document.getElementById('chatMsgs-'+orderId);
+  if(el)renderChatMessages(orderId,el);
+}
+
+/* ── Admin: full chat panel ── */
+function renderAdminChat(){
+  var ct=document.getElementById('adminContent');
+  var orderIds=[];
+  CHAT_MESSAGES.forEach(function(m){if(orderIds.indexOf(m.orderId)<0)orderIds.push(m.orderId);});
+  var withChat=ORDERS.filter(function(o){return orderIds.indexOf(o.id)>=0;});
+  /* Also show orders that have no messages but client navigated to them */
+  var unreadByOrder={};
+  CHAT_MESSAGES.filter(function(m){return m.role==='client'&&!m.readByAdmin;}).forEach(function(m){
+    unreadByOrder[m.orderId]=(unreadByOrder[m.orderId]||0)+1;
+  });
+
+  var sidebar='<div style="width:260px;flex-shrink:0;overflow-y:auto;display:flex;flex-direction:column;gap:.3rem">';
+  if(!withChat.length){
+    sidebar+='<div style="padding:1.5rem 1rem;text-align:center;color:rgba(255,255,255,.2);font-family:Inter,sans-serif;font-size:.75rem">Aucune conversation</div>';
+  } else {
+    withChat.forEach(function(o){
+      var unread=unreadByOrder[o.id]||0;
+      var last=CHAT_MESSAGES.filter(function(m){return m.orderId===o.id;}).slice(-1)[0];
+      var isActive=_adminChatOrderId===o.id;
+      sidebar+='<div onclick="openAdminChatFor(\''+o.id+'\')" id="chatorder-'+o.id+'"'
+        +' style="padding:.7rem .9rem;border-radius:10px;border:1px solid '+(isActive?'rgba(0,168,243,.4)':'rgba(255,255,255,.06)')+';background:'+(isActive?'rgba(0,168,243,.08)':'rgba(255,255,255,.02)')+';cursor:pointer;transition:all .2s">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.2rem">'
+          +'<span style="font-family:\'Bebas Neue\',sans-serif;font-size:.88rem;color:'+(unread?'white':'rgba(255,255,255,.6)')+'">'+o.id+'</span>'
+          +(unread?'<span style="background:#a855f7;color:white;border-radius:50%;width:18px;height:18px;font-size:.6rem;display:flex;align-items:center;justify-content:center;font-weight:700">'+unread+'</span>':'')
+        +'</div>'
+        +'<p style="font-family:Inter,sans-serif;font-size:.7rem;color:rgba(255,255,255,.35)">'+o.userName+'</p>'
+        +(last?'<p style="font-family:Inter,sans-serif;font-size:.65rem;color:rgba(255,255,255,.2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin-top:2px">'+(last.role==='admin'?'Vous : ':'')+escHtml(last.text.slice(0,40))+'</p>':'')
+      +'</div>';
+    });
+  }
+  sidebar+='</div>';
+
+  var chatPane='<div id="adminChatPane" style="flex:1;display:flex;flex-direction:column;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.06);border-radius:12px;overflow:hidden">';
+  if(_adminChatOrderId){
+    var o=ORDERS.find(function(x){return x.id===_adminChatOrderId;})||{id:_adminChatOrderId,userName:'—'};
+    chatPane+='<div style="padding:.8rem 1rem;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between">'
+      +'<div><p style="font-family:\'Bebas Neue\',sans-serif;font-size:.95rem;color:white;letter-spacing:.06em">'+o.id+'</p>'
+        +'<p style="font-family:Inter,sans-serif;font-size:.72rem;color:rgba(255,255,255,.4)">'+o.userName+'</p></div>'
+      +'<span style="font-family:Inter,sans-serif;font-size:.68rem;color:rgba(255,255,255,.25)">Chat en temps réel · sync LS</span>'
+    +'</div>'
+    +'<div id="adminChatMsgs" style="flex:1;overflow-y:auto;padding:.85rem;scroll-behavior:smooth"></div>'
+    +'<div style="padding:.6rem .85rem;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:.4rem">'
+      +'<input type="text" id="adminChatInp" class="fi" placeholder="Répondre au client…" style="flex:1;font-size:.8rem" onkeydown="if(event.key===\'Enter\')adminSendChat()"/>'
+      +'<button onclick="adminSendChat()" class="btn btn-primary btn-sm">Envoyer</button>'
+    +'</div>';
+  } else {
+    chatPane+='<div style="flex:1;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.2);font-family:Inter,sans-serif;font-size:.8rem">Sélectionnez une conversation</div>';
+  }
+  chatPane+='</div>';
+
+  ct.innerHTML='<div class="flex items-center justify-between mb-5">'
+    +'<div><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Messagerie</p>'
+    +'<h2 class="font-display text-2xl font-bold text-white uppercase">Chat <span style="color:#00a8f3">Commandes</span></h2></div>'
+    +'</div>'
+    +'<div style="display:flex;gap:1rem;height:calc(100vh - 220px)">'
+    +sidebar+chatPane
+    +'</div>';
+
+  if(_adminChatOrderId){
+    var el=document.getElementById('adminChatMsgs');
+    if(el)renderChatMessages(_adminChatOrderId,el);
+  }
+}
+
+function openAdminChatFor(orderId){
+  _adminChatOrderId=orderId;
+  CHAT_MESSAGES.filter(function(m){return m.orderId===orderId&&m.role==='client';}).forEach(function(m){m.readByAdmin=true;});
+  persistAll();
+  updateAdminCounters();
+  renderAdminChat();
+}
+
+function adminSendChat(){
+  var inp=document.getElementById('adminChatInp');
+  if(!inp||!inp.value.trim())return;
+  sendChatMsg(_adminChatOrderId,inp.value,'admin');
+  inp.value='';
+  var el=document.getElementById('adminChatMsgs');
+  if(el)renderChatMessages(_adminChatOrderId,el);
+  renderAdminChat();
+}
+
 
 /* ══ INIT ══ */
 document.addEventListener('DOMContentLoaded',function(){
@@ -5245,3 +5438,6 @@ document.addEventListener('DOMContentLoaded',function(){
 .btn-reply-mail:hover{background:rgba(0,168,243,.15)}
 .btn-reply-gmail{display:inline-flex;align-items:center;gap:.35rem;padding:.35rem .8rem;border-radius:7px;border:1px solid rgba(234,67,53,.3);background:rgba(234,67,53,.07);color:#ea4335;font-family:Inter,sans-serif;font-weight:600;font-size:.72rem;text-decoration:none;transition:background .2s}
 .btn-reply-gmail:hover{background:rgba(234,67,53,.15)}
+
+.cat-chooser-card{cursor:pointer;padding:2.2rem 1.8rem;border-radius:18px;border:2px solid rgba(255,255,255,.08);background:rgba(255,255,255,.025);transition:all .25s;display:flex;flex-direction:column;align-items:center;text-align:center;gap:.5rem}
+.cat-chooser-card.active{box-shadow:0 0 40px rgba(0,168,243,.18)}
