@@ -504,6 +504,9 @@ textarea.fi{resize:vertical}
       Test overlay directement
     </button>
   </div>
+  <!-- Catalog chooser — rendered by renderCatalogChooser() -->
+  <div id="catalogChooser" style="display:none;margin-bottom:1.5rem"></div>
+
   <!-- Layout sidebar + grille -->
   <div style="display:flex;gap:1.5rem;align-items:flex-start">
 
@@ -676,6 +679,10 @@ textarea.fi{resize:vertical}
       <div class="a-nav-item" id="anav-stock" onclick="adminTab('stock')">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
         Stock
+      </div>
+      <div class="a-nav-item" id="anav-catalogs" onclick="adminTab('catalogs')">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+        Catalogues
       </div>
     </div>
 
@@ -978,7 +985,7 @@ textarea.fi{resize:vertical}
 <script>
 /* ══ DATA ══ */
 let USERS = [
-  {id:'u1',first:'Tony',last:'Koru',email:'tony@client.fr',tel:'+33 6 12 34 56 78',addr:'12 rue des Lumières, 75001 Paris',company:'Koru Auto SARL',pwd:'client123',role:'client',status:'active',avatar:'TK',discount:0},
+  {id:'u1',first:'Tony',last:'Koru',email:'tony@client.fr',tel:'+33 6 12 34 56 78',addr:'12 rue des Lumières, 75001 Paris',company:'Koru Auto SARL',catalogs:['cat_luminaire'],pwd:'client123',role:'client',status:'active',avatar:'TK',discount:0},
   {id:'u2',first:'Tony',last:'Admin',email:'tony@admin.fr',tel:'+33 6 98 76 54 32',addr:'1 av. Racing, 69000 Lyon',company:'De Cooman RP',pwd:'admin123',role:'admin',status:'active',avatar:'TA',discount:0},
   {id:'u3',first:'Sophie',last:'Martin',email:'sophie@moto.fr',tel:'+33 6 55 66 77 88',addr:'8 allée des Courses, 31000 Toulouse',company:'Martin Moto Shop',pwd:'pass123',role:'client',status:'active',avatar:'SM',discount:5},
   {id:'u4',first:'Julien',last:'Perret',email:'julien@auto.fr',tel:'+33 7 01 23 45 67',addr:'45 rue Carnot, 13001 Marseille',company:'Perret Auto',pwd:'pass456',role:'client',status:'active',avatar:'JP',discount:10},
@@ -1033,6 +1040,17 @@ let CATALOG_FILTERS=[
   {id:'f-str',   label:'LED strips',   value:'strips',   active:true,  locked:false},
 ];
 
+/* ══ CATALOGUES MULTI-ACCÈS ══ */
+/* Chaque catalogue a un id de droit. cat_luminaire est accordé par défaut à tous. */
+let CATALOGS=[
+  {id:'cat_luminaire', label:'Luminaires Auto', desc:'Phares, feux, strips LED & intérieur', color:'#00a8f3',
+   icon:'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z',
+   filterValue:'all'},
+  {id:'cat_divers', label:'Accessoires & Divers', desc:'Câblage, connectique, pièces détachées', color:'#f59e0b',
+   icon:'M4 6h16M4 10h16M4 14h16M4 18h16',
+   filterValue:'all'},
+];
+
 /* Tags technologie (sous-filtres par catégorie) */
 let TECH_TAGS=[
   {id:'t-led', label:'LED',      value:'led',      active:true},
@@ -1077,6 +1095,83 @@ let SHIPPING_SETTINGS={
 let HERO_DESIGN={titleText:'Achetez des\npièces premium',titleColor:'#ffffff',titleAccentColor:'#00a8f3',titleFont:'Cormorant Garamond',descText:'Trouvez la qualité authentique dont votre véhicule a besoin avec notre gamme complète de pièces automobiles adaptées à vos besoins.',descColor:'rgba(255,255,255,0.5)',tagText:'Luminaires Auto Premium · Certifié CE',deliveryText:'Livraison gratuite à partir de 125 \u20ac HTVA d\'achat',cta1Text:'Voir le catalogue',cta2Text:'Accès espace pro',overlayOpacity:0.5,videoBrightness:32};
 /* Encrypted users DB (base64 in localStorage) */
 const DB_KEY='dcorp_users_v1';
+/* ── LocalStorage keys — source de vérité unique ── */
+const LS_ORDERS   ='dcorp_orders_v1';
+const LS_PRODUCTS ='dcorp_products_v1';
+const LS_CATALOGS ='dcorp_catalogs_v1';
+const LS_HERO     ='dcorp_hero_v1';
+const LS_CONTACT  ='dcorp_contact_v1';
+const LS_SHIPPING ='dcorp_shipping_v1';
+const LS_BG       ='site_bg';
+
+/* ── Persistence helpers ── */
+function lsSave(key,val){try{localStorage.setItem(key,JSON.stringify(val));}catch(e){console.warn('LS save failed',key,e);}}
+function lsLoad(key,def){try{var v=localStorage.getItem(key);return v?JSON.parse(v):def;}catch(e){return def;}}
+
+/* ── Persist all mutable state to LS ── */
+function persistAll(){
+  lsSave(LS_ORDERS,ORDERS);
+  lsSave(LS_PRODUCTS,PRODUCTS);
+  lsSave(LS_CATALOGS,typeof CATALOGS!=='undefined'?CATALOGS:[]);
+  lsSave(LS_HERO,HERO_DESIGN);
+  lsSave(LS_CONTACT,CONTACT_INFO);
+  lsSave(LS_SHIPPING,SHIPPING_SETTINGS);
+  saveUsersDB();
+}
+
+/* ── Load all mutable state from LS (called on init + storage events) ── */
+function hydrateFromLS(){
+  var o=lsLoad(LS_ORDERS,null);   if(o)ORDERS=o;
+  var p=lsLoad(LS_PRODUCTS,null); if(p)PRODUCTS=p;
+  var c=lsLoad(LS_CATALOGS,null); if(c&&typeof CATALOGS!=='undefined')CATALOGS=c;
+  var h=lsLoad(LS_HERO,null);     if(h)Object.assign(HERO_DESIGN,h);
+  var ci=lsLoad(LS_CONTACT,null); if(ci)Object.assign(CONTACT_INFO,ci);
+  var sh=lsLoad(LS_SHIPPING,null);if(sh)Object.assign(SHIPPING_SETTINGS,sh);
+}
+
+/* ── syncAppData: rafraîchit l'UI après tout changement de données ── */
+function syncAppData(){
+  hydrateFromLS();
+  /* Rebuild any visible view */
+  renderCatalog(currentCatalogFilter||'all');
+  renderContactBanner&&renderContactBanner();
+  applyBgFromLS();
+  updateCartBadge&&updateCartBadge();
+  if(typeof adminCurrentTab!=='undefined'&&adminCurrentTab){
+    var renders2={dashboard:renderAdminDashboard,orders:renderAdminOrders,
+      clients:renderAdminClients,catalog:renderAdminCatalog,stock:renderAdminStock};
+    if(renders2[adminCurrentTab])renders2[adminCurrentTab]();
+  }
+}
+
+/* ── Cross-tab sync via storage event ── */
+window.addEventListener('storage',function(e){
+  if([LS_ORDERS,LS_PRODUCTS,LS_CATALOGS,LS_HERO,LS_CONTACT,LS_SHIPPING,DB_KEY].indexOf(e.key)>=0){
+    syncAppData();
+  }
+  if(e.key===LS_BG){applyBgFromLS();}
+});
+
+/* ── Background image from LS ── */
+function applyBgFromLS(){
+  var bg=null;try{bg=localStorage.getItem(LS_BG);}catch(e){}
+  if(bg&&bg.length>4){
+    document.body.style.backgroundImage='url('+bg+')';
+    document.body.style.backgroundSize='cover';
+    document.body.style.backgroundPosition='center';
+    document.body.style.backgroundAttachment='fixed';
+  }
+}
+function setBg(url){
+  try{localStorage.setItem(LS_BG,url);}catch(e){toast('Image trop grande pour le localStorage (max ~5MB)','error');return;}
+  applyBgFromLS();
+  toast('Fond d\'écran appliqué ✓','success');
+}
+function clearBg(){
+  try{localStorage.removeItem(LS_BG);}catch(e){}
+  document.body.style.backgroundImage='none';
+  toast('Fond d\'écran supprimé','info');
+}
 function saveUsersDB(){try{localStorage.setItem(DB_KEY,btoa(unescape(encodeURIComponent(JSON.stringify(USERS)))));}catch(e){}}
 function loadUsersDB(){try{const d=localStorage.getItem(DB_KEY);if(d){const p=JSON.parse(decodeURIComponent(escape(atob(d))));if(Array.isArray(p)&&p.length)USERS.splice(0,USERS.length,...p);}}catch(e){}}
 const RESET_TOKENS={};
@@ -1253,6 +1348,7 @@ function setLoggedIn(user){
   /* Masquer le CTA "Accès espace pro" */
   var cta2=document.getElementById('heroCta2');if(cta2)cta2.style.display='none';
   renderCatalog(currentCatalogFilter);updateCartBadge();renderUserNotifBell();
+  renderCatalogChooser();
   var db=document.getElementById('debugBlock');if(db)db.style.display=user.role==='admin'?'block':'none';
 }
 function logout(){
@@ -1301,7 +1397,7 @@ function renderUserNotifBell(){
   if(dc){dc.textContent=unread>0?unread:'';dc.style.display=unread>0?'inline':'none';}
   /* Render list */
   const list=document.getElementById('userNotifList');if(!list)return;
-  const typeIcons={order:'📦',status:'🔄',chat:'💬',email:'✉',system:'⚙'};
+  const typeIcons={order:'📦',contact:'✉',chat:'💬',status:'🔄',access:'👤'};
   const typeColors={order:'#00a8f3',status:'#22c55e',chat:'#a855f7',email:'#f59e0b',system:'#94a3b8'};
   if(!USER_NOTIFICATIONS.length){list.innerHTML='<div style="padding:1.2rem;text-align:center;color:rgba(255,255,255,.2);font-family:\'Exo 2\',sans-serif;font-size:.82rem">Aucune notification</div>';return;}
   list.innerHTML=USER_NOTIFICATIONS.slice(0,15).map(function(n){
@@ -1374,7 +1470,7 @@ function renderNotifBell(){
   if(!list)return;
   if(!NOTIFICATIONS.length){list.innerHTML='<div style="padding:1.2rem;text-align:center;color:rgba(255,255,255,.2);font-family:\'Exo 2\',sans-serif;font-size:.82rem">Aucune notification</div>';return;}
   const typeIcons={order:'📦',contact:'✉',chat:'💬',status:'🔄'};
-  const typeColors={order:'#00a8f3',contact:'#f97316',chat:'#a855f7',status:'#22c55e'};
+  const typeColors={order:'#00a8f3',contact:'#f97316',chat:'#a855f7',status:'#22c55e',access:'#f59e0b'};
   list.innerHTML=NOTIFICATIONS.slice(0,20).map(function(n){
     return '<div onclick="clickNotif(\''+n.id+'\')" style="padding:.85rem 1rem;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;background:'+(n.read?'transparent':'rgba(249,115,22,.04)')+';transition:background .2s;display:flex;gap:.75rem;align-items:flex-start"'
     +' onmouseover="this.style.background=\'rgba(255,255,255,.04)\'" onmouseout="this.style.background=\''+(n.read?'transparent':'rgba(249,115,22,.04)')+'\'">  '
@@ -1396,6 +1492,7 @@ function clickNotif(id){
   if(n.type==='chat'&&n.orderId){adminTab('chat');}
   else if(n.type==='order'||n.type==='status'){adminTab('orders');}
   else if(n.type==='contact'){adminTab('contacts');}
+  else if(n.type==='access'){adminTab('access');}
 }
 function markAllNotifRead(){NOTIFICATIONS.forEach(n=>n.read=true);renderNotifBell();}
 function toggleNotifPanel(){
@@ -1417,7 +1514,7 @@ function adminTab(name){
   adminCurrentTab=name;
   document.querySelectorAll('.a-nav-item').forEach(el=>el.classList.toggle('active',el.id===`anav-${name}`));
   const ct=document.getElementById('adminContent');
-  const renders={dashboard:renderAdminDashboard,orders:renderAdminOrders,clients:renderAdminClients,access:renderAdminAccess,pricing:renderAdminPricing,catalog:renderAdminCatalog,hero:renderAdminHero,modeles:renderAdminModeles,contacts:renderAdminContacts,emailsettings:renderAdminEmailSettings,herodesign:renderAdminHeroDesign,chat:renderAdminChat,shipping:renderAdminShipping,contactinfo:renderAdminContactInfo,stock:renderAdminStock};
+  const renders={dashboard:renderAdminDashboard,orders:renderAdminOrders,clients:renderAdminClients,access:renderAdminAccess,pricing:renderAdminPricing,catalog:renderAdminCatalog,hero:renderAdminHero,modeles:renderAdminModeles,contacts:renderAdminContacts,emailsettings:renderAdminEmailSettings,herodesign:renderAdminHeroDesign,chat:renderAdminChat,shipping:renderAdminShipping,contactinfo:renderAdminContactInfo,stock:renderAdminStock,catalogs:renderAdminCatalogs};
   if(renders[name])renders[name]();
 }
 
@@ -2666,13 +2763,27 @@ function genererEtEnvoyer(docType, orderId, acomptePct){
     openMailto();
   }
 }
-
-/* ── sendDocumentEmail — now delegates to genererEtEnvoyer ── */
+/* ── Email helpers ── */
+function getAdminEmail(){
+  var ls=null;try{ls=localStorage.getItem('email_admin');}catch(e){}
+  if(ls&&ls.indexOf('@')>0)return ls.trim();
+  return getSenderEmail();
+}
+function encodeGmail(str){
+  return encodeURIComponent(str).replace(/%0A/g,'%0D%0A');
+}
+function buildGmailUrl(to,subject,body,from){
+  var url='https://mail.google.com/mail/?view=cm&fs=1';
+  url+='&to='+encodeURIComponent(to);
+  if(from)url+='&from='+encodeURIComponent(from);
+  url+='&su='+encodeGmail(subject);
+  url+='&body='+encodeGmail(body);
+  return url;
+}
 function sendDocumentEmail(){
   var ordId=document.getElementById('pdf-order')&&document.getElementById('pdf-order').value;
-  if(!ordId){toast('Sélectionnez une commande','error');return;}
   var pct=document.getElementById('pdf-pct')&&document.getElementById('pdf-pct').value;
-  genererEtEnvoyer(window._pdfType||'facture', ordId, pct||30);
+  traiterDocument(window._pdfType||'facture','mailto','',pct||30);
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -2703,7 +2814,7 @@ function traiterDocument(type, methode){
 
   /* Signature */
   var ci=CONTACT_INFO||{};
-  var senderEmail=getSenderEmail();
+  var senderEmail=getAdminEmail();
   emailBody+='\n\n──────────────────────────────\n'
     +(ci.companyName||'De Cooman Racing Performance')
     +'\n'+senderEmail
@@ -3659,6 +3770,19 @@ function openCheckout(){
     }).join('');
   }
   document.getElementById('coSummary').textContent=fmtN(count)+' article(s) · '+fmt(cartHT())+' HT';
+  /* Wire send-method radio buttons for visual highlight */
+  function updateSendMethodStyle(){
+    var siteActive=document.getElementById('sendSite')&&document.getElementById('sendSite').checked;
+    var sl=document.getElementById('sendSiteLbl');
+    var el=document.getElementById('sendEmailLbl');
+    if(sl){sl.style.borderColor=siteActive?'rgba(0,168,243,.55)':'rgba(255,255,255,.08)';sl.style.background=siteActive?'rgba(0,168,243,.1)':'rgba(255,255,255,.02)';}
+    if(el){el.style.borderColor=!siteActive?'rgba(0,168,243,.55)':'rgba(255,255,255,.08)';el.style.background=!siteActive?'rgba(0,168,243,.1)':'rgba(255,255,255,.02)';}
+    var st=sl&&sl.querySelector('p');var et=el&&el.querySelector('p');
+    if(st)st.style.color=siteActive?'#00a8f3':'rgba(255,255,255,.5)';
+    if(et)et.style.color=!siteActive?'#00a8f3':'rgba(255,255,255,.5)';
+  }
+  document.querySelectorAll('input[name="coSendMethod"]').forEach(function(r){r.onchange=updateSendMethodStyle;});
+  updateSendMethodStyle();
   updateCheckoutShipping();
   openOverlay('checkout');
 }
@@ -3727,6 +3851,7 @@ function doCheckout(){
     stockDeducted:false
   };
   ORDERS.unshift(order);
+  persistAll(); /* sync to localStorage immediately — visible to admin cross-tab */
   const totalTTC=(ht+shippingCostHT)*(1+TVA);
   addNotif('order','Nouvelle commande '+order.id,order.userName+' — '+fmt(totalTTC)+' TTC · '+order.payment,order.id);
   addUserNotif('order','Commande '+order.id+' confirmée','Votre commande a bien été enregistrée. Total TTC : '+fmt(totalTTC),order.id);
@@ -3941,11 +4066,22 @@ function showOrderDetail(orderId){
 }
 function adminUpdateStatus(orderId,status){
   const o=ORDERS.find(x=>x.id===orderId);if(!o)return;
-  o.status=status;o.history.push({date:today(),s:status,n:'Statut → '+SL[status]});
+  o.status=status;
+  o.history.push({date:today(),s:status,n:'Statut → '+SL[status]});
+  /* Sync workflow step to match the new status */
+  var statusToStep={pending:'received',confirmed:'prep',shipped:'shipped',delivered:'delivered',cancelled:null};
+  var targetStep=statusToStep[status];
+  if(targetStep&&!(o.steps||[]).find(function(s){return s.step===targetStep;})){
+    if(!o.steps)o.steps=[];
+    o.steps.push({step:targetStep,ts:new Date().toISOString(),by:currentUser?currentUser.id:'admin'});
+  }
   addNotif('status','Commande '+orderId+' mise à jour','Nouveau statut : '+SL[status]+' — '+o.userName,orderId);
   addUserNotif('status','Commande '+orderId+' — '+SL[status],'Votre commande a été mise à jour par notre équipe',orderId);
-  closeOverlay('orderDetail');toast('Commande '+orderId+' → '+SL[status],'success');
-  if(adminCurrentTab==='orders')renderAdminOrders();if(adminCurrentTab==='dashboard')renderAdminDashboard();
+  persistAll(); /* sync to LS so client sees update without refresh */
+  closeOverlay('orderDetail');
+  toast('Commande '+orderId+' → '+SL[status],'success');
+  if(adminCurrentTab==='orders')renderAdminOrders();
+  if(adminCurrentTab==='dashboard')renderAdminDashboard();
 }
 
 /* ══ PRINT ══ */
@@ -4107,13 +4243,75 @@ function renderAdminHero(){
         <li>• La vidéo est muette et assombrie automatiquement (filtre brightness 38%)</li>
       </ul>
     </div>`;
+
+  /* ── Site background image manager (site_bg localStorage) ── */
+  var bgSection='<div class="card p-5 mt-5">'
+    +'<p class="font-display font-bold text-white tracking-wide mb-1">Fond d\'écran global (site_bg)</p>'
+    +'<p style="font-family:Inter,sans-serif;font-size:.75rem;color:rgba(255,255,255,.35);margin-bottom:.85rem">Image appliquée sur tout le site via localStorage. URL ou Base64.</p>'
+    +'<div style="display:flex;gap:.5rem;margin-bottom:.6rem">'
+      +'<input type="text" id="bg-url-inp" class="fi" style="flex:1;font-size:.82rem" placeholder="https://... ou data:image/..."/>'
+      +'<button class="btn btn-primary btn-sm" onclick="var v=document.getElementById(\'bg-url-inp\').value.trim();if(v)setBg(v)">Appliquer</button>'
+      +'<button class="btn btn-ghost btn-sm" onclick="clearBg();document.getElementById(\'bg-url-inp\').value=\'\';document.getElementById(\'bg-prev\').style.display=\'none\'">Supprimer</button>'
+    +'</div>'
+    +'<div id="bg-prev" style="display:none;height:100px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background-size:cover;background-position:center"></div>'
+    +'</div>';
+  ct.innerHTML+=bgSection;
+  /* Populate preview if bg already set */
+  var _curBg=null;try{_curBg=localStorage.getItem('site_bg');}catch(e){}
+  if(_curBg){
+    var _inp=document.getElementById('bg-url-inp');
+    if(_inp)_inp.value=_curBg.length>60?'(Base64 actif — '+Math.round(_curBg.length/1024)+'KB)':_curBg;
+    var _pr=document.getElementById('bg-prev');
+    if(_pr){_pr.style.display='block';_pr.style.backgroundImage='url('+_curBg+')';}
+  }
+  var _bInp=document.getElementById('bg-url-inp');
+  if(_bInp)_bInp.addEventListener('input',function(){
+    var _pr2=document.getElementById('bg-prev'),v=this.value.trim();
+    if(_pr2&&v.length>4){_pr2.style.display='block';_pr2.style.backgroundImage='url('+v+')';}
+    else if(_pr2)_pr2.style.display='none';
+  });
 }
 
 /* ══ renderAdminContacts ══ */
+
+function markMsgRead(id){var m=CONTACT_MESSAGES.find(function(x){return x.id===id;});if(m){m.read=true;updateAdminCounters();renderAdminContacts();}}
 function renderAdminContacts(){
-  const ct=document.getElementById('adminContent');
-  const unread=CONTACT_MESSAGES.filter(m=>!m.read).length;
-  ct.innerHTML='<div class="flex items-center justify-between mb-5"><div><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Communications</p><h2 class="font-display text-2xl font-bold text-white uppercase">Messagerie <span style="color:#00a8f3">contact</span></h2></div>'+(CONTACT_MESSAGES.length?'<button class="btn btn-ghost btn-sm" onclick="markAllRead()">Tout marquer lu</button>':'')+'</div>'+(CONTACT_MESSAGES.length===0?'<div class="empty-state"><svg class="w-14 h-14 mx-auto mb-3" fill="none" stroke="rgba(0,168,243,.2)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg><p class="text-white/40 font-display font-bold text-xl mb-1">Aucun message</p><p>Les messages du formulaire de contact apparaîtront ici.</p></div>':CONTACT_MESSAGES.map(function(msg){return '<div class="card p-5 mb-3" style="'+(msg.read?'':'border-color:rgba(0,168,243,.3);background:rgba(0,168,243,.03)')+'"><div class="flex items-start justify-between gap-3 mb-3"><div><p class="font-display font-bold text-white">'+msg.first+' '+msg.last+' <span style="color:rgba(255,255,255,.35);font-weight:400;font-size:.85rem">&lt;'+msg.email+'&gt;</span></p><p class="text-white/35 text-xs mt-0.5">Sujet : <strong class="text-white/55">'+msg.subject+'</strong> &middot; '+msg.date+'</p></div><div class="flex gap-2 flex-shrink-0">'+(msg.read?'':'<span class="badge badge-confirmed">Nouveau</span>')+'<button class="btn btn-ghost btn-xs" onclick="markRead(\''+msg.id+'\')">Marquer lu</button><button class="btn btn-primary btn-xs" onclick="replyMsg(\''+msg.id+'\')">Répondre</button></div></div><div style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.05);border-radius:8px;padding:.8rem 1rem;font-family:\'Exo 2\',sans-serif;font-size:.83rem;color:rgba(255,255,255,.6);white-space:pre-wrap;line-height:1.7">'+msg.message.replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div></div>';}).join(''));
+  var ct=document.getElementById('adminContent');
+  var unread=CONTACT_MESSAGES.filter(function(m){return !m.read;}).length;
+  var html='<div class="flex items-center justify-between mb-5">'
+    +'<div><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Messagerie</p>'
+    +'<h2 class="font-display text-2xl font-bold text-white uppercase">Messages <span style="color:#00a8f3">Contact</span></h2>'
+    +(unread>0?'<p class="text-white/40 text-sm mt-1">'+unread+' message'+(unread>1?'s':'')+' non lu'+(unread>1?'s':'')+'</p>':'')
+    +'</div>'
+    +'<button class="btn btn-ghost btn-sm" onclick="CONTACT_MESSAGES.forEach(function(m){m.read=true;});updateAdminCounters();renderAdminContacts()">Tout marquer lu</button>'
+    +'</div>';
+  if(!CONTACT_MESSAGES.length){
+    html+='<div class="card p-8 text-center"><p style="color:rgba(255,255,255,.3);font-family:Inter,sans-serif">Aucun message</p></div>';
+    ct.innerHTML=html;return;
+  }
+  html+=CONTACT_MESSAGES.map(function(m){
+    var adminEmail=(typeof getAdminEmail==='function'?getAdminEmail():getSenderEmail());
+    var replySubj='Re: '+m.subject+' — '+m.first+' '+m.last;
+    var replyBody='Bonjour '+m.first+',\n\nMerci de nous avoir contactes.\n\nVotre message du '+m.date+' :\n> '+m.message.replace(/\n/g,'\n> ')+'\n\nCordialement,\n'+((CONTACT_INFO&&CONTACT_INFO.companyName)||'De Cooman Racing Performance');
+    var mailtoHref='mailto:'+m.email+'?cc='+encodeURIComponent(adminEmail)+'&subject='+encodeURIComponent(replySubj)+'&body='+encodeURIComponent(replyBody);
+    var gmailHref=(typeof buildGmailUrl==='function'?buildGmailUrl(m.email,replySubj,replyBody,adminEmail):'https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent(m.email));
+    var borderLeft=m.read?'':'border-left:3px solid #00a8f3';
+    return '<div class="card p-5 mb-3" style="'+borderLeft+'">'
+      +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:.6rem">'
+        +'<div><p style="font-family:Inter,sans-serif;font-weight:700;font-size:.88rem;color:white">'+m.first+' '+m.last+'</p>'
+          +'<p style="font-family:Inter,sans-serif;font-size:.72rem;color:rgba(0,168,243,.7)">'+m.email+'</p>'
+          +'<p style="font-family:Inter,sans-serif;font-size:.68rem;color:rgba(255,255,255,.3);margin-top:1px">'+m.date+' · '+m.subject+'</p></div>'
+        +(m.read?'':'<span style="font-size:.62rem;font-weight:700;color:#00a8f3;background:rgba(0,168,243,.1);border-radius:4px;padding:2px 8px">NOUVEAU</span>')
+      +'</div>'
+      +'<p style="font-family:Inter,sans-serif;font-size:.8rem;color:rgba(255,255,255,.55);line-height:1.6;white-space:pre-wrap;margin-bottom:.8rem">'+m.message+'</p>'
+      +'<div style="display:flex;gap:.5rem;flex-wrap:wrap">'
+        +(m.read?'':'<button onclick="markMsgRead(\''+m.id+'\')" class="btn btn-ghost btn-xs">\u2713 Lu</button>')
+        +'<a href="'+mailtoHref+'" class="btn-reply-mail">&#9993; Répondre (Mail)</a>'
+        +'<a href="'+gmailHref+'" target="_blank" rel="noopener noreferrer" class="btn-reply-gmail">&#9993; Répondre (Gmail)</a>'
+      +'</div>'
+    +'</div>';
+  }).join('');
+  ct.innerHTML=html;
 }
 
 /* ══ renderAdminEmailSettings ══ */
@@ -4208,11 +4406,6 @@ function renderAdminChat(){
   }
 }
 
-function renderAdminContacts(){
-  const ct=document.getElementById('adminContent');
-  const unread=CONTACT_MESSAGES.filter(m=>!m.read).length;
-  ct.innerHTML='<div class="flex items-center justify-between mb-5"><div><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Communications</p><h2 class="font-display text-2xl font-bold text-white uppercase">Messagerie <span style="color:#00a8f3">contact</span></h2></div>'+(CONTACT_MESSAGES.length?'<button class="btn btn-ghost btn-sm" onclick="markAllRead()">Tout marquer lu</button>':'')+'</div>'+(CONTACT_MESSAGES.length===0?'<div class="empty-state"><svg class="w-14 h-14 mx-auto mb-3" fill="none" stroke="rgba(0,168,243,.2)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg><p class="text-white/40 font-display font-bold text-xl mb-1">Aucun message</p><p>Les messages du formulaire de contact apparaîtront ici.</p></div>':CONTACT_MESSAGES.map(function(msg){return '<div class="card p-5 mb-3" style="'+(msg.read?'':'border-color:rgba(0,168,243,.3);background:rgba(0,168,243,.03)')+'"><div class="flex items-start justify-between gap-3 mb-3"><div><p class="font-display font-bold text-white">'+msg.first+' '+msg.last+' <span style="color:rgba(255,255,255,.35);font-weight:400;font-size:.85rem">&lt;'+msg.email+'&gt;</span></p><p class="text-white/35 text-xs mt-0.5">Sujet : <strong class="text-white/55">'+msg.subject+'</strong> &middot; '+msg.date+'</p></div><div class="flex gap-2 flex-shrink-0">'+(msg.read?'':'<span class="badge badge-confirmed">Nouveau</span>')+'<button class="btn btn-ghost btn-xs" onclick="markRead(\''+msg.id+'\')">Marquer lu</button><button class="btn btn-primary btn-xs" onclick="replyMsg(\''+msg.id+'\')">Répondre</button></div></div><div style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.05);border-radius:8px;padding:.8rem 1rem;font-family:\'Exo 2\',sans-serif;font-size:.83rem;color:rgba(255,255,255,.6);white-space:pre-wrap;line-height:1.7">'+msg.message.replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div></div>';}).join(''));
-}
 function renderAdminEmailSettings(){
   const ct=document.getElementById('adminContent');
   ct.innerHTML='<div class="mb-5"><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Communications</p><h2 class="font-display text-2xl font-bold text-white uppercase">Paramètres <span style="color:#00a8f3">email</span></h2><p class="text-white/35 text-sm mt-1">Configurez les destinataires des notifications</p></div><div class="card p-6 max-w-2xl"><div class="space-y-5"><div><label class="fl">Email réception — commandes</label><p class="text-white/30 text-xs mb-1.5">Reçoit les notifications de nouvelles commandes (mode Site+Email)</p><input type="email" id="es-orderNotif" class="fi" value="'+EMAIL_SETTINGS.orderNotif+'"/></div><div><label class="fl">Email réception — messages contact</label><p class="text-white/30 text-xs mb-1.5">Reçoit les messages du formulaire de contact</p><input type="email" id="es-contactNotif" class="fi" value="'+EMAIL_SETTINGS.contactNotif+'"/></div><div><label class="fl">CC systématique sur les documents</label><input type="email" id="es-docCc" class="fi" value="'+EMAIL_SETTINGS.docCc+'"/></div><div><label class="fl">Nom de l\'expéditeur</label><input type="text" id="es-senderName" class="fi" value="'+EMAIL_SETTINGS.senderName+'"/></div><div style="background:rgba(0,168,243,.04);border:1px solid rgba(0,168,243,.1);border-radius:10px;padding:.8rem 1rem"><p style="font-family:\'Rajdhani\',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,168,243,.6);margin-bottom:.4rem">ⓘ Note</p><p style="font-family:\'Exo 2\',sans-serif;font-size:.75rem;color:rgba(255,255,255,.3);line-height:1.7">Les emails utilisent votre client mail (mailto:). Pour l\'envoi automatique intégrez EmailJS ou un backend SMTP.</p></div><button class="btn btn-primary" onclick="saveEmailSettings()"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Enregistrer</button></div></div>';
@@ -4588,6 +4781,7 @@ function wfAdminValidate(orderId,stepId){
   }
   addUserNotif('status','Commande '+orderId+' — mise à jour',
     'Étape "'+( WORKFLOW_STEPS_DEF.find(function(d){return d.id===stepId;})||{label:stepId}).label+'" validée',orderId);
+  persistAll(); /* sync to LS */
   toast('Étape validée ✓','success');
   /* Re-render if admin is viewing this order */
   if(document.getElementById('wfPanel-'+orderId))renderWorkflowAdmin(orderId);
@@ -4859,6 +5053,157 @@ function stockRemoveManualUI(pid){
   if(rea)rea.value='';
 }
 
+/* ══════════════════════════════════════════════════════════════
+   CATALOGUES MULTI-ACCÈS
+══════════════════════════════════════════════════════════════ */
+
+/* Returns the list of catalog IDs the current user can access */
+function getUserCatalogs(){
+  if(!currentUser)return [];
+  /* If user has explicit catalogs list, use it; otherwise default to cat_luminaire */
+  var cats=currentUser.catalogs||['cat_luminaire'];
+  return cats;
+}
+
+/* Render the catalog chooser cards above the product grid */
+function renderCatalogChooser(){
+  var el=document.getElementById('catalogChooser');if(!el)return;
+  var allowedIds=getUserCatalogs();
+  var available=CATALOGS.filter(function(c){return allowedIds.indexOf(c.id)>=0;});
+
+  if(available.length<=1){
+    /* Single catalog or none — hide chooser, just show the grid */
+    el.style.display='none';
+    return;
+  }
+
+  el.style.display='block';
+  /* Responsive grid: 1 col if 1, 2 cols if 2, 3+ cols if 3+ */
+  var cols=available.length>=3?'repeat(3,1fr)':available.length===2?'repeat(2,1fr)':'1fr';
+
+  el.innerHTML='<p class="fl mb-3">Choisissez votre catalogue</p>'
+    +'<div style="display:grid;grid-template-columns:'+cols+';gap:1rem">'
+    +available.map(function(c){
+      var isActive=window._activeCatalogId===c.id;
+      return '<div onclick="selectCatalog(\''+c.id+'\')" style="'
+        +'cursor:pointer;padding:1.2rem 1.4rem;border-radius:14px;border:2px solid '+(isActive?c.color:'rgba(255,255,255,.08)')+';'
+        +'background:'+(isActive?'rgba('+hexToRgbStr(c.color||'#00a8f3')+', .08)':'rgba(255,255,255,.02)')+';'
+        +'transition:all .25s;display:flex;flex-direction:column;gap:.5rem" '
+        +'onmouseover="this.style.borderColor=\''+c.color+'\';this.style.background=\'rgba('+hexToRgbStr(c.color||'#00a8f3')+', .06)\'" '
+        +'onmouseout="if(window._activeCatalogId!==\''+c.id+'\'){this.style.borderColor=\'rgba(255,255,255,.08)\';this.style.background=\'rgba(255,255,255,.02)\'}">'
+        +'<div style="display:flex;align-items:center;gap:.75rem">'
+          +'<div style="width:40px;height:40px;border-radius:10px;background:rgba('+hexToRgbStr(c.color||'#00a8f3')+', .12);border:1px solid rgba('+hexToRgbStr(c.color||'#00a8f3')+', .25);display:flex;align-items:center;justify-content:center;flex-shrink:0">'
+            +'<svg style="width:18px;height:18px;color:'+c.color+'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="'+c.icon+'"/></svg>'
+          +'</div>'
+          +'<div>'
+            +'<p style="font-family:\'Bebas Neue\',sans-serif;font-size:1rem;letter-spacing:.06em;color:white">'+c.label+'</p>'
+            +'<p style="font-family:Inter,sans-serif;font-size:.72rem;color:rgba(255,255,255,.4)">'+c.desc+'</p>'
+          +'</div>'
+        +'</div>'
+        +(isActive?'<div style="font-family:Inter,sans-serif;font-size:.65rem;font-weight:700;color:'+c.color+';letter-spacing:.1em;text-transform:uppercase">✓ Catalogue actif</div>':'')
+      +'</div>';
+    }).join('')
+    +'</div>';
+}
+
+function selectCatalog(catId){
+  var cat=CATALOGS.find(function(c){return c.id===catId;});if(!cat)return;
+  window._activeCatalogId=catId;
+  /* Apply the catalog's filter to the product grid */
+  renderCatalog(cat.filterValue||'all');
+  renderCatalogChooser();
+}
+
+/* ══ ADMIN: CATALOGUES ══ */
+function renderAdminCatalogs(){
+  var ct=document.getElementById('adminContent');
+
+  var catRows=CATALOGS.map(function(c,idx){
+    return '<div style="display:flex;align-items:center;gap:.65rem;padding:.7rem .9rem;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:10px;flex-wrap:wrap" id="acat-'+c.id+'">'
+      /* Color dot */
+      +'<div style="width:14px;height:14px;border-radius:50%;background:'+c.color+';flex-shrink:0"></div>'
+      /* Label */
+      +'<input type="text" value="'+c.label+'" placeholder="Nom du catalogue" style="flex:1;min-width:120px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:white;padding:4px 9px;font-family:Inter,sans-serif;font-size:.82rem" oninput="CATALOGS['+idx+'].label=this.value;persistAll()" />'
+      /* ID (readonly) */
+      +'<code style="font-family:Courier New,monospace;font-size:.7rem;color:rgba(255,255,255,.3);background:rgba(0,0,0,.3);padding:3px 7px;border-radius:5px;flex-shrink:0">'+c.id+'</code>'
+      /* Description */
+      +'<input type="text" value="'+c.desc+'" placeholder="Description" style="flex:2;min-width:160px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:rgba(255,255,255,.6);padding:4px 9px;font-family:Inter,sans-serif;font-size:.78rem" oninput="CATALOGS['+idx+'].desc=this.value;persistAll()" />'
+      /* Color picker */
+      +'<input type="color" value="'+c.color+'" title="Couleur" style="width:32px;height:32px;border:none;border-radius:6px;cursor:pointer;background:none;padding:0" oninput="CATALOGS['+idx+'].color=this.value;persistAll()" />'
+      /* Delete */
+      +'<button onclick="deleteCatalog(\''+c.id+'\')" style="background:none;border:1px solid rgba(239,68,68,.2);border-radius:6px;cursor:pointer;color:rgba(239,68,68,.5);padding:4px 9px;font-size:.78rem" onmouseover="this.style.color=\'#ef4444\'" onmouseout="this.style.color=\'rgba(239,68,68,.5)\'">×</button>'
+    +'</div>';
+  }).join('');
+
+  ct.innerHTML='<div class="flex items-center justify-between mb-5">'
+    +'<div><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Structure</p>'
+    +'<h2 class="font-display text-2xl font-bold text-white uppercase">Catalogues <span style="color:#00a8f3">& Accès</span></h2>'
+    +'<p class="text-white/35 text-sm mt-1">Gérez les catalogues et les droits d\'accès clients</p></div>'
+    +'<button class="btn btn-primary btn-sm" onclick="addCatalog()">'
+      +'<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>Nouveau catalogue</button>'
+    +'</div>'
+
+    /* Catalog list */
+    +'<div class="card p-5 mb-5">'
+    +'<p class="fl mb-3">Catalogues disponibles</p>'
+    +'<div style="display:flex;flex-direction:column;gap:.45rem" id="acatList">'+catRows+'</div>'
+    +'</div>'
+
+    /* Default access note */
+    +'<div class="card p-5 mb-5" style="border-color:rgba(0,168,243,.15)">'
+    +'<p class="fl mb-1">Règle d\'accès par défaut</p>'
+    +'<p style="font-family:Inter,sans-serif;font-size:.78rem;color:rgba(255,255,255,.4)">Tous les nouveaux clients reçoivent automatiquement l\'accès <code style="color:#00a8f3">cat_luminaire</code>. Les accès supplémentaires se gèrent dans chaque fiche client.</p>'
+    +'</div>'
+
+    /* Access by client table */
+    +'<div class="card p-5">'
+    +'<p class="fl mb-3">Accès par client</p>'
+    +'<div style="display:flex;flex-direction:column;gap:.35rem">'
+    +USERS.filter(function(u){return u.role==='client';}).map(function(u){
+      var cats=u.catalogs||['cat_luminaire'];
+      return '<div style="display:flex;align-items:center;gap:.65rem;padding:.55rem .85rem;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:9px;flex-wrap:wrap">'
+        +'<span style="font-family:Inter,sans-serif;font-size:.82rem;color:white;min-width:140px">'+u.first+' '+u.last+'</span>'
+        +'<span style="font-family:Inter,sans-serif;font-size:.72rem;color:rgba(255,255,255,.35);flex:1">'+u.email+'</span>'
+        +'<div style="display:flex;gap:.3rem;flex-wrap:wrap">'
+        +CATALOGS.map(function(c){
+          var has=cats.indexOf(c.id)>=0;
+          return '<button onclick="toggleClientCatalog(\''+u.id+'\',\''+c.id+'\')" style="font-family:Inter,sans-serif;font-size:.68rem;font-weight:600;padding:3px 9px;border-radius:5px;cursor:pointer;transition:all .2s;border:1px solid '+(has?c.color+'88':'rgba(255,255,255,.1)')+';background:'+(has?'rgba('+hexToRgbStr(c.color||'#00a8f3')+', .12)':'rgba(255,255,255,.03)')+';color:'+(has?c.color:'rgba(255,255,255,.3)')+'">'+(has?'✓ ':'+ ')+c.label+'</button>';
+        }).join('')
+        +'</div></div>';
+    }).join('')
+    +'</div></div>';
+}
+
+function addCatalog(){
+  var newId='cat_'+Date.now().toString().slice(-5);
+  CATALOGS.push({id:newId,label:'Nouveau catalogue',desc:'Description...',color:'#00a8f3',icon:'M4 6h16M4 10h16M4 14h16M4 18h16',filterValue:'all'});
+  persistAll();
+  renderAdminCatalogs();
+  toast('Catalogue ajouté — modifiez son nom','success');
+}
+function deleteCatalog(catId){
+  if(catId==='cat_luminaire'){toast('Le catalogue principal ne peut pas être supprimé','error');return;}
+  CATALOGS=CATALOGS.filter(function(c){return c.id!==catId;});
+  /* Remove from all users */
+  USERS.forEach(function(u){if(u.catalogs)u.catalogs=u.catalogs.filter(function(c){return c!==catId;});});
+  persistAll();renderAdminCatalogs();
+  toast('Catalogue supprimé','info');
+}
+function toggleClientCatalog(userId,catId){
+  var u=USERS.find(function(x){return x.id===userId;});if(!u)return;
+  if(!u.catalogs)u.catalogs=['cat_luminaire'];
+  var idx=u.catalogs.indexOf(catId);
+  if(idx>=0){
+    if(catId==='cat_luminaire'){toast('L\'accès cat_luminaire est obligatoire','error');return;}
+    u.catalogs.splice(idx,1);
+  } else {
+    u.catalogs.push(catId);
+  }
+  saveUsersDB();persistAll();
+  renderAdminCatalogs();
+  toast('Accès mis à jour pour '+u.first,'success');
+}
+
 /* ══ FAQ ══ */
 const FAQS=[
   {q:'Comment fonctionne l\'achat en gros ?',a:'Cliquez sur un produit → sélectionnez votre quantité (boutons rapides 10/100/500/1000 ou saisie libre) → le prix HT, TVA et TTC se calculent instantanément.'},
@@ -4883,6 +5228,8 @@ function initReveal(){const io=new IntersectionObserver(en=>en.forEach(e=>{if(e.
 /* ══ INIT ══ */
 document.addEventListener('DOMContentLoaded',function(){
   loadUsersDB();
+  hydrateFromLS();
+  applyBgFromLS();
   renderCatalog('all');
   syncPublicFilters();
   renderFaq();
@@ -4894,3 +5241,7 @@ document.addEventListener('DOMContentLoaded',function(){
 </script>
 </body>
 </html>
+.btn-reply-mail{display:inline-flex;align-items:center;gap:.35rem;padding:.35rem .8rem;border-radius:7px;border:1px solid rgba(0,168,243,.3);background:rgba(0,168,243,.07);color:#00a8f3;font-family:Inter,sans-serif;font-weight:600;font-size:.72rem;text-decoration:none;transition:background .2s}
+.btn-reply-mail:hover{background:rgba(0,168,243,.15)}
+.btn-reply-gmail{display:inline-flex;align-items:center;gap:.35rem;padding:.35rem .8rem;border-radius:7px;border:1px solid rgba(234,67,53,.3);background:rgba(234,67,53,.07);color:#ea4335;font-family:Inter,sans-serif;font-weight:600;font-size:.72rem;text-decoration:none;transition:background .2s}
+.btn-reply-gmail:hover{background:rgba(234,67,53,.15)}
