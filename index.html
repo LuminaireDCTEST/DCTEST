@@ -905,6 +905,15 @@ textarea.fi{resize:vertical}
           <select id="ep-tech" class="fi"><option value="led">LED</option><option value="halogene">Halogène</option><option value="xenon">Xénon</option><option value="culotB22">Culot B22</option><option value="">Non spécifié</option></select>
         </div>
         <div><label class="fl">Badge (optionnel)</label><input type="text" id="ep-badge" class="fi" placeholder="Best-seller, Pro..."/></div>
+        <!-- Catalogue d'appartenance — obligatoire -->
+        <div style="background:rgba(0,168,243,.05);border:1px solid rgba(0,168,243,.15);border-radius:9px;padding:.7rem 1rem">
+          <label class="fl" style="color:#00a8f3;margin-bottom:.4rem">Catalogue * <span style="font-weight:400;color:rgba(255,255,255,.3);text-transform:none;font-size:.7rem">(obligatoire)</span></label>
+          <select id="ep-catalog" class="fi" style="font-weight:700">
+            <option value="">— Choisir un catalogue —</option>
+            <option value="cat_luminaire">🔵 Luminaires Auto</option>
+            <option value="cat_divers">🟡 Accessoires & Divers</option>
+          </select>
+        </div>
       </div>
       <div class="flex items-center gap-3">
         <label class="flex items-center gap-2 cursor-pointer">
@@ -1033,22 +1042,26 @@ let pendingRequests = [
   {id:'req3',first:'Romain',last:'Vasseur',email:'romain@rally.fr',tel:'+33 6 11 22 33 44',addr:'5 rue du Rallye, 33000 Bordeaux',company:'Rally Shop',reason:'Distribution LED',date:'2025-03-31'},
 ];
 let PRODUCTS = [
-  {id:1,name:'Kit Phares LED H7 Xenon+',cat:'phares',tech:'led',price:89.90,ref:'LED-H7-001',badge:'Best-seller',isNew:false,img:'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=400&h=280&fit=crop',
+  {id:1,name:'Kit Phares LED H7 Xenon+',cat:'phares',tech:'led',catalog_id:'cat_luminaire',price:89.90,ref:'LED-H7-001',badge:'Best-seller',isNew:false,img:'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=400&h=280&fit=crop',stock:250,
    volumeDiscounts:[{qty:10,pct:0},{qty:100,pct:0.5},{qty:250,pct:1},{qty:500,pct:1.5},{qty:1000,pct:2},{qty:2000,pct:3}]},
-  {id:2,name:'Feux Arrière LED Dynamiques',cat:'feux',tech:'led',price:124.00,ref:'FAR-DYN-002',badge:null,isNew:true,img:'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=400&h=280&fit=crop',
+  {id:2,name:'Feux Arrière LED Dynamiques',cat:'feux',tech:'led',catalog_id:'cat_luminaire',price:124.00,ref:'FAR-DYN-002',badge:null,isNew:true,img:'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=400&h=280&fit=crop',stock:120,
    volumeDiscounts:[{qty:10,pct:0},{qty:100,pct:0.5},{qty:250,pct:1},{qty:500,pct:1.5},{qty:1000,pct:2},{qty:2000,pct:3}]},
-  {id:3,name:'Ampoules Intérieur RGB 12V',cat:'interieur',tech:'led',price:34.50,ref:'RGB-INT-003',badge:'Pack duo',isNew:false,img:'https://images.unsplash.com/photo-1617814076668-8dfc6fe3b744?w=400&h=280&fit=crop',
+  {id:3,name:'Ampoules Intérieur RGB 12V',cat:'interieur',tech:'led',catalog_id:'cat_luminaire',price:34.50,ref:'RGB-INT-003',badge:'Pack duo',isNew:false,img:'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400&h=280&fit=crop',stock:500,
    volumeDiscounts:[{qty:10,pct:0},{qty:100,pct:0.5},{qty:250,pct:1},{qty:500,pct:1.5},{qty:1000,pct:2},{qty:2000,pct:3}]},
-  {id:4,name:'LED Strip Under-Glow 5m',cat:'strips',tech:'led',price:49.90,ref:'STR-UG-004',badge:null,isNew:true,img:'https://images.unsplash.com/photo-1563198804-b144dfc1661c?w=400&h=280&fit=crop',
+  {id:4,name:'LED Strip Under-Glow 5m',cat:'strips',tech:'led',catalog_id:'cat_luminaire',price:49.90,ref:'STR-UG-004',badge:null,isNew:true,img:'https://images.unsplash.com/photo-1563198804-b144dfc1661c?w=400&h=280&fit=crop',stock:180,
    volumeDiscounts:[{qty:10,pct:0},{qty:100,pct:0.5},{qty:250,pct:1},{qty:500,pct:1.5},{qty:1000,pct:2},{qty:2000,pct:3}]},
-  {id:5,name:'Phares Angel Eyes BMW',cat:'phares',tech:'xenon',price:210.00,ref:'ANG-BMW-005',badge:'Pro',isNew:false,img:'https://images.unsplash.com/photo-1504215680853-026ed2a45def?w=400&h=280&fit=crop',
+  {id:5,name:'Phares Angel Eyes BMW',cat:'phares',tech:'xenon',catalog_id:'cat_luminaire',price:210.00,ref:'ANG-BMW-005',badge:'Pro',isNew:false,img:'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=400&h=280&fit=crop',stock:60,
    volumeDiscounts:[{qty:10,pct:0},{qty:100,pct:0.5},{qty:250,pct:1},{qty:500,pct:1.5},{qty:1000,pct:2},{qty:2000,pct:3}]},
-  {id:6,name:'Projecteurs LED H4 Universel',cat:'phares',tech:'halogene',price:67.00,ref:'LED-H4-006',badge:null,isNew:false,img:'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400&h=280&fit=crop',
+  {id:6,name:'Projecteurs LED H4 Universel',cat:'phares',tech:'halogene',catalog_id:'cat_luminaire',price:67.00,ref:'LED-H4-006',badge:null,isNew:false,img:'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=400&h=280&fit=crop',stock:300,
    volumeDiscounts:[{qty:10,pct:0},{qty:100,pct:0.5},{qty:250,pct:1},{qty:500,pct:1.5},{qty:1000,pct:2},{qty:2000,pct:3}]},
-  {id:7,name:'Kit Feux DRL Universel',cat:'feux',tech:'led',price:55.90,ref:'DRL-UNI-007',badge:'Populaire',isNew:false,img:'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=400&h=280&fit=crop',
+  {id:7,name:'Kit Feux DRL Universel',cat:'feux',tech:'led',catalog_id:'cat_luminaire',price:55.90,ref:'DRL-UNI-007',badge:'Populaire',isNew:false,img:'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400&h=280&fit=crop',stock:200,
    volumeDiscounts:[{qty:10,pct:0},{qty:100,pct:0.5},{qty:250,pct:1},{qty:500,pct:1.5},{qty:1000,pct:2},{qty:2000,pct:3}]},
-  {id:8,name:'Plafonnier LED Habitacle',cat:'interieur',tech:'led',price:19.90,ref:'PLF-LED-008',badge:null,isNew:true,img:'https://images.unsplash.com/photo-1542362567-b07e54358753?w=400&h=280&fit=crop',
+  {id:8,name:'Plafonnier LED Habitacle',cat:'interieur',tech:'led',catalog_id:'cat_luminaire',price:19.90,ref:'PLF-LED-008',badge:null,isNew:true,img:'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=400&h=280&fit=crop',stock:420,
    volumeDiscounts:[{qty:10,pct:0},{qty:100,pct:0.5},{qty:250,pct:1},{qty:500,pct:1.5},{qty:1000,pct:2},{qty:2000,pct:3}]},
+  {id:9,name:'Câble Alimentation 12V 5A',cat:'divers',tech:'led',catalog_id:'cat_divers',price:12.90,ref:'CAB-12V-009',badge:null,isNew:false,img:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=280&fit=crop',stock:800,
+   volumeDiscounts:[{qty:10,pct:0},{qty:100,pct:0},{qty:250,pct:0.5},{qty:500,pct:1},{qty:1000,pct:1.5},{qty:2000,pct:2}]},
+  {id:10,name:'Connecteur Étanche IP67',cat:'divers',tech:'led',catalog_id:'cat_divers',price:3.50,ref:'CON-IP67-010',badge:'Pack 10',isNew:false,img:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=280&fit=crop',stock:2000,
+   volumeDiscounts:[{qty:10,pct:0},{qty:100,pct:0},{qty:250,pct:0.5},{qty:500,pct:1},{qty:1000,pct:1.5},{qty:2000,pct:2}]},
 ];
 let ORDERS = [
   {id:'CMD-0001',userId:'u1',userName:'Tony Koru',userEmail:'tony@client.fr',date:'2025-03-10',items:[{pid:1,name:'Kit Phares LED H7',qty:100,unitPrice:89.90},{pid:3,name:'Ampoules RGB',qty:200,unitPrice:34.50}],addr:'12 rue des Lumières, 75001 Paris',payment:'Carte bancaire',notes:'',status:'delivered',history:[{date:'2025-03-10',s:'pending',n:'Commande reçue'},{date:'2025-03-11',s:'confirmed',n:'Paiement validé'},{date:'2025-03-12',s:'shipped',n:'Expédié — Chronopost 9B12345'},{date:'2025-03-14',s:'delivered',n:'Livré'}],steps:[{"step": "received", "ts": "2025-03-10T08:00:00", "by": "auto"}, {"step": "prep", "ts": "2025-03-10T09:30:00", "by": "u2"}, {"step": "quality", "ts": "2025-03-11T10:00:00", "by": "u2"}, {"step": "shipped", "ts": "2025-03-12T14:00:00", "by": "u2"}, {"step": "delivered", "ts": "2025-03-14T11:00:00", "by": "u2"}, {"step": "client_confirm", "ts": "2025-03-15T09:00:00", "by": "u1"}],stockDeducted:false},
@@ -1160,14 +1173,8 @@ function persistAll(){
 /* ── Load all mutable state from LS (called on init + storage events) ── */
 function hydrateFromLS(){
   var o=lsLoad(LS_ORDERS,null);   if(o)ORDERS=o;
-  /* Validate PRODUCTS schema — must have name (string) + price (number) to be valid.
-     If LS contains stale data with wrong keys, discard it and keep the hardcoded defaults. */
-  var p=lsLoad(LS_PRODUCTS,null);
-  if(p&&Array.isArray(p)&&p.length>0){
-    var valid=p[0].name&&typeof p[0].name==='string'&&typeof p[0].price==='number';
-    if(valid) PRODUCTS=p;
-    else { try{localStorage.removeItem(LS_PRODUCTS);}catch(e){} } /* purge bad data */
-  }
+  /* Products: use loadProducts() for schema validation + migration */
+  loadProducts();
   var c=lsLoad(LS_CATALOGS,null); if(c&&typeof CATALOGS!=='undefined')CATALOGS=c;
   var h=lsLoad(LS_HERO,null);     if(h)Object.assign(HERO_DESIGN,h);
   var ci=lsLoad(LS_CONTACT,null); if(ci)Object.assign(CONTACT_INFO,ci);
@@ -1344,6 +1351,19 @@ function showView(name){
   } else {
     hdr.classList.remove('header-transparent');
     document.getElementById('mainContent').style.paddingTop='0';
+  }
+  /* ── Catalogue: toujours passer par le chooser au premier accès ── */
+  if(name==='catalogue'){
+    /* Reset active catalog so the chooser is always shown */
+    if(!window._catalogEnteredOnce){
+      window._activeCatalogId=null;
+    }
+    renderCatalogChooser();
+  }
+  /* ── Refresh données sur les vues personnelles ── */
+  if(name==='compte'||name==='orders'||name==='commandes'){
+    hydrateFromLS();
+    if(name==='orders'||name==='commandes')renderOrders&&renderOrders();
   }
   window.scrollTo(0,0);
 }
@@ -3154,36 +3174,41 @@ function applyImgUrl(pid){
 }
 function openEditProduct(pid){
   editingProductId=pid;
+  _epImages=[];
   var stockRow=document.getElementById('ep-stockRow');
+  var catSel=document.getElementById('ep-catalog');
   if(pid===null){
+    /* NEW product */
     document.getElementById('editProductTitle').textContent='Ajouter un produit';
     document.getElementById('editProductRef').textContent='Nouveau produit';
     ['ep-name','ep-ref','ep-badge'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
-    _epImages=[];
-    epRenderImgList();
     document.getElementById('ep-price').value='';
     document.getElementById('ep-cat').value='phares';
     document.getElementById('ep-tech').value='led';
     document.getElementById('ep-isNew').checked=false;
+    if(catSel)catSel.value='';
     var initS=document.getElementById('ep-initStock');if(initS)initS.value='0';
     if(stockRow)stockRow.style.display='block';
   } else {
-    const p=PRODUCTS.find(function(x){return x.id===pid;});if(!p)return;
+    /* EDIT existing product */
+    var p=PRODUCTS.find(function(x){return x.id===pid;});if(!p)return;
     document.getElementById('editProductTitle').textContent='Modifier le produit';
     document.getElementById('editProductRef').textContent=p.ref;
     document.getElementById('ep-name').value=p.name;
     document.getElementById('ep-ref').value=p.ref;
     document.getElementById('ep-price').value=p.price;
-    document.getElementById('ep-cat').value=p.cat;
+    document.getElementById('ep-cat').value=p.cat||'phares';
     document.getElementById('ep-tech').value=p.tech||'led';
     document.getElementById('ep-badge').value=p.badge||'';
     document.getElementById('ep-isNew').checked=p.isNew||false;
-    /* Multi-image: populate _epImages from p.images[] or fallback to p.img */
-    _epImages=(p.images&&p.images.length>0)?p.images.slice():(p.img?[p.img]:[]);
-    epRenderImgList();
+    if(catSel)catSel.value=p.catalog_id||'cat_luminaire';
     if(stockRow)stockRow.style.display='none';
-    previewImage(p.img);
+    /* Load images */
+    _epImages=(p.images&&p.images.length>0)?p.images.slice():(p.img?[p.img]:[]);
   }
+  epRenderImgList();
+  /* Volume tiers */
+  if(pid!==null){var p2=PRODUCTS.find(function(x){return x.id===pid;});if(p2)renderVolumeTiersAdmin(p2);}
   openOverlay('editProduct');
 }
 document.getElementById('ep-img').addEventListener('input',function(){previewImage(this.value);});
@@ -3192,29 +3217,34 @@ function previewImage(url){
   if(url){wrap.classList.remove('hidden');img.src=url;}else{wrap.classList.add('hidden');}
 }
 function saveProduct(){
-  const name=document.getElementById('ep-name').value.trim();
-  const ref=document.getElementById('ep-ref').value.trim();
-  const price=parseFloat(document.getElementById('ep-price').value);
-  const cat=document.getElementById('ep-cat').value;
-  const tech=document.getElementById('ep-tech').value||'led';
+  var name=document.getElementById('ep-name').value.trim();
+  var ref=document.getElementById('ep-ref').value.trim();
+  var price=parseFloat(document.getElementById('ep-price').value);
+  var cat=document.getElementById('ep-cat').value;
+  var tech=document.getElementById('ep-tech').value||'led';
+  var catalog_id=(document.getElementById('ep-catalog')&&document.getElementById('ep-catalog').value)||'';
+  /* Validation */
   if(!name||!ref||isNaN(price)||price<=0){toast('Nom, référence et prix requis','error');return;}
-  const badge=document.getElementById('ep-badge').value.trim()||null;
-  const isNew=document.getElementById('ep-isNew').checked;
-  /* Multi-image: use _epImages[], fallback placeholder */
+  if(!catalog_id){toast('Choisissez un catalogue (Luminaire ou Divers)','error');return;}
+  var badge=document.getElementById('ep-badge').value.trim()||null;
+  var isNew=document.getElementById('ep-isNew').checked;
+  /* Images */
   var imgs=_epImages.filter(function(s){return s&&s.length>4;});
   var img=imgs[0]||'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=400&h=280&fit=crop';
   if(editingProductId===null){
-    const defaultTiers=[{qty:10,pct:0},{qty:100,pct:0},{qty:250,pct:0},{qty:500,pct:0},{qty:1000,pct:0},{qty:2000,pct:0}];
+    var defaultTiers=[{qty:10,pct:0},{qty:100,pct:0},{qty:250,pct:0},{qty:500,pct:0},{qty:1000,pct:0},{qty:2000,pct:0}];
     var initStock=parseInt((document.getElementById('ep-initStock')||{}).value||0)||0;
-    var newProd={id:Date.now(),name,ref,price,cat,tech,badge,isNew,img,images:imgs,volumeDiscounts:defaultTiers,stock:initStock};
+    var newProd={id:Date.now(),name:name,ref:ref,price:price,cat:cat,tech:tech,
+                 catalog_id:catalog_id,badge:badge,isNew:isNew,img:img,images:imgs,
+                 volumeDiscounts:defaultTiers,stock:initStock};
     PRODUCTS.push(newProd);
-    /* ── Tâche 3: entrée automatique dans l'historique stock ── */
     stockLog(newProd.id,initStock>0?'+':'=',initStock>0?initStock:0,
       'Initialisation stock — Nouvel article ajouté',null);
-    toast('Produit "'+name+'" ajouté au catalogue ✓','success');
+    toast('Produit "'+name+'" ajouté ✓','success');
   } else {
-    const p=PRODUCTS.find(function(x){return x.id===editingProductId;});if(!p)return;
-    Object.assign(p,{name,ref,price,cat,tech,badge,isNew,img,images:imgs});
+    var p=PRODUCTS.find(function(x){return x.id===editingProductId;});if(!p)return;
+    Object.assign(p,{name:name,ref:ref,price:price,cat:cat,tech:tech,
+                     catalog_id:catalog_id,badge:badge,isNew:isNew,img:img,images:imgs});
     toast('Produit "'+name+'" mis à jour ✓','success');
   }
   closeOverlay('editProduct');
@@ -3297,63 +3327,134 @@ function syncPublicFilters(){
 
   bar.innerHTML=html;
 }
+/* ── renderCatalog: point d'entrée principal pour afficher le catalogue ──
+   filter: 'all' | 'phares' | 'feux' | etc. (filtre de sous-catégorie)
+   Vérifie les droits (catalog_id) du user courant avant d'afficher */
 function renderCatalog(filter){
   if(filter===undefined)filter='all';
   currentCatalogFilter=filter;
-  currentTechFilter=''; /* reset sous-filtre tech quand on change de catégorie */
+  currentTechFilter='';
   _renderProductGrid();
 }
-function filterCatalog(val){
-  renderCatalog(val);
-}
+function filterCatalog(val){renderCatalog(val);}
 function filterTech(techVal){
   currentTechFilter=techVal;
   _renderProductGrid();
 }
-function _renderProductGrid(){
-  /* 1. Filtre catégorie */
-  let list=currentCatalogFilter==='all'?PRODUCTS:PRODUCTS.filter(function(p){return p.cat===currentCatalogFilter;});
-  /* 2. Sous-filtre technologie */
-  if(currentTechFilter)list=list.filter(function(p){return p.tech===currentTechFilter;});
+/* ── _renderProductGrid: rendu complet de la grille produits ──
+   Filtre par: 1) droits catalogue du user  2) sous-catégorie  3) technologie */
+/* ── loadProducts: charge depuis LS avec validation stricte du schéma ──
+   Champ requis: name(string), price(number), catalog_id(string)
+   Si LS corrompu → purge + conserve les valeurs hardcodées */
+function loadProducts(){
+  var raw=null;
+  try{raw=localStorage.getItem(LS_PRODUCTS);}catch(e){}
+  if(!raw)return; /* no LS data — use hardcoded defaults */
+  try{
+    var parsed=JSON.parse(raw);
+    if(!Array.isArray(parsed)||!parsed.length)return;
+    var first=parsed[0];
+    var valid=typeof first.name==='string'&&typeof first.price==='number';
+    if(!valid){
+      console.warn('[loadProducts] LS schema invalid — purging stale data');
+      try{localStorage.removeItem(LS_PRODUCTS);}catch(e){}
+      return;
+    }
+    /* Ensure every product has catalog_id (migrate old data) */
+    parsed.forEach(function(p){
+      if(!p.catalog_id)p.catalog_id='cat_luminaire'; /* default migration */
+    });
+    PRODUCTS=parsed;
+  }catch(e){
+    console.warn('[loadProducts] parse error — purging',e);
+    try{localStorage.removeItem(LS_PRODUCTS);}catch(e2){}
+  }
+}
 
-  const grid=document.getElementById('productGrid');if(!grid)return;
-  const disc=currentUser?userDiscount(currentUser):0;
-  const PH=PHOLDER||'';
+function _renderProductGrid(){
+  var grid=document.getElementById('productGrid');if(!grid)return;
+
+  /* 0. Pas de catalogue actif -> afficher le chooser */
+  if(currentUser&&!window._activeCatalogId){
+    grid.style.display='none';
+    var sb0=document.getElementById('catalogSidebar');if(sb0)sb0.style.display='none';
+    renderCatalogChooser();return;
+  }
+
+  /* 1. Filtrer par catalog_id autorise */
+  var activeCat=window._activeCatalogId||(currentUser?(getUserCatalogs()[0]||'cat_luminaire'):'cat_luminaire');
+  var list=PRODUCTS.filter(function(p){return (p.catalog_id||'cat_luminaire')===activeCat;});
+
+  /* 2. Filtre sous-categorie */
+  if(currentCatalogFilter&&currentCatalogFilter!=='all'){
+    list=list.filter(function(p){return p.cat===currentCatalogFilter;});
+  }
+
+  /* 3. Sous-filtre technologie */
+  if(currentTechFilter){list=list.filter(function(p){return p.tech===currentTechFilter;});}
+
+  /* 4. Afficher la grille */
+  grid.style.display='grid';
+  var sb=document.getElementById('catalogSidebar');if(sb)sb.style.display='';
+  var disc=currentUser?userDiscount(currentUser):0;
+  var PH=PHOLDER||'';
 
   if(!list.length){
-    grid.innerHTML='<div class="col-span-4 empty-state"><p class="text-white/40 font-display font-bold text-xl mb-1">Aucun produit</p><p>Aucun produit ne correspond à ce filtre.</p></div>';
+    grid.innerHTML='<div class="col-span-4 empty-state">'
+      +'<p class="text-white/40 font-display font-bold text-xl mb-1">Aucun produit</p>'
+      +'<p class="text-white/20 text-sm">Aucun article dans cette categorie.</p></div>';
     syncPublicFilters();setTimeout(initReveal,80);return;
   }
 
-  grid.innerHTML=list.map(function(p,i){
-    const effPrice=p.price*(1-disc);
-    /* Tag technologie sur la carte */
-    const techTag=TECH_TAGS.find(function(t){return t.value===p.tech;});
-    const techBadge=techTag?('<button onclick="event.stopPropagation();filterTech(\''+techTag.value+'\')" title="Filtrer par '+techTag.label+'" style="position:absolute;top:8px;right:8px;z-index:3;font-family:\'Rajdhani\',sans-serif;font-weight:700;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:5px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor=\'rgba(0,168,243,.5)\';this.style.color=\'#00a8f3\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,.2)\';this.style.color=\'rgba(255,255,255,.7)\'">'+techTag.label+'</button>'):'';
+  function buildCard(p,i){
+    var effPrice=p.price*(1-disc);
+    /* Tech badge: use data-attribute for safe onclick wiring after render */
+    var techTag=TECH_TAGS.find(function(t){return t.value===p.tech;});
+    var techBadgeHtml='';
+    if(techTag){
+      techBadgeHtml='<button class="tech-filter-btn" data-tech="'+techTag.value+'"'
+        +' style="position:absolute;top:8px;left:8px;z-index:3;font-family:Inter,sans-serif;font-size:.58rem;'
+        +'font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:4px;'
+        +'border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:rgba(255,255,255,.55);cursor:pointer">'
+        +techTag.label+'</button>';
+    }
+    /* Badges */
+    var badgeHtml='';
+    if(p.isNew)badgeHtml+='<span class="prod-badge" style="background:rgba(0,168,243,.15);color:#00a8f3;border:1px solid rgba(0,168,243,.3)">Nouveau</span>';
+    if(p.badge)badgeHtml+='<span class="prod-badge" style="background:rgba(255,255,255,.07);color:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.12);margin-top:'+(p.isNew?'26':'4')+'px">'+p.badge+'</span>';
+    /* Price area */
+    var priceHtml;
+    if(currentUser){
+      priceHtml='<div>'
+        +(disc>0?'<p style="text-decoration:line-through;font-size:.75rem;color:rgba(255,255,255,.2)">'+fmt(p.price)+'</p>':'')
+        +'<span class="prod-price">'+fmt(effPrice)+'</span><span class="text-white/25 text-xs ml-1">/u. HT</span>'
+        +(disc>0?'<p style="font-size:.7rem;color:#22c55e;font-family:\'Rajdhani\',sans-serif;font-weight:700">\u2212'+(disc*100)+'% remise</p>':'')
+        +'</div>';
+    } else {
+      priceHtml='<span class="prod-price-locked">\uD83D\uDD12 Prix pro</span>';
+    }
+    /* Card HTML */
+    var card='<div class="card card-product reveal" data-prod-id="'+p.id+'" style="transition-delay:'+(i%4*.07)+'s" onclick="openProductModal('+p.id+')">';
+    card+='<div style="overflow:hidden;position:relative">';
+    card+='<img src="'+(p.img||PH)+'" alt="'+p.name+'" class="prod-img pub-prod-img" loading="lazy" onerror="this.onerror=null;this.src=\''+PH+'\'" />';
+    card+=badgeHtml+techBadgeHtml;
+    card+='<div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.55),transparent);pointer-events:none;z-index:1"></div>';
+    card+='<div style="position:absolute;bottom:8px;left:10px;z-index:2"><p style="font-size:.62rem;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.5);font-family:Inter,sans-serif">'+p.ref+'</p></div>';
+    card+='</div>';
+    card+='<div class="p-4">';
+    card+='<h3 class="font-display font-semibold text-white text-sm tracking-wide mb-1 leading-tight">'+p.name+'</h3>';
+    card+='<p class="text-white/25 text-xs mb-3">'+p.ref+'</p>';
+    card+='<div class="flex items-end justify-between">'+priceHtml;
+    card+='<button class="btn-add-cart" onclick="event.stopPropagation();openProductModal('+p.id+')"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg></button>';
+    card+='</div></div></div>';
+    return card;
+  }
 
-    return '<div class="card card-product reveal" data-prod-id="'+p.id+'" style="transition-delay:'+(i%4)*.07+'s" onclick="openProductModal('+p.id+')">'
-      +'<div style="overflow:hidden;position:relative">'
-      +'<img src="'+(p.img||PH)+'" alt="'+p.name+'" class="prod-img pub-prod-img" loading="lazy" onerror="this.src=\''+PH+'\'" />'
-      +(p.isNew?'<span class="prod-badge" style="background:rgba(0,168,243,.15);color:#00a8f3;border:1px solid rgba(0,168,243,.3)">Nouveau</span>':'')
-      +(p.badge?'<span class="prod-badge" style="background:rgba(255,255,255,.07);color:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.1)">'+p.badge+'</span>':'')
-      +techBadge
-      +'<div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.55),transparent);pointer-events:none;z-index:1"></div>'
-      +'<div style="position:absolute;bottom:8px;left:10px;z-index:2"><p style="font-size:.62rem;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.4)">'+p.cat+'</p></div>'
-      +'</div>'
-      +'<div class="p-4">'
-      +'<h3 class="font-display font-semibold text-white text-sm tracking-wide mb-1 leading-tight">'+p.name+'</h3>'
-      +'<p class="text-white/25 text-xs mb-3">'+p.ref+'</p>'
-      +'<div class="flex items-end justify-between">'
-      +(currentUser
-        ?('<div>'+(disc>0?'<p style="text-decoration:line-through;font-size:.75rem;color:rgba(255,255,255,.2)">'+fmt(p.price)+'</p>':'')+
-          '<span class="prod-price">'+fmt(effPrice)+'</span><span class="text-white/25 text-xs ml-1">/u. HT</span>'+
-          (disc>0?'<p style="font-size:.7rem;color:#22c55e;font-family:\'Rajdhani\',sans-serif;font-weight:700">−'+(disc*100)+'% remise</p>':'')+'</div>')
-        :'<span class="prod-price-locked" onclick="event.stopPropagation();openOverlay(\'login\')">🔒 Prix pro</span>')
-      +'</div>'
-      +'<button class="btn btn-ghost w-full mt-3 btn-sm" onclick="event.stopPropagation();openProductModal('+p.id+')">Commander en gros <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg></button>'
-      +'</div></div>';
-  }).join('');
-
+  grid.innerHTML=list.map(buildCard).join('');
+  /* Wire tech-filter-btn via event delegation after render */
+  grid.querySelectorAll('.tech-filter-btn').forEach(function(btn){
+    btn.addEventListener('click',function(e){e.stopPropagation();filterTech(btn.getAttribute('data-tech'));});
+  });
   syncPublicFilters();
   setTimeout(initReveal,80);
 }
@@ -5022,8 +5123,11 @@ function renderCatalogChooser(){
 function selectCatalog(catId){
   var cat=CATALOGS.find(function(c){return c.id===catId;});if(!cat)return;
   window._activeCatalogId=catId;
+  window._catalogEnteredOnce=true;
+  /* Show back button */
   var backBtn=document.getElementById('catalogBackBtn');
   if(backBtn)backBtn.style.display='flex';
+  /* Hide chooser, show grid */
   var chooser=document.getElementById('catalogChooser');
   if(chooser)chooser.style.display='none';
   var grid=document.getElementById('productGrid');if(grid)grid.style.display='grid';
@@ -5033,6 +5137,7 @@ function selectCatalog(catId){
 
 function backToCatalogChooser(){
   window._activeCatalogId=null;
+  window._catalogEnteredOnce=false;
   var backBtn=document.getElementById('catalogBackBtn');if(backBtn)backBtn.style.display='none';
   var grid=document.getElementById('productGrid');if(grid)grid.style.display='none';
   var sidebar=document.getElementById('catalogSidebar');if(sidebar)sidebar.style.display='none';
@@ -5591,8 +5696,12 @@ function heroReset(){
 /* ══ INIT ══ */
 document.addEventListener('DOMContentLoaded',function(){
   loadUsersDB();
-  hydrateFromLS();
+  loadProducts();       /* charge et valide les produits depuis LS */
+  hydrateFromLS();      /* commandes, catalogues, hero, contact, shipping, chat */
   applyBgFromLS();
+  /* Fond d'accueil stocké */
+  var _ca=null;try{_ca=localStorage.getItem('config_accueil');}catch(_e){}
+  if(_ca){try{applyAccueilConfig(JSON.parse(_ca));}catch(_e){}}
   renderCatalog('all');
   syncPublicFilters();
   renderFaq();
