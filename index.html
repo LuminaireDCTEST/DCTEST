@@ -311,6 +311,14 @@ textarea.fi{resize:vertical}
 .price-label{font-family:'Inter',sans-serif;font-size:.76rem;color:rgba(255,255,255,.4);letter-spacing:.06em;text-transform:uppercase;font-weight:500}
 .price-val{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.1em}
 .price-val.ht{color:rgba(255,255,255,.7)}.price-val.tva{color:rgba(0,168,243,.6)}.price-val.ttc{color:var(--gold);font-size:1.35rem}
+
+.btn-reply-mail{display:inline-flex;align-items:center;gap:.35rem;padding:.35rem .8rem;border-radius:7px;border:1px solid rgba(0,168,243,.3);background:rgba(0,168,243,.07);color:#00a8f3;font-family:Inter,sans-serif;font-weight:600;font-size:.72rem;text-decoration:none;transition:background .2s}
+.btn-reply-mail:hover{background:rgba(0,168,243,.15)}
+.btn-reply-gmail{display:inline-flex;align-items:center;gap:.35rem;padding:.35rem .8rem;border-radius:7px;border:1px solid rgba(234,67,53,.3);background:rgba(234,67,53,.07);color:#ea4335;font-family:Inter,sans-serif;font-weight:600;font-size:.72rem;text-decoration:none;transition:background .2s}
+.btn-reply-gmail:hover{background:rgba(234,67,53,.15)}
+
+.cat-chooser-card{cursor:pointer;padding:2.2rem 1.8rem;border-radius:18px;border:2px solid rgba(255,255,255,.08);background:rgba(255,255,255,.025);transition:all .25s;display:flex;flex-direction:column;align-items:center;text-align:center;gap:.5rem}
+.cat-chooser-card.active{box-shadow:0 0 40px rgba(0,168,243,.18)}
 </style>
 </head>
 <body class="hc-bg">
@@ -755,7 +763,15 @@ textarea.fi{resize:vertical}
   <div class="modal" style="max-width:540px">
     <button class="absolute top-4 right-4 text-white/25 hover:text-white" onclick="closeOverlay('product')"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
     <div class="flex gap-4 mb-5">
-      <img id="modImg" src="" alt="" style="width:90px;height:90px;object-fit:cover;border-radius:12px;border:1px solid var(--border);flex-shrink:0"/>
+      <!-- Slider multi-images -->
+      <div id="modImgSlider" style="position:relative;width:90px;height:90px;border-radius:12px;border:1px solid var(--border);flex-shrink:0;overflow:hidden;background:#111">
+        <img id="modImg" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:block"/>
+        <!-- Nav arrows (hidden when only 1 image) -->
+        <button id="modImgPrev" onclick="sliderNav(-1)" style="display:none;position:absolute;left:0;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.55);border:none;color:white;cursor:pointer;padding:2px 5px;font-size:.75rem;line-height:1;border-radius:0 4px 4px 0">‹</button>
+        <button id="modImgNext" onclick="sliderNav(1)" style="display:none;position:absolute;right:0;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.55);border:none;color:white;cursor:pointer;padding:2px 5px;font-size:.75rem;line-height:1;border-radius:4px 0 0 4px">›</button>
+        <!-- Dot indicators -->
+        <div id="modImgDots" style="position:absolute;bottom:4px;left:0;right:0;display:flex;justify-content:center;gap:3px"></div>
+      </div>
       <div><p class="text-accent text-xs tracking-widest uppercase opacity-60 mb-1" id="modCat">—</p><h3 class="font-display text-xl font-bold text-white" id="modName">—</h3><p class="text-white/40 text-sm mt-0.5" id="modRef">—</p><p class="text-white/30 text-xs mt-1" id="modDiscount"></p></div>
     </div>
     <div class="glow-line mb-5"></div>
@@ -896,7 +912,19 @@ textarea.fi{resize:vertical}
           <span class="fl" style="margin:0;color:rgba(255,255,255,.65)">Marquer "Nouveau"</span>
         </label>
       </div>
-      <div><label class="fl">URL de l'image</label><input type="text" id="ep-img" class="fi" placeholder="https://..."/></div>
+      <div>
+        <label class="fl mb-2">Images du produit</label>
+        <div id="ep-imgList" style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.5rem"></div>
+        <div style="display:flex;gap:.4rem">
+          <input type="text" id="ep-imgNew" class="fi" style="flex:1;font-size:.8rem" placeholder="URL https://... ou coller base64"/>
+          <button type="button" onclick="epAddImageUrl()" class="btn btn-ghost btn-sm" style="white-space:nowrap">+ URL</button>
+          <label class="btn btn-ghost btn-sm" style="cursor:pointer;white-space:nowrap" title="Importer JPG/PNG">
+            📁
+            <input type="file" id="ep-imgFile" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="epAddImageFile(this)"/>
+          </label>
+        </div>
+        <p style="font-family:Inter,sans-serif;font-size:.65rem;color:rgba(255,255,255,.25);margin-top:.3rem">Accepte JPG, PNG, WebP — URL ou fichier local. La 1ère image est l'image principale.</p>
+      </div>
       <div id="ep-imgPreview" class="hidden"><label class="fl">Aperçu</label><img id="ep-imgPreviewEl" src="" alt="" style="width:100%;height:140px;object-fit:cover;border-radius:10px;border:1px solid var(--border)"/></div>
       <!-- Stock initial — visible only for new products -->
       <div id="ep-stockRow" style="display:none;background:rgba(74,222,128,.05);border:1px solid rgba(74,222,128,.15);border-radius:8px;padding:.75rem 1rem">
@@ -1132,12 +1160,21 @@ function persistAll(){
 /* ── Load all mutable state from LS (called on init + storage events) ── */
 function hydrateFromLS(){
   var o=lsLoad(LS_ORDERS,null);   if(o)ORDERS=o;
-  var p=lsLoad(LS_PRODUCTS,null); if(p)PRODUCTS=p;
+  /* Validate PRODUCTS schema — must have name (string) + price (number) to be valid.
+     If LS contains stale data with wrong keys, discard it and keep the hardcoded defaults. */
+  var p=lsLoad(LS_PRODUCTS,null);
+  if(p&&Array.isArray(p)&&p.length>0){
+    var valid=p[0].name&&typeof p[0].name==='string'&&typeof p[0].price==='number';
+    if(valid) PRODUCTS=p;
+    else { try{localStorage.removeItem(LS_PRODUCTS);}catch(e){} } /* purge bad data */
+  }
   var c=lsLoad(LS_CATALOGS,null); if(c&&typeof CATALOGS!=='undefined')CATALOGS=c;
   var h=lsLoad(LS_HERO,null);     if(h)Object.assign(HERO_DESIGN,h);
   var ci=lsLoad(LS_CONTACT,null); if(ci)Object.assign(CONTACT_INFO,ci);
   var sh=lsLoad(LS_SHIPPING,null);if(sh)Object.assign(SHIPPING_SETTINGS,sh);
   var ch=lsLoad(LS_CHAT,null);    if(ch)CHAT_MESSAGES=ch;
+  /* Apply hero / fond d'accueil config */
+  var ca=lsLoad('config_accueil',null); if(ca)applyAccueilConfig(ca);
 }
 
 /* ── syncAppData: rafraîchit l'UI après tout changement de données ── */
@@ -1173,6 +1210,10 @@ window.addEventListener('storage',function(e){
     syncAppData();
   }
   if(e.key===LS_BG){applyBgFromLS();}
+  /* Fond d'accueil — applied to ALL tabs immediately */
+  if(e.key==='config_accueil'&&e.newValue){
+    try{applyAccueilConfig(JSON.parse(e.newValue));}catch(err){}
+  }
 });
 
 /* ── Background image from LS ── */
@@ -3117,7 +3158,9 @@ function openEditProduct(pid){
   if(pid===null){
     document.getElementById('editProductTitle').textContent='Ajouter un produit';
     document.getElementById('editProductRef').textContent='Nouveau produit';
-    ['ep-name','ep-ref','ep-badge','ep-img'].forEach(function(id){document.getElementById(id).value='';});
+    ['ep-name','ep-ref','ep-badge'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+    _epImages=[];
+    epRenderImgList();
     document.getElementById('ep-price').value='';
     document.getElementById('ep-cat').value='phares';
     document.getElementById('ep-tech').value='led';
@@ -3135,7 +3178,9 @@ function openEditProduct(pid){
     document.getElementById('ep-tech').value=p.tech||'led';
     document.getElementById('ep-badge').value=p.badge||'';
     document.getElementById('ep-isNew').checked=p.isNew||false;
-    document.getElementById('ep-img').value=p.img||'';
+    /* Multi-image: populate _epImages from p.images[] or fallback to p.img */
+    _epImages=(p.images&&p.images.length>0)?p.images.slice():(p.img?[p.img]:[]);
+    epRenderImgList();
     if(stockRow)stockRow.style.display='none';
     previewImage(p.img);
   }
@@ -3155,11 +3200,13 @@ function saveProduct(){
   if(!name||!ref||isNaN(price)||price<=0){toast('Nom, référence et prix requis','error');return;}
   const badge=document.getElementById('ep-badge').value.trim()||null;
   const isNew=document.getElementById('ep-isNew').checked;
-  const img=document.getElementById('ep-img').value.trim()||'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=400&h=280&fit=crop';
+  /* Multi-image: use _epImages[], fallback placeholder */
+  var imgs=_epImages.filter(function(s){return s&&s.length>4;});
+  var img=imgs[0]||'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=400&h=280&fit=crop';
   if(editingProductId===null){
     const defaultTiers=[{qty:10,pct:0},{qty:100,pct:0},{qty:250,pct:0},{qty:500,pct:0},{qty:1000,pct:0},{qty:2000,pct:0}];
     var initStock=parseInt((document.getElementById('ep-initStock')||{}).value||0)||0;
-    var newProd={id:Date.now(),name,ref,price,cat,tech,badge,isNew,img,volumeDiscounts:defaultTiers,stock:initStock};
+    var newProd={id:Date.now(),name,ref,price,cat,tech,badge,isNew,img,images:imgs,volumeDiscounts:defaultTiers,stock:initStock};
     PRODUCTS.push(newProd);
     /* ── Tâche 3: entrée automatique dans l'historique stock ── */
     stockLog(newProd.id,initStock>0?'+':'=',initStock>0?initStock:0,
@@ -3167,10 +3214,11 @@ function saveProduct(){
     toast('Produit "'+name+'" ajouté au catalogue ✓','success');
   } else {
     const p=PRODUCTS.find(function(x){return x.id===editingProductId;});if(!p)return;
-    Object.assign(p,{name,ref,price,cat,tech,badge,isNew,img});
+    Object.assign(p,{name,ref,price,cat,tech,badge,isNew,img,images:imgs});
     toast('Produit "'+name+'" mis à jour ✓','success');
   }
   closeOverlay('editProduct');
+  persistAll();
   renderAdminCatalog();
   renderCatalog(currentCatalogFilter);
 }
@@ -3470,9 +3518,9 @@ function openProductModal(pid){
     var p=PRODUCTS.find(function(x){return x.id===pid;});
     if(!p){console.error('Product not found:',pid);return;}
     modalProduct=p;
+    /* Init multi-image slider */
+    initProductSlider(p);
     var disc=userDiscount(currentUser)||0;
-    var modImg=document.getElementById('modImg');
-    if(modImg)modImg.src=p.img||'';
     var modName=document.getElementById('modName');
     if(modName)modName.textContent=p.name;
     var modCat=document.getElementById('modCat');
@@ -4149,153 +4197,6 @@ function printDoc(type,orderId){
 
 
 /* ══ renderAdminHero ══ */
-function renderAdminHero(){
-  const ct=document.getElementById('adminContent');
-  const vid=document.getElementById('heroVideo');
-  const currentSrc=vid?vid.querySelector('source')?.src||vid.src||'':'';
-  const hasCustom=!!currentHeroSrc;
-  ct.innerHTML=`
-    <div class="mb-6">
-      <p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Apparence</p>
-      <h2 class="font-display text-2xl font-bold text-white uppercase">Fond <span style="color:#00a8f3">d'accueil</span></h2>
-      <p class="text-white/35 text-sm mt-1">Remplacez la vidéo de fond de la page d'accueil en temps réel</p>
-    </div>
-
-    <!-- Prévisualisation live -->
-    <div class="card mb-6" style="overflow:hidden;border-radius:16px">
-      <div style="position:relative;height:240px;overflow:hidden;background:#050505">
-        <video id="heroPreviewVid" autoplay muted loop playsinline
-               style="width:100%;height:100%;object-fit:cover;filter:brightness(.38) saturate(.75)">
-          ${currentHeroSrc?`<source src="${currentHeroSrc}" type="video/${currentHeroSrc.endsWith('.webm')?'webm':'mp4'}"/>`:'<source src="hero-bg.mp4" type="video/mp4"/>'}
-        </video>
-        <div style="position:absolute;inset:0;background:linear-gradient(120deg,rgba(5,5,5,.72),rgba(5,5,5,.3));z-index:1"></div>
-        <div style="position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:.5rem">
-          <p style="font-family:'Inter',sans-serif;font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.35)">Prévisualisation</p>
-          <p class="font-display font-bold text-white" style="font-size:1.6rem;letter-spacing:.05em;text-shadow:0 0 30px rgba(0,168,243,.4)">Achetez des pièces <span style="color:#00a8f3">premium</span></p>
-        </div>
-        <div style="position:absolute;bottom:10px;right:12px;z-index:3">
-          <span id="heroSourceLabel" style="background:rgba(0,0,0,.5);border:1px solid rgba(0,168,243,.2);color:rgba(0,168,243,.7);font-family:'Inter',sans-serif;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;padding:3px 9px;border-radius:6px">
-            ${hasCustom?'Vidéo personnalisée':'Vidéo par défaut'}
-          </span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Option 1 : Upload fichier local -->
-    <div class="card p-6 mb-4">
-      <div class="flex items-center gap-3 mb-4">
-        <div style="width:36px;height:36px;border-radius:9px;background:rgba(0,168,243,.1);border:1px solid rgba(0,168,243,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-          <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-        </div>
-        <div>
-          <p class="font-display font-bold text-white tracking-wide">Option 1 — Importer un fichier MP4</p>
-          <p class="text-white/35 text-xs mt-0.5" style="font-family:'Inter',sans-serif">Sélectionnez un fichier vidéo depuis votre ordinateur (MP4 ou WebM)</p>
-        </div>
-      </div>
-
-      <!-- Drop zone -->
-      <div id="dropZone"
-           style="border:2px dashed rgba(0,168,243,.2);border-radius:12px;padding:2rem;text-align:center;cursor:pointer;transition:all .3s;background:rgba(0,168,243,.02)"
-           onclick="document.getElementById('heroFileInput').click()"
-           ondragover="event.preventDefault();this.style.borderColor='#00a8f3';this.style.background='rgba(0,168,243,.06)'"
-           ondragleave="this.style.borderColor='rgba(0,168,243,.2)';this.style.background='rgba(0,168,243,.02)'"
-           ondrop="handleHeroFileDrop(event)">
-        <svg class="w-10 h-10 mx-auto mb-3 text-accent" style="opacity:.4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-        <p style="font-family:'Inter',sans-serif;font-weight:600;font-size:.95rem;letter-spacing:.05em;color:rgba(255,255,255,.6)" id="dropZoneText">Glissez-déposez votre vidéo ici</p>
-        <p style="font-family:'Inter',sans-serif;font-size:.75rem;color:rgba(255,255,255,.25);margin-top:.3rem">ou cliquez pour choisir un fichier · MP4, WebM recommandés</p>
-        <input type="file" id="heroFileInput" accept="video/mp4,video/webm,video/*" style="display:none" onchange="handleHeroFileInput(this)"/>
-      </div>
-
-      <!-- Progress bar (hidden by default) -->
-      <div id="heroUploadProgress" style="display:none;margin-top:1rem">
-        <div style="height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden">
-          <div id="heroProgressBar" style="height:100%;width:0%;background:var(--a);border-radius:2px;transition:width .3s"></div>
-        </div>
-        <p id="heroProgressText" style="font-family:'Inter',sans-serif;font-size:.75rem;color:rgba(0,168,243,.7);margin-top:.4rem;text-align:center">Chargement…</p>
-      </div>
-    </div>
-
-    <!-- Option 2 : URL externe -->
-    <div class="card p-6 mb-4">
-      <div class="flex items-center gap-3 mb-4">
-        <div style="width:36px;height:36px;border-radius:9px;background:rgba(0,168,243,.1);border:1px solid rgba(0,168,243,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-          <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-        </div>
-        <div>
-          <p class="font-display font-bold text-white tracking-wide">Option 2 — Lien URL direct</p>
-          <p class="text-white/35 text-xs mt-0.5" style="font-family:'Inter',sans-serif">Collez une URL directe vers une vidéo MP4 hébergée en ligne</p>
-        </div>
-      </div>
-      <div style="display:flex;gap:.6rem">
-        <input type="text" id="heroUrlInput" class="fi" placeholder="https://example.com/video.mp4"
-               style="font-size:.88rem"
-               onkeydown="if(event.key==='Enter')applyHeroUrl()"
-               oninput="livePreviewHeroUrl(this.value)"/>
-        <button class="btn btn-primary" style="flex-shrink:0;padding:.6rem 1.2rem" onclick="applyHeroUrl()">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-          Appliquer
-        </button>
-      </div>
-      <p style="font-family:'Inter',sans-serif;font-size:.72rem;color:rgba(255,255,255,.2);margin-top:.5rem">
-        ⓘ La vidéo doit être accessible publiquement. Utilisez des hébergeurs comme Bunny.net, AWS S3, ou tout CDN public.
-      </p>
-    </div>
-
-    <!-- Option 3 : Réinitialiser -->
-    <div class="card p-5" style="background:rgba(239,68,68,.03);border-color:rgba(239,68,68,.1)">
-      <div class="flex items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-          <div style="width:34px;height:34px;border-radius:9px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            <svg class="w-4 h-4" style="color:#ef4444" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-          </div>
-          <div>
-            <p class="font-display font-bold text-white tracking-wide" style="font-size:.9rem">Réinitialiser la vidéo par défaut</p>
-            <p style="font-family:'Inter',sans-serif;font-size:.73rem;color:rgba(255,255,255,.3);margin-top:.1rem">Revenir au fichier hero-bg.mp4 d'origine</p>
-          </div>
-        </div>
-        <button class="btn btn-danger btn-sm" onclick="resetHeroVideo()">Réinitialiser</button>
-      </div>
-    </div>
-
-    <!-- Tips -->
-    <div style="margin-top:1.5rem;padding:1rem 1.2rem;background:rgba(0,168,243,.04);border:1px solid rgba(0,168,243,.08);border-radius:12px">
-      <p style="font-family:'Inter',sans-serif;font-weight:700;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,168,243,.6);margin-bottom:.6rem">Conseils pour une vidéo optimale</p>
-      <ul style="font-family:'Inter',sans-serif;font-size:.78rem;color:rgba(255,255,255,.3);line-height:1.8;list-style:none;padding:0">
-        <li>• Format recommandé : <strong style="color:rgba(255,255,255,.5)">MP4 H.264</strong> pour une compatibilité maximale</li>
-        <li>• Résolution : <strong style="color:rgba(255,255,255,.5)">1920×1080</strong> minimum, 4K accepté (comme votre fichier actuel)</li>
-        <li>• Durée : entre <strong style="color:rgba(255,255,255,.5)">10 et 60 secondes</strong> recommandé pour une boucle fluide</li>
-        <li>• Poids : idéalement <strong style="color:rgba(255,255,255,.5)">&lt; 20 Mo</strong> pour un chargement rapide</li>
-        <li>• La vidéo est muette et assombrie automatiquement (filtre brightness 38%)</li>
-      </ul>
-    </div>`;
-
-  /* ── Site background image manager (site_bg localStorage) ── */
-  var bgSection='<div class="card p-5 mt-5">'
-    +'<p class="font-display font-bold text-white tracking-wide mb-1">Fond d\'écran global (site_bg)</p>'
-    +'<p style="font-family:Inter,sans-serif;font-size:.75rem;color:rgba(255,255,255,.35);margin-bottom:.85rem">Image appliquée sur tout le site via localStorage. URL ou Base64.</p>'
-    +'<div style="display:flex;gap:.5rem;margin-bottom:.6rem">'
-      +'<input type="text" id="bg-url-inp" class="fi" style="flex:1;font-size:.82rem" placeholder="https://... ou data:image/..."/>'
-      +'<button class="btn btn-primary btn-sm" onclick="var v=document.getElementById(\'bg-url-inp\').value.trim();if(v)setBg(v)">Appliquer</button>'
-      +'<button class="btn btn-ghost btn-sm" onclick="clearBg();document.getElementById(\'bg-url-inp\').value=\'\';document.getElementById(\'bg-prev\').style.display=\'none\'">Supprimer</button>'
-    +'</div>'
-    +'<div id="bg-prev" style="display:none;height:100px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background-size:cover;background-position:center"></div>'
-    +'</div>';
-  ct.innerHTML+=bgSection;
-  /* Populate preview if bg already set */
-  var _curBg=null;try{_curBg=localStorage.getItem('site_bg');}catch(e){}
-  if(_curBg){
-    var _inp=document.getElementById('bg-url-inp');
-    if(_inp)_inp.value=_curBg.length>60?'(Base64 actif — '+Math.round(_curBg.length/1024)+'KB)':_curBg;
-    var _pr=document.getElementById('bg-prev');
-    if(_pr){_pr.style.display='block';_pr.style.backgroundImage='url('+_curBg+')';}
-  }
-  var _bInp=document.getElementById('bg-url-inp');
-  if(_bInp)_bInp.addEventListener('input',function(){
-    var _pr2=document.getElementById('bg-prev'),v=this.value.trim();
-    if(_pr2&&v.length>4){_pr2.style.display='block';_pr2.style.backgroundImage='url('+v+')';}
-    else if(_pr2)_pr2.style.display='none';
-  });
-}
 
 /* ══ renderAdminContacts ══ */
 
@@ -5418,6 +5319,275 @@ function adminSendChat(){
 }
 
 
+/* ══════════════════════════════════════════════════════════════
+   MULTI-IMAGES — Slider produit + Admin manager
+══════════════════════════════════════════════════════════════ */
+
+/* Current slider state */
+var _sliderIdx=0;
+var _sliderImgs=[];
+
+/* Called from openProductModal — sets up the slider */
+function initProductSlider(p){
+  /* Build image list: p.images[] first, then p.img as fallback */
+  var imgs=[];
+  if(p.images&&p.images.length>0){
+    imgs=p.images.filter(function(s){return s&&s.length>4;});
+  }
+  if(!imgs.length&&p.img) imgs=[p.img];
+  if(!imgs.length) imgs=[''];
+  _sliderImgs=imgs;
+  _sliderIdx=0;
+  _renderSlide();
+}
+
+function _renderSlide(){
+  var img=document.getElementById('modImg');
+  var prev=document.getElementById('modImgPrev');
+  var next=document.getElementById('modImgNext');
+  var dots=document.getElementById('modImgDots');
+  if(!img)return;
+  img.src=_sliderImgs[_sliderIdx]||'';
+  var multi=_sliderImgs.length>1;
+  if(prev)prev.style.display=multi?'block':'none';
+  if(next)next.style.display=multi?'block':'none';
+  if(dots){
+    dots.innerHTML=_sliderImgs.map(function(s,i){
+      return '<div style="width:6px;height:6px;border-radius:1px;background:'+(i===_sliderIdx?'#00a8f3':'rgba(255,255,255,.3)')+';transition:background .2s"></div>';
+    }).join('');
+    dots.style.display=multi?'flex':'none';
+  }
+}
+
+function sliderNav(dir){
+  _sliderIdx=(_sliderIdx+dir+_sliderImgs.length)%_sliderImgs.length;
+  _renderSlide();
+}
+
+/* ── Admin: multi-image list manager ── */
+var _epImages=[]; /* working list during edit */
+
+function epRenderImgList(){
+  var el=document.getElementById('ep-imgList');if(!el)return;
+  if(!_epImages.length){
+    el.innerHTML='<p style="font-family:Inter,sans-serif;font-size:.72rem;color:rgba(255,255,255,.25);padding:.3rem 0">Aucune image — ajoutez une URL ou importez un fichier.</p>';
+    return;
+  }
+  el.innerHTML=_epImages.map(function(src,i){
+    var thumb=src.length>60?src.slice(0,40)+'…':src;
+    return '<div style="display:flex;align-items:center;gap:.4rem;padding:.3rem .5rem;background:rgba(255,255,255,.03);border-radius:6px;border:1px solid rgba(255,255,255,.07)">'
+      +'<img src="'+src+'" style="width:32px;height:32px;object-fit:cover;border-radius:4px;flex-shrink:0" onerror="this.style.opacity=.3">'
+      +'<span style="font-family:Inter,sans-serif;font-size:.65rem;color:rgba(255,255,255,.4);flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">'+thumb+'</span>'
+      +(i===0?'<span style="font-size:.6rem;font-weight:700;color:#00a8f3;letter-spacing:.08em">MAIN</span>':'')
+      +'<button onclick="epRemoveImg('+i+')" style="background:none;border:none;cursor:pointer;color:rgba(239,68,68,.5);font-size:.8rem;padding:0 2px" onmouseover="this.style.color=\'#ef4444\'" onmouseout="this.style.color=\'rgba(239,68,68,.5)\'">×</button>'
+    +'</div>';
+  }).join('');
+}
+
+function epAddImageUrl(){
+  var inp=document.getElementById('ep-imgNew');if(!inp)return;
+  var v=inp.value.trim();
+  if(!v||v.length<5){toast('Saisissez une URL valide','error');return;}
+  _epImages.push(v);
+  inp.value='';
+  epRenderImgList();
+  /* Preview first image */
+  var pv=document.getElementById('ep-imgPreviewEl');
+  if(pv&&_epImages.length===1)pv.src=_epImages[0];
+  var pw=document.getElementById('ep-imgPreview');
+  if(pw&&_epImages.length===1)pw.classList.remove('hidden');
+}
+
+function epRemoveImg(idx){
+  _epImages.splice(idx,1);
+  epRenderImgList();
+}
+
+function epAddImageFile(input){
+  var file=input&&input.files&&input.files[0];
+  if(!file)return;
+  if(!file.type.match(/^image\/(jpeg|png|webp)$/)){toast('Format accepté : JPG, PNG, WebP','error');return;}
+  /* Check size < 4MB to avoid LS overflow */
+  if(file.size>4*1024*1024){toast('Image trop grande (max 4MB)','error');return;}
+  var reader=new FileReader();
+  reader.onload=function(e){
+    _epImages.push(e.target.result);
+    epRenderImgList();
+    var pv=document.getElementById('ep-imgPreviewEl');
+    var pw=document.getElementById('ep-imgPreview');
+    if(pv&&_epImages.length===1){pv.src=_epImages[0];if(pw)pw.classList.remove('hidden');}
+    toast('Image importée ✓','success');
+  };
+  reader.readAsDataURL(file);
+  input.value=''; /* reset so same file can be re-added */
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FOND D'ACCUEIL — Configurateur avec image / vidéo / opacité
+   LS key: config_accueil  →  {type:'image'|'video', src:'...', opacity:0.5}
+══════════════════════════════════════════════════════════════ */
+
+var _accueilConfig={type:'video',src:'',opacity:0.35};
+
+/* Apply a config object to the hero section immediately */
+function applyAccueilConfig(cfg){
+  if(!cfg)return;
+  _accueilConfig=Object.assign({},_accueilConfig,cfg);
+  var vid=document.getElementById('heroVideo');
+  var heroOverlay=document.getElementById('heroOverlay');
+  if(!vid)return;
+
+  if(cfg.type==='video'&&cfg.src){
+    /* Set video source */
+    vid.style.display='block';
+    var src=vid.querySelector('source')||document.createElement('source');
+    src.src=cfg.src;
+    src.type=cfg.src.endsWith('.webm')?'video/webm':'video/mp4';
+    if(!vid.contains(src))vid.appendChild(src);
+    vid.load();vid.play().catch(function(){});
+  } else if(cfg.type==='image'&&cfg.src){
+    /* Use CSS background instead of video */
+    vid.style.display='none';
+    document.body.style.backgroundImage='url('+cfg.src+')';
+    document.body.style.backgroundSize='cover';
+    document.body.style.backgroundPosition='center';
+    document.body.style.backgroundAttachment='fixed';
+  }
+  /* Apply opacity to heroVideo filter */
+  var op=typeof cfg.opacity==='number'?cfg.opacity:0.35;
+  vid.style.filter='brightness('+op+') saturate(.7)';
+  if(heroOverlay)heroOverlay.style.opacity=Math.min(1-op+0.1,0.85);
+}
+
+/* Save config and broadcast to all tabs */
+function saveAccueilConfig(cfg){
+  _accueilConfig=Object.assign({},_accueilConfig,cfg);
+  try{localStorage.setItem('config_accueil',JSON.stringify(_accueilConfig));}catch(e){
+    toast('Fichier trop grand pour le localStorage (max ~5MB)','error');return;
+  }
+  applyAccueilConfig(_accueilConfig);
+  toast('Fond d\'accueil appliqué ✓','success');
+}
+
+/* Full configurator UI — replaces renderAdminHero */
+function renderAdminHero(){
+  var ct=document.getElementById('adminContent');
+  var cfg=_accueilConfig;
+  var typeVideo=cfg.type==='video';
+  var typeImage=cfg.type==='image';
+  var opPct=Math.round((cfg.opacity||0.35)*100);
+
+  ct.innerHTML='<div class="flex items-center justify-between mb-5">'
+    +'<div><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Apparence</p>'
+    +'<h2 class="font-display text-2xl font-bold text-white uppercase">Fond <span style="color:#00a8f3">d\'accueil</span></h2>'
+    +'<p class="text-white/35 text-sm mt-1">Configurez l\'arrière-plan de la page d\'accueil en temps réel</p>'
+    +'</div></div>'
+
+    /* Type selector */
+    +'<div class="card p-5 mb-4">'
+    +'<p class="fl mb-3">Type de fond</p>'
+    +'<div style="display:flex;gap:.5rem">'
+    +['image','video'].map(function(t){
+      var active=cfg.type===t;
+      var label=t==='image'?'🖼 Image':'🎬 Vidéo';
+      return '<button onclick="heroSetType(\''+t+'\')" style="flex:1;padding:.55rem 1rem;border-radius:9px;border:2px solid '+(active?'#00a8f3':'rgba(255,255,255,.1)')+';background:'+(active?'rgba(0,168,243,.1)':'rgba(255,255,255,.03)')+';color:'+(active?'#00a8f3':'rgba(255,255,255,.5)')+';font-family:Inter,sans-serif;font-weight:600;font-size:.8rem;cursor:pointer;transition:all .2s">'+label+'</button>';
+    }).join('')
+    +'</div></div>'
+
+    /* Source input */
+    +'<div class="card p-5 mb-4">'
+    +'<p class="fl mb-3">'+(typeVideo?'URL de la vidéo (MP4/WebM)':'Source image')+'</p>'
+    /* URL input */
+    +'<div style="display:flex;gap:.4rem;margin-bottom:.5rem">'
+      +'<input type="text" id="hero-src-inp" class="fi" style="flex:1;font-size:.82rem" placeholder="'+(typeVideo?'https://.../video.mp4':'https://.../photo.jpg ou coller base64')+'" value="'+(cfg.src&&cfg.src.length<200?cfg.src:'')+'">'
+      +'<button onclick="heroApplySrc()" class="btn btn-primary btn-sm">Appliquer</button>'
+    +'</div>'
+    /* File upload (image only) */
+    +(typeImage
+      ?'<label class="btn btn-ghost btn-sm" style="cursor:pointer">📁 Importer image'
+        +'<input type="file" id="hero-file-inp" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="heroFileUpload(this)"/>'
+        +'</label>'
+      :'<p style="font-family:Inter,sans-serif;font-size:.7rem;color:rgba(255,255,255,.3)">La vidéo sera muette, en boucle et couvrira tout l\'écran automatiquement.</p>')
+    +'</div>'
+
+    /* Opacity slider */
+    +'<div class="card p-5 mb-4">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">'
+      +'<p class="fl" style="margin:0">Luminosité / transparence</p>'
+      +'<span id="hero-op-val" style="font-family:\'Bebas Neue\',sans-serif;font-size:1.1rem;color:#00a8f3">'+opPct+'%</span>'
+    +'</div>'
+    +'<input type="range" id="hero-op-inp" min="5" max="85" value="'+opPct+'" style="width:100%;accent-color:#00a8f3" oninput="heroOpacityLive(this.value)">'
+    +'<div style="display:flex;justify-content:space-between;font-family:Inter,sans-serif;font-size:.62rem;color:rgba(255,255,255,.3);margin-top:.3rem"><span>Sombre</span><span>Lumineux</span></div>'
+    +'</div>'
+
+    /* Preview */
+    +'<div class="card" style="overflow:hidden;border-radius:14px">'
+    +'<p class="fl" style="padding:.65rem 1rem .4rem;margin:0;border-bottom:1px solid rgba(255,255,255,.06)">Aperçu miniature</p>'
+    +'<div id="hero-preview" style="position:relative;height:160px;overflow:hidden;background:#050505">'
+      +(typeImage&&cfg.src?'<div style="position:absolute;inset:0;background-image:url('+cfg.src+');background-size:cover;background-position:center;filter:brightness('+(cfg.opacity||0.35)+') saturate(.7)"></div>':'')
+      +(typeVideo?'<div style="display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,.2);font-family:Inter,sans-serif;font-size:.75rem">Aperçu vidéo → page d\'accueil</div>':'')
+      +'<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2">'
+        +'<p style="font-family:\'Cormorant Garamond\',serif;font-style:italic;font-size:1.3rem;color:rgba(255,255,255,.9);text-shadow:0 0 20px rgba(0,0,0,.8)">De Cooman Racing Performance</p>'
+      +'</div>'
+    +'</div>'
+    +'<div style="padding:.65rem 1rem;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:.5rem">'
+      +'<button onclick="heroSaveConfig()" class="btn btn-primary btn-sm gp">💾 Enregistrer & Diffuser</button>'
+      +'<button onclick="heroReset()" class="btn btn-ghost btn-sm">Réinitialiser</button>'
+    +'</div>'
+    +'</div>';
+}
+
+/* Hero configurator event handlers */
+function heroSetType(t){
+  _accueilConfig.type=t;
+  renderAdminHero();
+}
+function heroOpacityLive(v){
+  var pct=parseInt(v);
+  _accueilConfig.opacity=pct/100;
+  var lbl=document.getElementById('hero-op-val');
+  if(lbl)lbl.textContent=pct+'%';
+  /* Live preview on hero */
+  var vid=document.getElementById('heroVideo');
+  if(vid)vid.style.filter='brightness('+(pct/100)+') saturate(.7)';
+}
+function heroApplySrc(){
+  var inp=document.getElementById('hero-src-inp');
+  if(!inp||!inp.value.trim()){toast('Saisissez une source','error');return;}
+  _accueilConfig.src=inp.value.trim();
+  applyAccueilConfig(_accueilConfig);
+  renderAdminHero();
+}
+function heroFileUpload(input){
+  var file=input&&input.files&&input.files[0];if(!file)return;
+  if(file.size>5*1024*1024){toast('Image trop grande (max 5MB pour le localStorage)','error');return;}
+  var reader=new FileReader();
+  reader.onload=function(e){
+    _accueilConfig.src=e.target.result;
+    _accueilConfig.type='image';
+    applyAccueilConfig(_accueilConfig);
+    renderAdminHero();
+    toast('Image chargée — cliquez "Enregistrer & Diffuser"','info');
+  };
+  reader.readAsDataURL(file);
+  input.value='';
+}
+function heroSaveConfig(){
+  var inp=document.getElementById('hero-src-inp');
+  if(inp&&inp.value.trim()&&inp.value.trim()!==_accueilConfig.src)
+    _accueilConfig.src=inp.value.trim();
+  saveAccueilConfig(_accueilConfig);
+}
+function heroReset(){
+  _accueilConfig={type:'video',src:'',opacity:0.35};
+  try{localStorage.removeItem('config_accueil');}catch(e){}
+  var vid=document.getElementById('heroVideo');
+  if(vid){vid.style.display='block';vid.style.filter='brightness(.35) saturate(.7)';}
+  document.body.style.backgroundImage='none';
+  renderAdminHero();
+  toast('Fond d\'accueil réinitialisé','info');
+}
+
 /* ══ INIT ══ */
 document.addEventListener('DOMContentLoaded',function(){
   loadUsersDB();
@@ -5434,10 +5604,3 @@ document.addEventListener('DOMContentLoaded',function(){
 </script>
 </body>
 </html>
-.btn-reply-mail{display:inline-flex;align-items:center;gap:.35rem;padding:.35rem .8rem;border-radius:7px;border:1px solid rgba(0,168,243,.3);background:rgba(0,168,243,.07);color:#00a8f3;font-family:Inter,sans-serif;font-weight:600;font-size:.72rem;text-decoration:none;transition:background .2s}
-.btn-reply-mail:hover{background:rgba(0,168,243,.15)}
-.btn-reply-gmail{display:inline-flex;align-items:center;gap:.35rem;padding:.35rem .8rem;border-radius:7px;border:1px solid rgba(234,67,53,.3);background:rgba(234,67,53,.07);color:#ea4335;font-family:Inter,sans-serif;font-weight:600;font-size:.72rem;text-decoration:none;transition:background .2s}
-.btn-reply-gmail:hover{background:rgba(234,67,53,.15)}
-
-.cat-chooser-card{cursor:pointer;padding:2.2rem 1.8rem;border-radius:18px;border:2px solid rgba(255,255,255,.08);background:rgba(255,255,255,.025);transition:all .25s;display:flex;flex-direction:column;align-items:center;text-align:center;gap:.5rem}
-.cat-chooser-card.active{box-shadow:0 0 40px rgba(0,168,243,.18)}
