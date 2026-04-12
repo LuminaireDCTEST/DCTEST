@@ -1160,6 +1160,7 @@ function lsLoad(key,def){try{var v=localStorage.getItem(key);return v?JSON.parse
 
 /* ── Persist all mutable state to LS ── */
 function persistAll(){
+  console.log('[DB] persistAll called');
   lsSave(LS_ORDERS,ORDERS);
   lsSave(LS_PRODUCTS,PRODUCTS);
   lsSave(LS_CATALOGS,typeof CATALOGS!=='undefined'?CATALOGS:[]);
@@ -1168,20 +1169,27 @@ function persistAll(){
   lsSave(LS_SHIPPING,SHIPPING_SETTINGS);
   lsSave(LS_CHAT,CHAT_MESSAGES);
   saveUsersDB();
+  /* Force refresh on ALL open tabs for the most important key */
+  try{window.dispatchEvent(new StorageEvent('storage',{key:LS_ORDERS,newValue:JSON.stringify(ORDERS)}));}catch(e){}
+  console.log('[DB] persistAll done — PRODUCTS:'+PRODUCTS.length+' ORDERS:'+ORDERS.length);
 }
 
 /* ── Load all mutable state from LS (called on init + storage events) ── */
 function hydrateFromLS(){
-  var o=lsLoad(LS_ORDERS,null);   if(o)ORDERS=o;
-  /* Products: use loadProducts() for schema validation + migration */
+  console.log('[DB] hydrateFromLS called');
+  var o=lsLoad(LS_ORDERS,null);if(o)ORDERS=o;
+  /* Products: loadProducts() handles schema validation */
   loadProducts();
-  var c=lsLoad(LS_CATALOGS,null); if(c&&typeof CATALOGS!=='undefined')CATALOGS=c;
-  var h=lsLoad(LS_HERO,null);     if(h)Object.assign(HERO_DESIGN,h);
-  var ci=lsLoad(LS_CONTACT,null); if(ci)Object.assign(CONTACT_INFO,ci);
+  var c=lsLoad(LS_CATALOGS,null);if(c&&typeof CATALOGS!=='undefined')CATALOGS=c;
+  var h=lsLoad(LS_HERO,null);if(h)Object.assign(HERO_DESIGN,h);
+  var ci=lsLoad(LS_CONTACT,null);if(ci)Object.assign(CONTACT_INFO,ci);
   var sh=lsLoad(LS_SHIPPING,null);if(sh)Object.assign(SHIPPING_SETTINGS,sh);
-  var ch=lsLoad(LS_CHAT,null);    if(ch)CHAT_MESSAGES=ch;
-  /* Apply hero / fond d'accueil config */
-  var ca=lsLoad('config_accueil',null); if(ca)applyAccueilConfig(ca);
+  var ch=lsLoad(LS_CHAT,null);if(ch)CHAT_MESSAGES=ch;
+  /* Apply hero config from new key */
+  var ca=null;
+  try{ca=localStorage.getItem('config_visuel_accueil');}catch(e){}
+  if(ca){try{applyAccueilConfig(JSON.parse(ca));}catch(e){console.warn('[DB] config_visuel_accueil parse error',e);}}
+  console.log('[DB] hydrateFromLS done — PRODUCTS:'+PRODUCTS.length);
 }
 
 /* ── syncAppData: rafraîchit l'UI après tout changement de données ── */
@@ -1213,13 +1221,15 @@ function syncAppData(){
 
 /* ── Cross-tab sync via storage event ── */
 window.addEventListener('storage',function(e){
-  if([LS_ORDERS,LS_PRODUCTS,LS_CATALOGS,LS_HERO,LS_CONTACT,LS_SHIPPING,LS_CHAT,DB_KEY].indexOf(e.key)>=0){
+  var syncKeys=[LS_ORDERS,LS_PRODUCTS,LS_CATALOGS,LS_HERO,LS_CONTACT,LS_SHIPPING,LS_CHAT,DB_KEY];
+  if(syncKeys.indexOf(e.key)>=0){
+    console.log('[Sync] storage event for key='+e.key+' — calling syncAppData');
     syncAppData();
   }
   if(e.key===LS_BG){applyBgFromLS();}
-  /* Fond d'accueil — applied to ALL tabs immediately */
-  if(e.key==='config_accueil'&&e.newValue){
-    try{applyAccueilConfig(JSON.parse(e.newValue));}catch(err){}
+  if(e.key==='config_visuel_accueil'&&e.newValue){
+    console.log('[Sync] config_visuel_accueil changed — applying');
+    try{applyAccueilConfig(JSON.parse(e.newValue));}catch(err){console.warn('[Sync]',err);}
   }
 });
 
@@ -3173,50 +3183,80 @@ function applyImgUrl(pid){
   toast(`Image du produit "${p.name}" mise à jour ✓`,'success');
 }
 function openEditProduct(pid){
+  console.log('[Admin] openEditProduct called with pid='+pid);
   editingProductId=pid;
   _epImages=[];
+
+  var overlay=document.getElementById('overlay-editProduct');
+  if(!overlay){console.error('[Admin] overlay-editProduct not found in DOM!');return;}
+
   var stockRow=document.getElementById('ep-stockRow');
   var catSel=document.getElementById('ep-catalog');
+  if(!catSel)console.warn('[Admin] ep-catalog select not found');
+
   if(pid===null){
-    /* NEW product */
-    document.getElementById('editProductTitle').textContent='Ajouter un produit';
-    document.getElementById('editProductRef').textContent='Nouveau produit';
-    ['ep-name','ep-ref','ep-badge'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
-    document.getElementById('ep-price').value='';
-    document.getElementById('ep-cat').value='phares';
-    document.getElementById('ep-tech').value='led';
-    document.getElementById('ep-isNew').checked=false;
+    /* ── NEW product ── */
+    var titleEl=document.getElementById('editProductTitle');
+    var refEl=document.getElementById('editProductRef');
+    if(titleEl)titleEl.textContent='Ajouter un produit';
+    if(refEl)refEl.textContent='Nouveau produit';
+    ['ep-name','ep-ref','ep-badge'].forEach(function(id){
+      var el=document.getElementById(id);if(el)el.value='';
+    });
+    var priceEl=document.getElementById('ep-price');if(priceEl)priceEl.value='';
+    var catEl=document.getElementById('ep-cat');if(catEl)catEl.value='phares';
+    var techEl=document.getElementById('ep-tech');if(techEl)techEl.value='led';
+    var newEl=document.getElementById('ep-isNew');if(newEl)newEl.checked=false;
     if(catSel)catSel.value='';
     var initS=document.getElementById('ep-initStock');if(initS)initS.value='0';
     if(stockRow)stockRow.style.display='block';
+    console.log('[Admin] Form reset for new product');
+
   } else {
-    /* EDIT existing product */
-    var p=PRODUCTS.find(function(x){return x.id===pid;});if(!p)return;
-    document.getElementById('editProductTitle').textContent='Modifier le produit';
-    document.getElementById('editProductRef').textContent=p.ref;
-    document.getElementById('ep-name').value=p.name;
-    document.getElementById('ep-ref').value=p.ref;
-    document.getElementById('ep-price').value=p.price;
-    document.getElementById('ep-cat').value=p.cat||'phares';
-    document.getElementById('ep-tech').value=p.tech||'led';
-    document.getElementById('ep-badge').value=p.badge||'';
-    document.getElementById('ep-isNew').checked=p.isNew||false;
-    if(catSel)catSel.value=p.catalog_id||'cat_luminaire';
+    /* ── EDIT existing product ── */
+    var p=PRODUCTS.find(function(x){return x.id===pid;});
+    if(!p){console.error('[Admin] Product not found: pid='+pid+' PRODUCTS.length='+PRODUCTS.length);return;}
+    console.log('[Admin] Editing product: '+p.name+' catalog_id='+p.catalog_id);
+
+    var titleEl=document.getElementById('editProductTitle');
+    var refEl=document.getElementById('editProductRef');
+    if(titleEl)titleEl.textContent='Modifier : '+p.name;
+    if(refEl)refEl.textContent=p.ref;
+
+    var nameEl=document.getElementById('ep-name');if(nameEl)nameEl.value=p.name;
+    var refInput=document.getElementById('ep-ref');if(refInput)refInput.value=p.ref;
+    var priceEl=document.getElementById('ep-price');if(priceEl)priceEl.value=p.price;
+    var catEl=document.getElementById('ep-cat');if(catEl)catEl.value=p.cat||'phares';
+    var techEl=document.getElementById('ep-tech');if(techEl)techEl.value=p.tech||'led';
+    var badgeEl=document.getElementById('ep-badge');if(badgeEl)badgeEl.value=p.badge||'';
+    var newEl=document.getElementById('ep-isNew');if(newEl)newEl.checked=!!p.isNew;
+    if(catSel){
+      catSel.value=p.catalog_id||'cat_luminaire';
+      console.log('[Admin] ep-catalog set to: '+catSel.value);
+    }
     if(stockRow)stockRow.style.display='none';
     /* Load images */
     _epImages=(p.images&&p.images.length>0)?p.images.slice():(p.img?[p.img]:[]);
   }
+
   epRenderImgList();
+
   /* Volume tiers */
-  if(pid!==null){var p2=PRODUCTS.find(function(x){return x.id===pid;});if(p2)renderVolumeTiersAdmin(p2);}
+  if(pid!==null){
+    var p2=PRODUCTS.find(function(x){return x.id===pid;});
+    if(p2&&typeof renderVolumeTiersAdmin==='function')renderVolumeTiersAdmin(p2);
+  }
+
+  /* Open overlay */
   openOverlay('editProduct');
+  console.log('[Admin] editProduct overlay opened');
 }
-document.getElementById('ep-img').addEventListener('input',function(){previewImage(this.value);});
 function previewImage(url){
   const wrap=document.getElementById('ep-imgPreview'),img=document.getElementById('ep-imgPreviewEl');
   if(url){wrap.classList.remove('hidden');img.src=url;}else{wrap.classList.add('hidden');}
 }
 function saveProduct(){
+  console.log('[Admin] saveProduct called, editingProductId='+editingProductId);
   var name=document.getElementById('ep-name').value.trim();
   var ref=document.getElementById('ep-ref').value.trim();
   var price=parseFloat(document.getElementById('ep-price').value);
@@ -3334,6 +3374,7 @@ function renderCatalog(filter){
   if(filter===undefined)filter='all';
   currentCatalogFilter=filter;
   currentTechFilter='';
+  console.log('[Catalog] renderCatalog filter='+filter+' activeCat='+window._activeCatalogId+' PRODUCTS='+PRODUCTS.length);
   _renderProductGrid();
 }
 function filterCatalog(val){renderCatalog(val);}
@@ -3372,6 +3413,7 @@ function loadProducts(){
 }
 
 function _renderProductGrid(){
+  console.log('[Grid] _renderProductGrid activeCat='+window._activeCatalogId+' PRODUCTS='+PRODUCTS.length);
   var grid=document.getElementById('productGrid');if(!grid)return;
 
   /* 0. Pas de catalogue actif -> afficher le chooser */
@@ -5071,57 +5113,121 @@ function getUserCatalogs(){
 
 /* Render the catalog chooser cards above the product grid */
 function renderCatalogChooser(){
-  var el=document.getElementById('catalogChooser');if(!el)return;
+  console.log('[Chooser] renderCatalogChooser called, _activeCatalogId='+window._activeCatalogId);
+  var el=document.getElementById('catalogChooser');
+  var grid=document.getElementById('productGrid');
+  var sidebar=document.getElementById('catalogSidebar');
+  var backBtn=document.getElementById('catalogBackBtn');
+  if(!el){console.warn('[Chooser] #catalogChooser not found');return;}
+
+  /* Determine which catalogs the user can access */
   var allowedIds=getUserCatalogs();
   var available=CATALOGS.filter(function(c){return allowedIds.indexOf(c.id)>=0;});
-  if(available.length===0){el.style.display='none';return;}
-  if(available.length===1&&!window._activeCatalogId){
+  console.log('[Chooser] available='+available.map(function(c){return c.id;}).join(','));
+
+  /* Single catalog with no override: auto-select, skip chooser */
+  if(available.length===1&&!window._catalogEnteredOnce){
+    console.log('[Chooser] Single catalog auto-select: '+available[0].id);
     window._activeCatalogId=available[0].id;
+    window._catalogEnteredOnce=true;
     el.style.display='none';
-    renderCatalog(available[0].filterValue||'all');return;
+    if(backBtn)backBtn.style.display='none';
+    if(grid)grid.style.display='grid';
+    if(sidebar)sidebar.style.display='';
+    renderCatalog(available[0].filterValue||'all');
+    return;
   }
-  if(available.length<=1&&window._activeCatalogId){el.style.display='none';return;}
+
+  /* No catalogs: hide everything */
+  if(available.length===0){
+    el.style.display='none';
+    if(grid)grid.style.display='none';
+    el.innerHTML='<p style="color:rgba(255,255,255,.3);text-align:center;padding:3rem;font-family:Inter,sans-serif">Aucun catalogue autorisé pour votre compte.</p>';
+    return;
+  }
+
+  /* Show chooser, hide grid+sidebar */
   el.style.display='block';
-  var pgrid=document.getElementById('productGrid');
-  var psb=document.getElementById('catalogSidebar');
-  if(pgrid)pgrid.style.display=window._activeCatalogId?'grid':'none';
-  if(psb)psb.style.display=window._activeCatalogId?'':'none';
-  var cards=available.map(function(c,idx){
-    var isActive=window._activeCatalogId===c.id;
+  if(grid)grid.style.display='none';
+  if(sidebar)sidebar.style.display='none';
+  if(backBtn)backBtn.style.display='none';
+
+  /* Layout: 1 catalog = 60% centered, 2 = 50/50, 3+ = grid */
+  var containerStyle, cardStyle;
+  if(available.length===1){
+    containerStyle='display:flex;justify-content:center;align-items:stretch;gap:0;padding:2rem 0';
+    cardStyle='width:60%;min-width:280px;';
+  } else if(available.length===2){
+    containerStyle='display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;padding:1.5rem 0';
+    cardStyle='';
+  } else {
+    containerStyle='display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem;padding:1rem 0';
+    cardStyle='';
+  }
+
+  /* Build HTML */
+  var html='<p style="font-family:Cormorant Garamond,serif;font-style:italic;font-size:1.1rem;'
+    +'color:rgba(255,255,255,.45);text-align:center;margin-bottom:1.5rem;letter-spacing:.03em">'
+    +'Sélectionnez votre espace catalogue</p>'
+    +'<div style="'+containerStyle+'">';
+
+  available.forEach(function(c){
     var col=c.color||'#00a8f3';
-    var rgb=hexToRgbStr&&hexToRgbStr(col)||'0,168,243';
-    return '<div class="cat-chooser-card'+(isActive?' active':'')+'" data-catid="'+c.id+'" data-color="'+col+'" data-rgb="'+rgb+'" style="border-color:'+(isActive?col:'rgba(255,255,255,.08)')+';background:'+(isActive?'rgba('+rgb+',.08)':'rgba(255,255,255,.025)')+'">'
-      +'<div style="width:60px;height:60px;border-radius:15px;background:rgba('+rgb+',.15);border:1px solid rgba('+rgb+',.3);display:flex;align-items:center;justify-content:center;margin:0 auto .85rem">'
-        +'<svg style="width:26px;height:26px;color:'+col+'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="'+c.icon+'"/></svg>'
+    /* Compute count of products in this catalog */
+    var count=PRODUCTS.filter(function(p){return (p.catalog_id||'cat_luminaire')===c.id;}).length;
+    html+='<div class="cat-chooser-card" data-catid="'+c.id+'" data-filterval="'+(c.filterValue||'all')+'" style="'+cardStyle+'">'
+      +'<div style="width:72px;height:72px;border-radius:18px;background:rgba(0,0,0,.3);border:2px solid rgba(255,255,255,.1);'
+        +'display:flex;align-items:center;justify-content:center;margin:0 auto 1.2rem;transition:border-color .2s">'
+        +'<svg style="width:32px;height:32px;color:'+col+'" fill="none" stroke="currentColor" viewBox="0 0 24 24">'
+          +'<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="'+c.icon+'"/></svg>'
       +'</div>'
-      +'<p style="font-family:Bebas Neue,sans-serif;font-size:1.2rem;letter-spacing:.08em;color:white;margin-bottom:.35rem">'+c.label+'</p>'
-      +'<p style="font-family:Inter,sans-serif;font-size:.73rem;color:rgba(255,255,255,.4);line-height:1.5;margin-bottom:.85rem">'+c.desc+'</p>'
-      +(isActive?'<span style="background:rgba('+rgb+',.15);color:'+col+';border-radius:20px;padding:2px 9px;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-family:Inter,sans-serif">✓ Actif</span>':'<span style="font-family:Inter,sans-serif;font-size:.7rem;font-weight:600;color:rgba(255,255,255,.3)">→ Accéder</span>')
+      +'<p style="font-family:Bebas Neue,sans-serif;font-size:1.5rem;letter-spacing:.08em;color:white;margin-bottom:.4rem;line-height:1">'+c.label+'</p>'
+      +'<p style="font-family:Inter,sans-serif;font-size:.78rem;color:rgba(255,255,255,.4);line-height:1.5;margin-bottom:1rem">'+c.desc+'</p>'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem">'
+        +'<span style="font-family:Inter,sans-serif;font-size:.7rem;color:rgba(255,255,255,.3)">'+count+' article'+(count>1?'s':'')+'</span>'
+        +'<span style="font-family:Inter,sans-serif;font-size:.72rem;font-weight:700;color:'+col+';display:flex;align-items:center;gap:.3rem">'
+          +'Accéder <svg style="width:13px;height:13px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>'
+        +'</span>'
+      +'</div>'
     +'</div>';
-  }).join('');
-  var cols=available.length>=3?'repeat(3,1fr)':available.length===2?'repeat(2,1fr)':'1fr';
-  el.innerHTML='<p style="font-family:Cormorant Garamond,serif;font-style:italic;font-size:1rem;color:rgba(255,255,255,.4);margin-bottom:1.4rem;text-align:center">Sélectionnez votre espace catalogue</p>'
-    +'<div style="display:grid;grid-template-columns:'+cols+';gap:1.2rem;max-width:900px;margin:0 auto">'+cards+'</div>';
-  /* Wire click events after DOM is built */
+  });
+  html+='</div>';
+  el.innerHTML=html;
+
+  /* Wire clicks via event delegation */
   el.querySelectorAll('.cat-chooser-card').forEach(function(card){
-    card.addEventListener('click',function(){selectCatalog(card.getAttribute('data-catid'));});
+    var col=available.find(function(c){return c.id===card.getAttribute('data-catid');});
+    var accent=(col&&col.color)||'#00a8f3';
+    card.style.cursor='pointer';
+    card.style.padding='2rem 1.8rem';
+    card.style.borderRadius='18px';
+    card.style.border='2px solid rgba(255,255,255,.08)';
+    card.style.background='rgba(255,255,255,.025)';
+    card.style.transition='all .25s';
+    card.style.textAlign='center';
     card.addEventListener('mouseenter',function(){
-      if(card.getAttribute('data-catid')!==window._activeCatalogId){
-        card.style.borderColor=card.getAttribute('data-color');
-        card.style.background='rgba('+card.getAttribute('data-rgb')+',.05)';
-      }
+      card.style.borderColor=accent;
+      card.style.background='rgba(0,0,0,.25)';
+      card.style.transform='translateY(-3px)';
+      card.style.boxShadow='0 12px 40px rgba(0,0,0,.4)';
     });
     card.addEventListener('mouseleave',function(){
-      if(card.getAttribute('data-catid')!==window._activeCatalogId){
-        card.style.borderColor='rgba(255,255,255,.08)';
-        card.style.background='rgba(255,255,255,.025)';
-      }
+      card.style.borderColor='rgba(255,255,255,.08)';
+      card.style.background='rgba(255,255,255,.025)';
+      card.style.transform='';
+      card.style.boxShadow='';
+    });
+    card.addEventListener('click',function(){
+      console.log('[Chooser] Card clicked: '+card.getAttribute('data-catid'));
+      selectCatalog(card.getAttribute('data-catid'));
     });
   });
 }
 
 function selectCatalog(catId){
-  var cat=CATALOGS.find(function(c){return c.id===catId;});if(!cat)return;
+  console.log('[Catalog] selectCatalog called with catId='+catId);
+  var cat=CATALOGS.find(function(c){return c.id===catId;});
+  if(!cat){console.error('[Catalog] catalog not found: '+catId);return;}
   window._activeCatalogId=catId;
   window._catalogEnteredOnce=true;
   /* Show back button */
@@ -5130,12 +5236,15 @@ function selectCatalog(catId){
   /* Hide chooser, show grid */
   var chooser=document.getElementById('catalogChooser');
   if(chooser)chooser.style.display='none';
-  var grid=document.getElementById('productGrid');if(grid)grid.style.display='grid';
-  var sidebar=document.getElementById('catalogSidebar');if(sidebar)sidebar.style.display='';
+  var grid=document.getElementById('productGrid');
+  if(grid)grid.style.display='grid';
+  var sidebar=document.getElementById('catalogSidebar');
+  if(sidebar)sidebar.style.display='';
   renderCatalog(cat.filterValue||'all');
 }
 
 function backToCatalogChooser(){
+  console.log('[Catalog] backToCatalogChooser');
   window._activeCatalogId=null;
   window._catalogEnteredOnce=false;
   var backBtn=document.getElementById('catalogBackBtn');if(backBtn)backBtn.style.display='none';
@@ -5535,111 +5644,129 @@ function epAddImageFile(input){
 var _accueilConfig={type:'video',src:'',opacity:0.35};
 
 /* Apply a config object to the hero section immediately */
+/* ── applyAccueilConfig: injecte le fond d'accueil depuis config_visuel_accueil ── */
 function applyAccueilConfig(cfg){
   if(!cfg)return;
-  _accueilConfig=Object.assign({},_accueilConfig,cfg);
+  console.log('[Hero] applyAccueilConfig type='+cfg.type+' opacity='+cfg.opacity);
+  _accueilConfig=Object.assign({type:'video',src:'',opacity:0.35},cfg);
   var vid=document.getElementById('heroVideo');
-  var heroOverlay=document.getElementById('heroOverlay');
   if(!vid)return;
+  var op=typeof cfg.opacity==='number'?cfg.opacity:0.35;
 
   if(cfg.type==='video'&&cfg.src){
-    /* Set video source */
     vid.style.display='block';
-    var src=vid.querySelector('source')||document.createElement('source');
+    /* Clear existing sources */
+    while(vid.firstChild)vid.removeChild(vid.firstChild);
+    var src=document.createElement('source');
     src.src=cfg.src;
-    src.type=cfg.src.endsWith('.webm')?'video/webm':'video/mp4';
-    if(!vid.contains(src))vid.appendChild(src);
+    src.type=cfg.src.toLowerCase().endsWith('.webm')?'video/webm':'video/mp4';
+    vid.appendChild(src);
     vid.load();vid.play().catch(function(){});
   } else if(cfg.type==='image'&&cfg.src){
-    /* Use CSS background instead of video */
     vid.style.display='none';
-    document.body.style.backgroundImage='url('+cfg.src+')';
-    document.body.style.backgroundSize='cover';
-    document.body.style.backgroundPosition='center';
-    document.body.style.backgroundAttachment='fixed';
+    var heroSection=document.getElementById('heroSection')||document.querySelector('.hero-section');
+    if(heroSection){
+      heroSection.style.backgroundImage='url('+cfg.src+')';
+      heroSection.style.backgroundSize='cover';
+      heroSection.style.backgroundPosition='center';
+    } else {
+      /* Fallback: body background */
+      document.body.style.backgroundImage='url('+cfg.src+')';
+      document.body.style.backgroundSize='cover';
+      document.body.style.backgroundPosition='center';
+    }
   }
-  /* Apply opacity to heroVideo filter */
-  var op=typeof cfg.opacity==='number'?cfg.opacity:0.35;
   vid.style.filter='brightness('+op+') saturate(.7)';
-  if(heroOverlay)heroOverlay.style.opacity=Math.min(1-op+0.1,0.85);
 }
 
-/* Save config and broadcast to all tabs */
+/* ── saveAccueilConfig: persist + broadcast ── */
 function saveAccueilConfig(cfg){
   _accueilConfig=Object.assign({},_accueilConfig,cfg);
-  try{localStorage.setItem('config_accueil',JSON.stringify(_accueilConfig));}catch(e){
+  try{
+    localStorage.setItem('config_visuel_accueil',JSON.stringify(_accueilConfig));
+    console.log('[Hero] Saved config_visuel_accueil');
+  }catch(e){
     toast('Fichier trop grand pour le localStorage (max ~5MB)','error');return;
   }
   applyAccueilConfig(_accueilConfig);
-  toast('Fond d\'accueil appliqué ✓','success');
+  /* Broadcast to all other tabs */
+  try{window.dispatchEvent(new StorageEvent('storage',{key:'config_visuel_accueil',newValue:JSON.stringify(_accueilConfig)}));}catch(e){}
+  toast('Fond d\'accueil appliqué et diffusé ✓','success');
 }
 
 /* Full configurator UI — replaces renderAdminHero */
 function renderAdminHero(){
+  console.log('[Admin] renderAdminHero called');
   var ct=document.getElementById('adminContent');
-  var cfg=_accueilConfig;
-  var typeVideo=cfg.type==='video';
-  var typeImage=cfg.type==='image';
+  if(!ct){console.error('[Admin] adminContent not found');return;}
+
+  /* Read current config */
+  var cfg={type:'video',src:'',opacity:0.35};
+  try{
+    var stored=localStorage.getItem('config_visuel_accueil');
+    if(stored)cfg=Object.assign(cfg,JSON.parse(stored));
+  }catch(e){console.warn('[Hero] config parse error',e);}
+  _accueilConfig=cfg;
+
   var opPct=Math.round((cfg.opacity||0.35)*100);
 
   ct.innerHTML='<div class="flex items-center justify-between mb-5">'
     +'<div><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Apparence</p>'
     +'<h2 class="font-display text-2xl font-bold text-white uppercase">Fond <span style="color:#00a8f3">d\'accueil</span></h2>'
-    +'<p class="text-white/35 text-sm mt-1">Configurez l\'arrière-plan de la page d\'accueil en temps réel</p>'
+    +'<p class="text-white/35 text-sm mt-1">Vidéo ou image de fond — appliqué instantanément sur toutes les sessions</p>'
     +'</div></div>'
 
-    /* Type selector */
+    /* Type toggle */
     +'<div class="card p-5 mb-4">'
-    +'<p class="fl mb-3">Type de fond</p>'
-    +'<div style="display:flex;gap:.5rem">'
-    +['image','video'].map(function(t){
-      var active=cfg.type===t;
-      var label=t==='image'?'🖼 Image':'🎬 Vidéo';
-      return '<button onclick="heroSetType(\''+t+'\')" style="flex:1;padding:.55rem 1rem;border-radius:9px;border:2px solid '+(active?'#00a8f3':'rgba(255,255,255,.1)')+';background:'+(active?'rgba(0,168,243,.1)':'rgba(255,255,255,.03)')+';color:'+(active?'#00a8f3':'rgba(255,255,255,.5)')+';font-family:Inter,sans-serif;font-weight:600;font-size:.8rem;cursor:pointer;transition:all .2s">'+label+'</button>';
-    }).join('')
+    +'<p class="fl mb-3">Type de source</p>'
+    +'<div id="heroTypeBtns" style="display:flex;gap:.6rem">'
+    +'<button id="heroBtn-video" onclick="heroSetType(\'video\')" style="flex:1;padding:.6rem 1rem;border-radius:9px;border:2px solid '+(cfg.type==='video'?'#00a8f3':'rgba(255,255,255,.1)')+';background:'+(cfg.type==='video'?'rgba(0,168,243,.1)':'rgba(255,255,255,.03)')+';color:'+(cfg.type==='video'?'#00a8f3':'rgba(255,255,255,.5)')+';font-family:Inter,sans-serif;font-weight:600;font-size:.82rem;cursor:pointer;transition:all .2s">🎬 Vidéo MP4</button>'
+    +'<button id="heroBtn-image" onclick="heroSetType(\'image\')" style="flex:1;padding:.6rem 1rem;border-radius:9px;border:2px solid '+(cfg.type==='image'?'#00a8f3':'rgba(255,255,255,.1)')+';background:'+(cfg.type==='image'?'rgba(0,168,243,.1)':'rgba(255,255,255,.03)')+';color:'+(cfg.type==='image'?'#00a8f3':'rgba(255,255,255,.5)')+';font-family:Inter,sans-serif;font-weight:600;font-size:.82rem;cursor:pointer;transition:all .2s">🖼 Image</button>'
     +'</div></div>'
 
-    /* Source input */
+    /* Source */
     +'<div class="card p-5 mb-4">'
-    +'<p class="fl mb-3">'+(typeVideo?'URL de la vidéo (MP4/WebM)':'Source image')+'</p>'
-    /* URL input */
+    +'<p class="fl mb-2">URL de la source <span style="font-size:.7rem;color:rgba(255,255,255,.3);font-weight:400;text-transform:none;letter-spacing:0">'+(cfg.type==='video'?'MP4 ou WebM':'JPG, PNG ou WebP')+'</span></p>'
     +'<div style="display:flex;gap:.4rem;margin-bottom:.5rem">'
-      +'<input type="text" id="hero-src-inp" class="fi" style="flex:1;font-size:.82rem" placeholder="'+(typeVideo?'https://.../video.mp4':'https://.../photo.jpg ou coller base64')+'" value="'+(cfg.src&&cfg.src.length<200?cfg.src:'')+'">'
+      +'<input type="text" id="hero-src-inp" class="fi" style="flex:1;font-size:.82rem" placeholder="https://..." value="'+(cfg.src&&cfg.src.length<300?cfg.src:'')+'">'
       +'<button onclick="heroApplySrc()" class="btn btn-primary btn-sm">Appliquer</button>'
     +'</div>'
-    /* File upload (image only) */
-    +(typeImage
-      ?'<label class="btn btn-ghost btn-sm" style="cursor:pointer">📁 Importer image'
-        +'<input type="file" id="hero-file-inp" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="heroFileUpload(this)"/>'
+    +(cfg.type==='image'
+      ?'<label class="btn btn-ghost btn-sm" style="cursor:pointer;display:inline-flex;align-items:center;gap:.4rem">'
+        +'📁 Importer image locale'
+        +'<input type="file" id="hero-file-inp" accept="image/*" style="display:none" onchange="heroFileUpload(this)"/>'
         +'</label>'
-      :'<p style="font-family:Inter,sans-serif;font-size:.7rem;color:rgba(255,255,255,.3)">La vidéo sera muette, en boucle et couvrira tout l\'écran automatiquement.</p>')
+      :'<p style="font-family:Inter,sans-serif;font-size:.7rem;color:rgba(255,255,255,.3)">La vidéo sera muette, en boucle, couvrant tout l\'arrière-plan.</p>')
     +'</div>'
 
-    /* Opacity slider */
+    /* Opacity */
     +'<div class="card p-5 mb-4">'
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">'
-      +'<p class="fl" style="margin:0">Luminosité / transparence</p>'
-      +'<span id="hero-op-val" style="font-family:\'Bebas Neue\',sans-serif;font-size:1.1rem;color:#00a8f3">'+opPct+'%</span>'
+      +'<p class="fl" style="margin:0">Luminosité du fond</p>'
+      +'<span id="hero-op-val" style="font-family:Bebas Neue,sans-serif;font-size:1.15rem;color:#00a8f3;min-width:40px;text-align:right">'+opPct+'%</span>'
     +'</div>'
-    +'<input type="range" id="hero-op-inp" min="5" max="85" value="'+opPct+'" style="width:100%;accent-color:#00a8f3" oninput="heroOpacityLive(this.value)">'
-    +'<div style="display:flex;justify-content:space-between;font-family:Inter,sans-serif;font-size:.62rem;color:rgba(255,255,255,.3);margin-top:.3rem"><span>Sombre</span><span>Lumineux</span></div>'
+    +'<input type="range" id="hero-op-inp" min="5" max="90" value="'+opPct+'" style="width:100%;accent-color:#00a8f3;cursor:pointer" oninput="heroOpacityLive(this.value)">'
+    +'<div style="display:flex;justify-content:space-between;font-family:Inter,sans-serif;font-size:.62rem;color:rgba(255,255,255,.25);margin-top:.25rem"><span>Sombre</span><span>Lumineux</span></div>'
     +'</div>'
 
-    /* Preview */
-    +'<div class="card" style="overflow:hidden;border-radius:14px">'
-    +'<p class="fl" style="padding:.65rem 1rem .4rem;margin:0;border-bottom:1px solid rgba(255,255,255,.06)">Aperçu miniature</p>'
-    +'<div id="hero-preview" style="position:relative;height:160px;overflow:hidden;background:#050505">'
-      +(typeImage&&cfg.src?'<div style="position:absolute;inset:0;background-image:url('+cfg.src+');background-size:cover;background-position:center;filter:brightness('+(cfg.opacity||0.35)+') saturate(.7)"></div>':'')
-      +(typeVideo?'<div style="display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,.2);font-family:Inter,sans-serif;font-size:.75rem">Aperçu vidéo → page d\'accueil</div>':'')
+    /* Preview + save */
+    +'<div class="card" style="overflow:hidden">'
+    +'<div style="padding:.7rem 1rem;border-bottom:1px solid rgba(255,255,255,.06);font-family:Inter,sans-serif;font-size:.72rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.1em">Aperçu & Sauvegarde</div>'
+    +'<div id="hero-preview-box" style="position:relative;height:140px;overflow:hidden;background:#050505">'
+      +(cfg.src&&cfg.type==='image'
+        ?'<div style="position:absolute;inset:0;background-image:url('+cfg.src+');background-size:cover;background-position:center;filter:brightness('+(cfg.opacity||0.35)+')"></div>':'')
       +'<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2">'
-        +'<p style="font-family:\'Cormorant Garamond\',serif;font-style:italic;font-size:1.3rem;color:rgba(255,255,255,.9);text-shadow:0 0 20px rgba(0,0,0,.8)">De Cooman Racing Performance</p>'
+        +'<p style="font-family:Cormorant Garamond,serif;font-style:italic;font-size:1.2rem;color:rgba(255,255,255,.85);text-shadow:0 0 20px rgba(0,0,0,.9)">De Cooman Racing Performance</p>'
       +'</div>'
     +'</div>'
-    +'<div style="padding:.65rem 1rem;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:.5rem">'
-      +'<button onclick="heroSaveConfig()" class="btn btn-primary btn-sm gp">💾 Enregistrer & Diffuser</button>'
+    +'<div style="padding:.7rem 1rem;display:flex;gap:.5rem">'
+      +'<button onclick="heroSaveConfig()" class="btn btn-primary btn-sm gp" style="flex:1">'
+        +'<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>'
+        +'Enregistrer & Diffuser maintenant</button>'
       +'<button onclick="heroReset()" class="btn btn-ghost btn-sm">Réinitialiser</button>'
-    +'</div>'
-    +'</div>';
+    +'</div></div>';
+
+  console.log('[Hero] renderAdminHero rendered, cfg='+JSON.stringify(cfg));
 }
 
 /* Hero configurator event handlers */
@@ -5685,12 +5812,14 @@ function heroSaveConfig(){
 }
 function heroReset(){
   _accueilConfig={type:'video',src:'',opacity:0.35};
-  try{localStorage.removeItem('config_accueil');}catch(e){}
+  try{localStorage.removeItem('config_visuel_accueil');}catch(e){}
+  try{localStorage.removeItem('config_accueil');}catch(e){} /* clean old key too */
   var vid=document.getElementById('heroVideo');
   if(vid){vid.style.display='block';vid.style.filter='brightness(.35) saturate(.7)';}
   document.body.style.backgroundImage='none';
   renderAdminHero();
   toast('Fond d\'accueil réinitialisé','info');
+  console.log('[Hero] Config reset');
 }
 
 /* ══ INIT ══ */
