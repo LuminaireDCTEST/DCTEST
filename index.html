@@ -1030,7 +1030,7 @@ textarea.fi{resize:vertical}
 <script>
 /* ══ DATA ══ */
 let USERS = [
-  {id:'u1',first:'Tony',last:'Koru',email:'tony@client.fr',tel:'+33 6 12 34 56 78',addr:'12 rue des Lumières, 75001 Paris',company:'Koru Auto SARL',catalogs:['cat_luminaire'],pwd:'client123',role:'client',status:'active',avatar:'TK',discount:0},
+  {id:'u1',first:'Tony',last:'Koru',email:'tony@client.fr',tel:'+33 6 12 34 56 78',addr:'12 rue des Lumières, 75001 Paris',company:'Koru Auto SARL',catalogs:['cat_luminaire','cat_divers'],pwd:'client123',role:'client',status:'active',avatar:'TK',discount:0},
   {id:'u2',first:'Tony',last:'Admin',email:'tony@admin.fr',tel:'+33 6 98 76 54 32',addr:'1 av. Racing, 69000 Lyon',company:'De Cooman RP',pwd:'admin123',role:'admin',status:'active',avatar:'TA',discount:0},
   {id:'u3',first:'Sophie',last:'Martin',email:'sophie@moto.fr',tel:'+33 6 55 66 77 88',addr:'8 allée des Courses, 31000 Toulouse',company:'Martin Moto Shop',pwd:'pass123',role:'client',status:'active',avatar:'SM',discount:5},
   {id:'u4',first:'Julien',last:'Perret',email:'julien@auto.fr',tel:'+33 7 01 23 45 67',addr:'45 rue Carnot, 13001 Marseille',company:'Perret Auto',pwd:'pass456',role:'client',status:'active',avatar:'JP',discount:10},
@@ -1041,6 +1041,11 @@ let pendingRequests = [
   {id:'req2',first:'Aurélie',last:'Bonneau',email:'aurelie@speed.fr',tel:'+33 7 66 55 44 33',addr:'77 av. de la Vitesse, 06000 Nice',company:'Speed Parts SARL',reason:'Équipementier pro',date:'2025-03-30'},
   {id:'req3',first:'Romain',last:'Vasseur',email:'romain@rally.fr',tel:'+33 6 11 22 33 44',addr:'5 rue du Rallye, 33000 Bordeaux',company:'Rally Shop',reason:'Distribution LED',date:'2025-03-31'},
 ];
+/* ── Image placeholder ── */
+var PHOLDER='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22280%22%3E%3Crect width=%22400%22 height=%22280%22 fill=%22%230a0a14%22/%3E%3Ctext x=%22200%22 y=%22148%22 font-family=%22Inter,sans-serif%22 font-size=%2214%22 fill=%22%23ffffff30%22 text-anchor=%22middle%22%3EImage non disponible%3C/text%3E%3C/svg%3E';
+/* ── DB version: bump to force purge of stale LS data ── */
+var DB_VERSION='v26';
+
 let PRODUCTS = [
   {id:1,name:'Kit Phares LED H7 Xenon+',cat:'phares',tech:'led',catalog_id:'cat_luminaire',price:89.90,ref:'LED-H7-001',badge:'Best-seller',isNew:false,img:'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=400&h=280&fit=crop',stock:250,
    volumeDiscounts:[{qty:10,pct:0},{qty:100,pct:0.5},{qty:250,pct:1},{qty:500,pct:1.5},{qty:1000,pct:2},{qty:2000,pct:3}]},
@@ -3387,118 +3392,224 @@ function filterTech(techVal){
 /* ── loadProducts: charge depuis LS avec validation stricte du schéma ──
    Champ requis: name(string), price(number), catalog_id(string)
    Si LS corrompu → purge + conserve les valeurs hardcodées */
+/* ══════════════════════════════════════════════════════
+   loadProducts — Gestionnaire de stockage produits
+   Garantie : PRODUCTS contient toujours des objets valides
+   avec les champs : id, name, price, cat, catalog_id, img
+══════════════════════════════════════════════════════ */
 function loadProducts(){
-  var raw=null;
-  try{raw=localStorage.getItem(LS_PRODUCTS);}catch(e){}
-  if(!raw)return; /* no LS data — use hardcoded defaults */
-  try{
-    var parsed=JSON.parse(raw);
-    if(!Array.isArray(parsed)||!parsed.length)return;
-    var first=parsed[0];
-    var valid=typeof first.name==='string'&&typeof first.price==='number';
-    if(!valid){
-      console.warn('[loadProducts] LS schema invalid — purging stale data');
-      try{localStorage.removeItem(LS_PRODUCTS);}catch(e){}
-      return;
-    }
-    /* Ensure every product has catalog_id (migrate old data) */
-    parsed.forEach(function(p){
-      if(!p.catalog_id)p.catalog_id='cat_luminaire'; /* default migration */
-    });
-    PRODUCTS=parsed;
-  }catch(e){
-    console.warn('[loadProducts] parse error — purging',e);
-    try{localStorage.removeItem(LS_PRODUCTS);}catch(e2){}
+  /* 1. Check DB version — purge stale data if version changed */
+  var storedVer=null;
+  try{storedVer=localStorage.getItem('dcorp_db_version');}catch(e){}
+  if(storedVer!==DB_VERSION){
+    console.log('[DB] Version mismatch ('+storedVer+' vs '+DB_VERSION+') — purging LS products');
+    try{localStorage.removeItem(LS_PRODUCTS);}catch(e){}
+    try{localStorage.setItem('dcorp_db_version',DB_VERSION);}catch(e){}
+    return; /* use hardcoded PRODUCTS defaults */
   }
+
+  /* 2. Read from LS */
+  var raw=null;
+  try{raw=localStorage.getItem(LS_PRODUCTS);}catch(e){
+    console.warn('[DB] localStorage read error',e);return;
+  }
+  if(!raw){
+    console.log('[DB] No products in LS — using hardcoded defaults ('+PRODUCTS.length+' products)');
+    return;
+  }
+
+  /* 3. Parse + validate schema */
+  var parsed=null;
+  try{parsed=JSON.parse(raw);}catch(e){
+    console.warn('[DB] Products JSON parse error — purging',e);
+    try{localStorage.removeItem(LS_PRODUCTS);}catch(e2){}
+    return;
+  }
+  if(!Array.isArray(parsed)||parsed.length===0){
+    console.warn('[DB] Products LS empty array — using defaults');
+    return;
+  }
+
+  /* 4. Validate required fields */
+  var first=parsed[0];
+  var valid=(typeof first.name==='string'&&first.name.length>0)
+    &&(typeof first.price==='number'&&first.price>0)
+    &&(typeof first.id!=='undefined');
+  if(!valid){
+    console.warn('[DB] Products LS schema invalid (missing name/price/id) — purging',first);
+    try{localStorage.removeItem(LS_PRODUCTS);}catch(e){}
+    return;
+  }
+
+  /* 5. Migrate missing fields */
+  parsed=parsed.map(function(p){
+    return {
+      id: p.id,
+      name: p.name||'Sans nom',
+      ref: p.ref||'REF-'+p.id,
+      price: typeof p.price==='number'?p.price:0,
+      cat: p.cat||'divers',
+      tech: p.tech||'led',
+      catalog_id: p.catalog_id||'cat_luminaire', /* migration: default to luminaire */
+      badge: p.badge||null,
+      isNew: !!p.isNew,
+      img: p.img||p.image||p.photo||PHOLDER, /* support legacy key names */
+      images: p.images||[],
+      stock: typeof p.stock==='number'?p.stock:0,
+      volumeDiscounts: p.volumeDiscounts||[]
+    };
+  });
+
+  PRODUCTS=parsed;
+  console.log('[DB] Products loaded from LS: '+PRODUCTS.length+' products');
+  console.log('[DB] Sample product:', JSON.stringify(PRODUCTS[0]).slice(0,120));
 }
 
-function _renderProductGrid(){
-  console.log('[Grid] _renderProductGrid activeCat='+window._activeCatalogId+' PRODUCTS='+PRODUCTS.length);
-  var grid=document.getElementById('productGrid');if(!grid)return;
+/* ══════════════════════════════════════════════════════
+   afficherProduits — Point d'entrée public pour afficher
+   le catalogue filtré par idCatalogue
+   Alias robuste de _renderProductGrid
+══════════════════════════════════════════════════════ */
+function afficherProduits(idCatalogue){
+  console.log('[afficherProduits] START idCatalogue='+idCatalogue);
+  console.log('[afficherProduits] PRODUCTS total='+PRODUCTS.length);
+  console.log('[afficherProduits] Sample product:', PRODUCTS.length>0?JSON.stringify({
+    id:PRODUCTS[0].id,
+    name:PRODUCTS[0].name,
+    catalog_id:PRODUCTS[0].catalog_id
+  }):'EMPTY');
 
-  /* 0. Pas de catalogue actif -> afficher le chooser */
-  if(currentUser&&!window._activeCatalogId){
-    grid.style.display='none';
-    var sb0=document.getElementById('catalogSidebar');if(sb0)sb0.style.display='none';
-    renderCatalogChooser();return;
-  }
+  /* Set active catalog */
+  window._activeCatalogId=idCatalogue;
 
-  /* 1. Filtrer par catalog_id autorise */
-  var activeCat=window._activeCatalogId||(currentUser?(getUserCatalogs()[0]||'cat_luminaire'):'cat_luminaire');
-  var list=PRODUCTS.filter(function(p){return (p.catalog_id||'cat_luminaire')===activeCat;});
-
-  /* 2. Filtre sous-categorie */
-  if(currentCatalogFilter&&currentCatalogFilter!=='all'){
-    list=list.filter(function(p){return p.cat===currentCatalogFilter;});
-  }
-
-  /* 3. Sous-filtre technologie */
-  if(currentTechFilter){list=list.filter(function(p){return p.tech===currentTechFilter;});}
-
-  /* 4. Afficher la grille */
-  grid.style.display='grid';
-  var sb=document.getElementById('catalogSidebar');if(sb)sb.style.display='';
-  var disc=currentUser?userDiscount(currentUser):0;
-  var PH=PHOLDER||'';
-
-  if(!list.length){
-    grid.innerHTML='<div class="col-span-4 empty-state">'
-      +'<p class="text-white/40 font-display font-bold text-xl mb-1">Aucun produit</p>'
-      +'<p class="text-white/20 text-sm">Aucun article dans cette categorie.</p></div>';
-    syncPublicFilters();setTimeout(initReveal,80);return;
-  }
-
-  function buildCard(p,i){
-    var effPrice=p.price*(1-disc);
-    /* Tech badge: use data-attribute for safe onclick wiring after render */
-    var techTag=TECH_TAGS.find(function(t){return t.value===p.tech;});
-    var techBadgeHtml='';
-    if(techTag){
-      techBadgeHtml='<button class="tech-filter-btn" data-tech="'+techTag.value+'"'
-        +' style="position:absolute;top:8px;left:8px;z-index:3;font-family:Inter,sans-serif;font-size:.58rem;'
-        +'font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:4px;'
-        +'border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:rgba(255,255,255,.55);cursor:pointer">'
-        +techTag.label+'</button>';
-    }
-    /* Badges */
-    var badgeHtml='';
-    if(p.isNew)badgeHtml+='<span class="prod-badge" style="background:rgba(0,168,243,.15);color:#00a8f3;border:1px solid rgba(0,168,243,.3)">Nouveau</span>';
-    if(p.badge)badgeHtml+='<span class="prod-badge" style="background:rgba(255,255,255,.07);color:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.12);margin-top:'+(p.isNew?'26':'4')+'px">'+p.badge+'</span>';
-    /* Price area */
-    var priceHtml;
-    if(currentUser){
-      priceHtml='<div>'
-        +(disc>0?'<p style="text-decoration:line-through;font-size:.75rem;color:rgba(255,255,255,.2)">'+fmt(p.price)+'</p>':'')
-        +'<span class="prod-price">'+fmt(effPrice)+'</span><span class="text-white/25 text-xs ml-1">/u. HT</span>'
-        +(disc>0?'<p style="font-size:.7rem;color:#22c55e;font-family:\'Rajdhani\',sans-serif;font-weight:700">\u2212'+(disc*100)+'% remise</p>':'')
-        +'</div>';
-    } else {
-      priceHtml='<span class="prod-price-locked">\uD83D\uDD12 Prix pro</span>';
-    }
-    /* Card HTML */
-    var card='<div class="card card-product reveal" data-prod-id="'+p.id+'" style="transition-delay:'+(i%4*.07)+'s" onclick="openProductModal('+p.id+')">';
-    card+='<div style="overflow:hidden;position:relative">';
-    card+='<img src="'+(p.img||PH)+'" alt="'+p.name+'" class="prod-img pub-prod-img" loading="lazy" onerror="this.onerror=null;this.src=\''+PH+'\'" />';
-    card+=badgeHtml+techBadgeHtml;
-    card+='<div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.55),transparent);pointer-events:none;z-index:1"></div>';
-    card+='<div style="position:absolute;bottom:8px;left:10px;z-index:2"><p style="font-size:.62rem;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.5);font-family:Inter,sans-serif">'+p.ref+'</p></div>';
-    card+='</div>';
-    card+='<div class="p-4">';
-    card+='<h3 class="font-display font-semibold text-white text-sm tracking-wide mb-1 leading-tight">'+p.name+'</h3>';
-    card+='<p class="text-white/25 text-xs mb-3">'+p.ref+'</p>';
-    card+='<div class="flex items-end justify-between">'+priceHtml;
-    card+='<button class="btn-add-cart" onclick="event.stopPropagation();openProductModal('+p.id+')"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg></button>';
-    card+='</div></div></div>';
-    return card;
-  }
-
-  grid.innerHTML=list.map(buildCard).join('');
-  /* Wire tech-filter-btn via event delegation after render */
-  grid.querySelectorAll('.tech-filter-btn').forEach(function(btn){
-    btn.addEventListener('click',function(e){e.stopPropagation();filterTech(btn.getAttribute('data-tech'));});
+  /* Filter products */
+  var filtered=PRODUCTS.filter(function(p){
+    var pid=p.catalog_id||'cat_luminaire';
+    return pid===idCatalogue;
   });
+  console.log('[afficherProduits] filtered count='+filtered.length+' for catalog='+idCatalogue);
+
+  /* Get grid container */
+  var grid=document.getElementById('productGrid');
+  if(!grid){console.error('[afficherProduits] #productGrid not found!');return;}
+
+  /* Always show grid, hide chooser */
+  grid.style.display='grid';
+  var chooser=document.getElementById('catalogChooser');
+  if(chooser)chooser.style.display='none';
+  var sidebar=document.getElementById('catalogSidebar');
+  if(sidebar)sidebar.style.display='';
+
+  /* Clear previous content */
+  grid.innerHTML='';
+
+  if(filtered.length===0){
+    grid.innerHTML='<div class="col-span-4" style="padding:3rem;text-align:center">'
+      +'<p style="font-family:Bebas Neue,sans-serif;font-size:1.4rem;color:rgba(255,255,255,.3);letter-spacing:.1em">Aucun article dans ce catalogue</p>'
+      +'<p style="font-family:Inter,sans-serif;font-size:.8rem;color:rgba(255,255,255,.2);margin-top:.5rem">'
+        +'Catalogue : '+idCatalogue+' — '
+        +(PRODUCTS.length>0?PRODUCTS.length+' articles au total, 0 dans ce catalogue':'Aucun article chargé — vérifiez le localStorage')
+      +'</p>'
+      +'</div>';
+    console.warn('[afficherProduits] 0 products for catalog '+idCatalogue+'. All catalog_ids: '+[...new Set(PRODUCTS.map(function(p){return p.catalog_id||'UNDEFINED';}))].join(','));
+    syncPublicFilters();
+    return;
+  }
+
+  /* Apply sub-category filter if active */
+  var display=filtered;
+  if(currentCatalogFilter&&currentCatalogFilter!=='all'){
+    display=filtered.filter(function(p){return p.cat===currentCatalogFilter;});
+    if(display.length===0)display=filtered; /* fallback: show all if filter empty */
+  }
+  if(currentTechFilter){
+    display=display.filter(function(p){return p.tech===currentTechFilter;});
+    if(display.length===0)display=filtered;
+  }
+
+  /* Render cards */
+  var disc=currentUser?userDiscount(currentUser):0;
+  grid.innerHTML=display.map(buildProductCard).join('');
+
+  /* Event delegation on grid (single listener) */
+  grid.onclick=null;
+  grid.addEventListener('click',function(e){
+    var techBtn=e.target.closest('.tech-filter-btn');
+    if(techBtn){e.stopPropagation();filterTech(techBtn.getAttribute('data-tech'));return;}
+    var card=e.target.closest('[data-prod-id]');
+    if(card)openProductModal(parseInt(card.getAttribute('data-prod-id'),10));
+  },{once:false});
+
   syncPublicFilters();
   setTimeout(initReveal,80);
+  console.log('[afficherProduits] Rendered '+display.length+' products');
+}
+
+/* ── buildProductCard: pure function, no side effects ── */
+function buildProductCard(p){
+  var disc=currentUser?userDiscount(currentUser):0;
+  var effPrice=p.price*(1-disc);
+  var imgSrc=p.img||PHOLDER;
+
+  /* Tech badge */
+  var techTag=TECH_TAGS.find(function(t){return t.value===p.tech;});
+  var techBadgeHtml=techTag
+    ?'<button class="tech-filter-btn" data-tech="'+techTag.value+'" onclick="event.stopPropagation()" '
+      +'style="position:absolute;top:8px;left:8px;z-index:3;font-family:Inter,sans-serif;font-size:.58rem;'
+      +'font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:4px;'
+      +'border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:rgba(255,255,255,.55);cursor:pointer">'
+      +techTag.label+'</button>'
+    :'';
+
+  var badgeHtml=(p.isNew?'<span class="prod-badge" style="background:rgba(0,168,243,.15);color:#00a8f3;border:1px solid rgba(0,168,243,.3)">Nouveau</span>':'')
+    +(p.badge?'<span class="prod-badge" style="background:rgba(255,255,255,.07);color:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.12);margin-top:'+(p.isNew?'26':'4')+'px">'+p.badge+'</span>':'');
+
+  var priceHtml=currentUser
+    ?'<div>'+(disc>0?'<p style="text-decoration:line-through;font-size:.75rem;color:rgba(255,255,255,.2)">'+fmt(p.price)+' €</p>':'')
+      +'<span class="prod-price">'+fmt(effPrice)+'</span><span class="text-white/25 text-xs ml-1">/u. HT</span>'
+      +(disc>0?'<p style="font-size:.7rem;color:#22c55e;font-weight:700">\u2212'+(disc*100)+'% remise</p>':'')
+      +'</div>'
+    :'<span class="prod-price-locked">\uD83D\uDD12 Prix pro</span>';
+
+  return '<div class="card card-product reveal" data-prod-id="'+p.id+'" style="cursor:pointer">'
+    +'<div style="overflow:hidden;position:relative">'
+      +'<img src="'+imgSrc+'" alt="'+p.name+'" class="prod-img pub-prod-img" loading="lazy" '
+        +'onerror="this.onerror=null;this.src=PHOLDER" />'
+      +badgeHtml+techBadgeHtml
+      +'<div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.6),transparent);pointer-events:none;z-index:1"></div>'
+      +'<div style="position:absolute;bottom:8px;left:10px;z-index:2">'
+        +'<p style="font-size:.62rem;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.5);font-family:Inter,sans-serif">'+p.ref+'</p>'
+      +'</div>'
+    +'</div>'
+    +'<div class="p-4">'
+      +'<h3 class="font-display font-semibold text-white text-sm tracking-wide mb-1 leading-tight">'+p.name+'</h3>'
+      +'<p class="text-white/25 text-xs mb-3">'+p.ref+'</p>'
+      +'<div style="display:flex;align-items:flex-end;justify-content:space-between">'+priceHtml
+        +'<button class="btn-add-cart" onclick="event.stopPropagation();openProductModal('+p.id+')" title="Commander">'
+          +'<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>'
+        +'</button>'
+      +'</div>'
+    +'</div>'
+  +'</div>';
+}
+
+
+function _renderProductGrid(){
+  /* Delegate to afficherProduits for consistent rendering */
+  var activeCat=window._activeCatalogId;
+  if(!activeCat){
+    if(currentUser){
+      var grid=document.getElementById('productGrid');
+      if(grid)grid.style.display='none';
+      var sb=document.getElementById('catalogSidebar');if(sb)sb.style.display='none';
+      renderCatalogChooser();
+    } else {
+      /* Anonymous user: show all luminaire products */
+      afficherProduits('cat_luminaire');
+    }
+    return;
+  }
+  afficherProduits(activeCat);
 }
 function searchProducts(q){
   const l=q.toLowerCase();
@@ -4452,36 +4563,6 @@ function renderAdminHeroDesign(){
 
 /* ══ renderAdminChat ══ */
 
-function renderAdminEmailSettings(){
-  const ct=document.getElementById('adminContent');
-  ct.innerHTML='<div class="mb-5"><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Communications</p><h2 class="font-display text-2xl font-bold text-white uppercase">Paramètres <span style="color:#00a8f3">email</span></h2><p class="text-white/35 text-sm mt-1">Configurez les destinataires des notifications</p></div><div class="card p-6 max-w-2xl"><div class="space-y-5"><div><label class="fl">Email réception — commandes</label><p class="text-white/30 text-xs mb-1.5">Reçoit les notifications de nouvelles commandes (mode Site+Email)</p><input type="email" id="es-orderNotif" class="fi" value="'+EMAIL_SETTINGS.orderNotif+'"/></div><div><label class="fl">Email réception — messages contact</label><p class="text-white/30 text-xs mb-1.5">Reçoit les messages du formulaire de contact</p><input type="email" id="es-contactNotif" class="fi" value="'+EMAIL_SETTINGS.contactNotif+'"/></div><div><label class="fl">CC systématique sur les documents</label><input type="email" id="es-docCc" class="fi" value="'+EMAIL_SETTINGS.docCc+'"/></div><div><label class="fl">Nom de l\'expéditeur</label><input type="text" id="es-senderName" class="fi" value="'+EMAIL_SETTINGS.senderName+'"/></div><div style="background:rgba(0,168,243,.04);border:1px solid rgba(0,168,243,.1);border-radius:10px;padding:.8rem 1rem"><p style="font-family:\'Rajdhani\',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,168,243,.6);margin-bottom:.4rem">ⓘ Note</p><p style="font-family:\'Exo 2\',sans-serif;font-size:.75rem;color:rgba(255,255,255,.3);line-height:1.7">Les emails utilisent votre client mail (mailto:). Pour l\'envoi automatique intégrez EmailJS ou un backend SMTP.</p></div><button class="btn btn-primary" onclick="saveEmailSettings()"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Enregistrer</button></div></div>';
-}
-function renderAdminHeroDesign(){
-  const ct=document.getElementById('adminContent');
-  const d=HERO_DESIGN;
-  ct.innerHTML='<div class="mb-5"><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Apparence</p><h2 class="font-display text-2xl font-bold text-white uppercase">Design page <span style="color:#00a8f3">d\'accueil</span></h2><p class="text-white/35 text-sm mt-1">Personnalisez les textes, couleurs et typographies en temps réel</p></div>'
-  +'<div style="display:flex;gap:1.5rem;flex-wrap:wrap">'
-  +'<div style="flex:1;min-width:300px"><div class="card p-5 mb-4"><p class="font-display font-bold text-white tracking-wide mb-4">Textes</p><div class="space-y-3">'
-  +'<div><label class="fl">Titre principal</label><textarea id="hd-title" class="fi" rows="2" style="resize:none;font-size:.85rem" oninput="liveApplyHeroDesign()">'+d.titleText+'</textarea></div>'
-  +'<div><label class="fl">Tag line</label><input type="text" id="hd-tag" class="fi" value="'+d.tagText+'" oninput="liveApplyHeroDesign()"/></div>'
-  +'<div><label class="fl">Ligne livraison</label><input type="text" id="hd-delivery" class="fi" value="'+d.deliveryText+'" oninput="liveApplyHeroDesign()"/></div>'
-  +'<div><label class="fl">Description</label><textarea id="hd-desc" class="fi" rows="3" style="resize:none;font-size:.82rem" oninput="liveApplyHeroDesign()">'+d.descText+'</textarea></div>'
-  +'<div class="grid grid-cols-2 gap-3"><div><label class="fl">CTA 1</label><input type="text" id="hd-cta1" class="fi" value="'+d.cta1Text+'" oninput="liveApplyHeroDesign()"/></div><div><label class="fl">CTA 2</label><input type="text" id="hd-cta2" class="fi" value="'+d.cta2Text+'" oninput="liveApplyHeroDesign()"/></div></div>'
-  +'</div></div>'
-  +'<div class="card p-5 mb-4"><p class="font-display font-bold text-white tracking-wide mb-4">Couleurs & Police</p><div class="grid grid-cols-2 gap-4">'
-  +'<div><label class="fl">Couleur titre</label><div style="display:flex;gap:.5rem;align-items:center"><input type="color" id="hd-titleColor" value="'+d.titleColor+'" oninput="liveApplyHeroDesign()" style="width:40px;height:34px;border-radius:8px;border:1px solid rgba(0,168,243,.2);background:transparent;cursor:pointer"/><input type="text" class="fi" value="'+d.titleColor+'" style="font-size:.8rem" oninput="document.getElementById(\'hd-titleColor\').value=this.value;liveApplyHeroDesign()"/></div></div>'
-  +'<div><label class="fl">Couleur accent</label><div style="display:flex;gap:.5rem;align-items:center"><input type="color" id="hd-accentColor" value="'+d.titleAccentColor+'" oninput="liveApplyHeroDesign()" style="width:40px;height:34px;border-radius:8px;border:1px solid rgba(0,168,243,.2);background:transparent;cursor:pointer"/><input type="text" class="fi" value="'+d.titleAccentColor+'" style="font-size:.8rem" oninput="document.getElementById(\'hd-accentColor\').value=this.value;liveApplyHeroDesign()"/></div></div>'
-  +'<div class="col-span-2"><label class="fl">Police du titre</label><select id="hd-font" class="fi" onchange="liveApplyHeroDesign()">'
-  +['Cormorant Garamond','Inter','Bebas Neue','Georgia','Impact','Arial Black'].map(function(f){return '<option '+(d.titleFont===f?'selected':'')+'>'+f+'</option>';}).join('')
-  +'</select></div>'
-  +'<div><label class="fl">Opacité overlay ('+(Math.round(d.overlayOpacity*100))+'%)</label><input type="range" id="hd-overlay" min="0" max="85" value="'+Math.round(d.overlayOpacity*100)+'" style="width:100%;accent-color:#00a8f3" oninput="liveApplyHeroDesign()"/></div>'
-  +'<div><label class="fl">Luminosité vidéo ('+d.videoBrightness+'%)</label><input type="range" id="hd-bright" min="10" max="80" value="'+d.videoBrightness+'" style="width:100%;accent-color:#00a8f3" oninput="liveApplyHeroDesign()"/></div>'
-  +'</div></div>'
-  +'<div class="flex gap-3"><button class="btn btn-ghost flex-1" onclick="resetHeroDesign()">Réinitialiser</button>'
-  +'<button class="btn btn-outline flex-1" onclick="closeAdminPanel();showView(\'accueil\')" title="Ferme le panneau admin pour voir le résultat">👁 Voir le résultat</button>'
-  +'<button class="btn btn-primary flex-1" onclick="saveHeroDesign()"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Appliquer</button></div></div>'
-  +'<div style="width:280px;flex-shrink:0"><p class="fl mb-3">Aperçu</p><div style="position:relative;height:260px;border-radius:14px;overflow:hidden;border:1px solid rgba(0,168,243,.2)"><video autoplay muted loop playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness('+d.videoBrightness+'%) saturate(75%)" id="hdPreviewVid"><source src="hero-bg.mp4" type="video/mp4"/></video><div id="hdPreviewOvl" style="position:absolute;inset:0;background:rgba(5,5,5,'+d.overlayOpacity+');z-index:1"></div><div style="position:absolute;inset:0;z-index:2;padding:1.5rem;display:flex;flex-direction:column;justify-content:center"><p id="hdPTag" style="font-family:\'Exo 2\',sans-serif;font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(0,168,243,.7);margin-bottom:.4rem">'+d.tagText+'</p><h2 id="hdPTitle" style="font-family:\''+d.titleFont+'\',sans-serif;font-size:1.5rem;font-weight:700;text-transform:uppercase;line-height:1.05;color:'+d.titleColor+';white-space:pre-line">'+d.titleText+'</h2><p id="hdPDesc" style="font-family:\'Exo 2\',sans-serif;font-size:.7rem;color:rgba(255,255,255,.55);margin-top:.5rem;line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical">'+d.descText+'</p></div></div></div></div>';
-}
 
 /* ══ ADMIN: LIVRAISON ══ */
 function renderAdminShipping(){
@@ -5225,22 +5306,20 @@ function renderCatalogChooser(){
 }
 
 function selectCatalog(catId){
-  console.log('[Catalog] selectCatalog called with catId='+catId);
+  console.log('[Catalog] selectCatalog: '+catId);
   var cat=CATALOGS.find(function(c){return c.id===catId;});
-  if(!cat){console.error('[Catalog] catalog not found: '+catId);return;}
+  if(!cat){console.error('[Catalog] Unknown catalog: '+catId);return;}
   window._activeCatalogId=catId;
   window._catalogEnteredOnce=true;
-  /* Show back button */
-  var backBtn=document.getElementById('catalogBackBtn');
-  if(backBtn)backBtn.style.display='flex';
-  /* Hide chooser, show grid */
-  var chooser=document.getElementById('catalogChooser');
-  if(chooser)chooser.style.display='none';
-  var grid=document.getElementById('productGrid');
-  if(grid)grid.style.display='grid';
-  var sidebar=document.getElementById('catalogSidebar');
-  if(sidebar)sidebar.style.display='';
-  renderCatalog(cat.filterValue||'all');
+  /* UI: hide chooser, show back btn */
+  var chooser=document.getElementById('catalogChooser');if(chooser)chooser.style.display='none';
+  var backBtn=document.getElementById('catalogBackBtn');if(backBtn)backBtn.style.display='flex';
+  var sidebar=document.getElementById('catalogSidebar');if(sidebar)sidebar.style.display='';
+  /* Set category filter from catalog config (default 'all') */
+  currentCatalogFilter=cat.filterValue||'all';
+  currentTechFilter='';
+  /* Render products for this catalog */
+  afficherProduits(catId);
 }
 
 function backToCatalogChooser(){
@@ -5736,7 +5815,7 @@ function renderAdminHero(){
         +'📁 Importer image locale'
         +'<input type="file" id="hero-file-inp" accept="image/*" style="display:none" onchange="heroFileUpload(this)"/>'
         +'</label>'
-      :'<p style="font-family:Inter,sans-serif;font-size:.7rem;color:rgba(255,255,255,.3)">La vidéo sera muette, en boucle, couvrant tout l\'arrière-plan.</p>')
+      :'<div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">'+'<label class="btn btn-ghost btn-sm" style="cursor:pointer;display:inline-flex;align-items:center;gap:.4rem">'+'\uD83C\uDFAC Importer vid\u00e9o locale (MP4/WebM)'+'<input type="file" id="hero-file-video-inp" accept="video/mp4,video/webm" style="display:none" onchange="heroFileUpload(this)"/>'+'</label>'+'<span style="font-family:Inter,sans-serif;font-size:.68rem;color:rgba(255,255,255,.25)">Session uniquement \u2014 URL externe pour persistance</span>'+'</div>')
     +'</div>'
 
     /* Opacity */
@@ -5791,17 +5870,50 @@ function heroApplySrc(){
   renderAdminHero();
 }
 function heroFileUpload(input){
-  var file=input&&input.files&&input.files[0];if(!file)return;
-  if(file.size>5*1024*1024){toast('Image trop grande (max 5MB pour le localStorage)','error');return;}
-  var reader=new FileReader();
-  reader.onload=function(e){
-    _accueilConfig.src=e.target.result;
-    _accueilConfig.type='image';
+  var file=input&&input.files&&input.files[0];
+  if(!file){return;}
+  console.log('[Hero] File selected: '+file.name+' type='+file.type+' size='+Math.round(file.size/1024)+'KB');
+
+  /* Determine type */
+  var isVideo=file.type.startsWith('video/');
+  var isImage=file.type.startsWith('image/');
+  if(!isVideo&&!isImage){toast('Format non supporté — utilisez MP4, WebM, JPG, PNG ou WebP','error');return;}
+
+  /* Size check */
+  var maxSizeMB=isVideo?50:5;
+  if(file.size>maxSizeMB*1024*1024){
+    toast('Fichier trop grand (max '+maxSizeMB+'MB). Utilisez une URL externe.','error');
+    input.value='';return;
+  }
+
+  if(isVideo){
+    /* Use createObjectURL for video — avoids LS size limits */
+    /* Note: objectURL is session-only, lost on page reload */
+    var objUrl=URL.createObjectURL(file);
+    _accueilConfig.src=objUrl;
+    _accueilConfig.type='video';
+    _accueilConfig.srcIsBlob=true; /* flag: don't try to persist blob URL */
     applyAccueilConfig(_accueilConfig);
     renderAdminHero();
-    toast('Image chargée — cliquez "Enregistrer & Diffuser"','info');
-  };
-  reader.readAsDataURL(file);
+    toast('Vidéo locale chargée (session uniquement — pour persister, utilisez une URL externe)','info');
+    console.log('[Hero] Video blob URL: '+objUrl);
+  } else {
+    /* Image: convert to base64 for persistence */
+    if(file.size>3*1024*1024){
+      toast('Image > 3MB — risque de saturation LS. Préférez une URL.','error');
+    }
+    var reader=new FileReader();
+    reader.onload=function(e){
+      _accueilConfig.src=e.target.result;
+      _accueilConfig.type='image';
+      _accueilConfig.srcIsBlob=false;
+      applyAccueilConfig(_accueilConfig);
+      renderAdminHero();
+      toast('Image importée — cliquez "Enregistrer & Diffuser"','info');
+      console.log('[Hero] Image base64 length: '+e.target.result.length);
+    };
+    reader.readAsDataURL(file);
+  }
   input.value='';
 }
 function heroSaveConfig(){
@@ -5824,13 +5936,16 @@ function heroReset(){
 
 /* ══ INIT ══ */
 document.addEventListener('DOMContentLoaded',function(){
+  /* Init DB version key on first visit (no purge on first load) */
+  try{if(!localStorage.getItem('dcorp_db_version'))localStorage.setItem('dcorp_db_version',DB_VERSION);}catch(e){}
   loadUsersDB();
-  loadProducts();       /* charge et valide les produits depuis LS */
-  hydrateFromLS();      /* commandes, catalogues, hero, contact, shipping, chat */
+  loadProducts();   /* load + validate PRODUCTS from LS */
+  hydrateFromLS();  /* orders, catalogs, hero, contact, shipping, chat */
   applyBgFromLS();
-  /* Fond d'accueil stocké */
-  var _ca=null;try{_ca=localStorage.getItem('config_accueil');}catch(_e){}
-  if(_ca){try{applyAccueilConfig(JSON.parse(_ca));}catch(_e){}}
+  /* Apply hero/accueil config (try both keys for compatibility) */
+  var _ca=null;
+  try{_ca=localStorage.getItem('config_visuel_accueil')||localStorage.getItem('config_accueil');}catch(_e){}
+  if(_ca){try{applyAccueilConfig(JSON.parse(_ca));}catch(_e){console.warn('[Init] hero config error',_e);}}
   renderCatalog('all');
   syncPublicFilters();
   renderFaq();
@@ -5838,6 +5953,7 @@ document.addEventListener('DOMContentLoaded',function(){
   initReveal();
   updateAdminCounters();
   showView('accueil');
+  console.log('[Init] App ready — PRODUCTS:'+PRODUCTS.length+' ORDERS:'+ORDERS.length);
 });
 </script>
 </body>
