@@ -975,13 +975,38 @@ function wfCheckAutoConfirm(){
 
 /* ── CHAT ── */
 function sendChatMsg(orderId,inputEl,role){
-  const text=(typeof inputEl==='string'?inputEl:inputEl?.value||'').trim();if(!text)return;
-  const msg={id:'CM'+Date.now()+Math.random().toString(36).slice(2,5),orderId,from:currentUser?.id||'?',fromName:currentUser?(currentUser.first+' '+currentUser.last):'?',role,text,date:new Date().toISOString(),readByAdmin:role==='admin',readByClient:role==='client'};
-  DB_CHAT.push(msg);sauvegarder();
-  if(typeof inputEl!=='string'&&inputEl)inputEl.value='';
-  if(role==='client'){addAdminNotif('chat',`💬 Message sur ${orderId}`,`${msg.fromName} : ${text.slice(0,60)}`,orderId);updateAdminCounters();}
-  else addUserNotif('chat',`Réponse sur votre commande ${orderId}`,text.slice(0,80),orderId);
-  ['chat-msgs-detail-'+orderId,'chat-msgs-acc-'+orderId,'admin-chat-msgs'].forEach(id=>{const el=document.getElementById(id);if(el)_renderChatMessages(orderId,el);});
+  try{
+    const text=(typeof inputEl==='string'?inputEl:inputEl?.value||'').trim();
+    if(!text)return;
+    if(!orderId){console.error('[sendChatMsg] orderId manquant');return;}
+    const msg={
+      id:'CM'+Date.now()+Math.random().toString(36).slice(2,5),
+      orderId:String(orderId),
+      from:currentUser?.id||'?',
+      fromName:currentUser?(currentUser.first+' '+currentUser.last):'Anonyme',
+      role:role||'client',
+      text,
+      date:new Date().toISOString(),
+      readByAdmin:role==='admin',
+      readByClient:role==='client'
+    };
+    DB_CHAT.push(msg);
+    sauvegarder();
+    if(typeof inputEl!=='string'&&inputEl)inputEl.value='';
+    if(role==='client'){
+      addAdminNotif('chat',`💬 Message sur ${orderId}`,`${msg.fromName} : ${text.slice(0,60)}`,orderId);
+      updateAdminCounters();
+    } else {
+      addUserNotif('chat',`Réponse sur votre commande ${orderId}`,text.slice(0,80),orderId);
+    }
+    ['chat-msgs-detail-'+orderId,'chat-msgs-acc-'+orderId,'admin-chat-msgs'].forEach(id=>{
+      const el=document.getElementById(id);if(el)_renderChatMessages(orderId,el);
+    });
+    console.log('DEBUG [sendChatMsg] sent orderId='+orderId+' role='+role);
+  }catch(e){
+    console.error('[sendChatMsg] ERREUR:',e);
+    toast('Erreur envoi message: '+e.message,'error');
+  }
 }
 function _renderChatMessages(orderId,containerEl){
   if(!containerEl)return;const msgs=DB_CHAT.filter(m=>m.orderId===orderId);
@@ -1106,14 +1131,14 @@ function renderAdminAccess(){
       </div>
     </div>
 
-    ${pendingRequests.length===0
+    ${(DB_CONFIG.pendingRequests||[]).length===0
       ?`<div class="empty-state">
           <svg class="w-16 h-16 mx-auto mb-3" fill="none" stroke="rgba(0,168,243,.2)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0H4"/></svg>
           <p class="text-white/40 font-display font-bold text-xl mb-1">Aucune demande en attente</p>
           <p>Toutes les demandes ont été traitées.</p>
         </div>`
       :`<div class="grid md:grid-cols-2 gap-5">
-        ${pendingRequests.map(r=>`
+        ${(DB_CONFIG.pendingRequests||[]).map(r=>`
           <div class="inbox-card" id="req-card-${r.id}">
             <!-- En-tête -->
             <div class="flex items-start justify-between gap-3 mb-4">
@@ -1180,7 +1205,7 @@ function renderAdminAccess(){
 
 
 function approveRequest(rid){
-  const r=pendingRequests.find(x=>x.id===rid);if(!r)return;
+  const r=(DB_CONFIG.pendingRequests||[]).find(x=>x.id===rid);if(!r)return;
   const role=pendingRoles[rid]||'client';
   /* Restaurer le vrai mot de passe de l'inscription, ou générer un temporaire */
   let realPwd='temp1234';
@@ -1203,7 +1228,7 @@ function approveRequest(rid){
   a.style.display='none';document.body.appendChild(a);a.click();document.body.removeChild(a);
   addNotif('order','Compte approuvé — '+r.first+' '+r.last,'Rôle : '+(role==='admin'?'Administrateur':'Client')+' · '+r.email,null);
   delete pendingRoles[rid];
-  pendingRequests=pendingRequests.filter(x=>x.id!==rid);
+  DB_CONFIG.pendingRequests=DB_CONFIG.pendingRequests||[];DB_CONFIG.pendingRequests=(DB_CONFIG.pendingRequests||[]).filter(x=>x.id!==rid);
   updateAdminCounters();
   const roleLabel=role==='admin'?'Administrateur':'Client';
   toast('✓ Compte '+roleLabel+' créé pour '+r.first+' '+r.last+' — Email de bienvenue envoyé 📧','success');
@@ -1212,9 +1237,9 @@ function approveRequest(rid){
 
 
 function rejectRequest(rid){
-  const r=pendingRequests.find(x=>x.id===rid);if(!r)return;
+  const r=(DB_CONFIG.pendingRequests||[]).find(x=>x.id===rid);if(!r)return;
   delete pendingRoles[rid];
-  pendingRequests=pendingRequests.filter(x=>x.id!==rid);
+  DB_CONFIG.pendingRequests=DB_CONFIG.pendingRequests||[];DB_CONFIG.pendingRequests=(DB_CONFIG.pendingRequests||[]).filter(x=>x.id!==rid);
   updateAdminCounters();
   toast('Demande de '+r.first+' '+r.last+' refusée','info');
   renderAdminAccess();
@@ -1677,10 +1702,10 @@ function renderAdminModeles(){
 
 function buildPdfHtml(type, orderId, acomptePct){
   var o=DB_COMMANDES.find(function(x){return x.id===orderId;});if(!o)return null;
-  var user=USERS.find(function(u){return u.id===o.userId;})||{};
-  var ci=DB_CONFIG.contactInfo||{companyName:'De Cooman Racing Performance',address:'Belgique',emails:[{address:'DCRkoru@gmail.com'}],phones:[{number:'+32 2 000 00 00'}]};
-  var societeEmail=(ci.emails&&ci.emails[0]&&ci.emails[0].address)||'DCRkoru@gmail.com';
-  var societeTel=(ci.phones&&ci.phones[0]&&ci.phones[0].number)||'';
+  var user=DB_USERS.find(function(u){return u.id===o.userId;})||{};
+  var ci=DB_CONFIG.contact||DB_CONFIG.contactInfo||{companyName:'De Cooman Racing Performance',address:'Belgique',email:'DCRkoru@gmail.com'};
+  var societeEmail=ci.email||ci.emails&&ci.emails[0]&&ci.emails[0].address||'DCRkoru@gmail.com';
+  var societeTel=ci.phone||ci.tel||'';
 
   var docLabels={commande:'BON DE COMMANDE',livraison:'BON DE LIVRAISON',facture:'FACTURE',devis:'DEVIS',acompte:'FACTURE D\'ACOMPTE',avoir:'AVOIR'};
   var docColors={commande:'#0066cc',livraison:'#059669',facture:'#d97706',devis:'#7c3aed',acompte:'#0891b2',avoir:'#dc2626'};
@@ -2857,8 +2882,10 @@ function adminUpdateStatus(orderId,status){
 
 function openEditOrder(orderId){
   console.log('DEBUG [openEditOrder] orderId='+orderId);
-  const o=DB_COMMANDES.find(x=>x.id===orderId);if(!o)return;
-  showOrderDetail(o);
+  // orderId can be a string like 'CMD-0001' — find by id
+  const o=DB_COMMANDES.find(x=>x.id===orderId);
+  if(!o){toast('Commande introuvable: '+orderId,'error');return;}
+  showOrderDetail(o.id);  // pass the string id, not the object
 }
 
 function stockAddManualUI(pid){
@@ -2976,30 +3003,145 @@ function renderAdminShipping(){
   const ct=document.getElementById('adminContent');if(!ct)return;
   const sh=DB_CONFIG.shipping||{};
   const zones=sh.zones||[];
-  ct.innerHTML=`<div class="mb-5"><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Logistique</p>
-<h2 class="font-display text-2xl font-bold text-white uppercase">Livraison & <span style="color:#00a8f3">Zones</span></h2></div>
-<div class="card p-5 mb-4">
-  <p class="fl mb-3">Seuil livraison gratuite (HT)</p>
-  <div style="display:flex;gap:.5rem;align-items:center">
-    <input type="number" id="sh-free" class="fi" style="width:140px" value="${sh.freeThresholdHT||125}" step="1" min="0"/>
-    <span class="text-white/40 text-sm">€ HT</span>
+
+  function zoneRow(z,idx){
+    return `<div class="card p-4 mb-3" id="zone-row-${idx}">
+      <div style="display:grid;grid-template-columns:2fr 1.2fr 1.2fr 1fr 1fr auto;gap:.5rem;align-items:center;flex-wrap:wrap">
+        <div>
+          <label class="fl" style="font-size:.65rem">Libellé zone</label>
+          <input type="text" class="fi" style="font-size:.8rem" data-field="label" value="${z.label||''}" onchange="updateZoneField(${idx},'label',this.value)"/>
+        </div>
+        <div>
+          <label class="fl" style="font-size:.65rem">Tarif HT (€)</label>
+          <input type="number" class="fi" style="font-size:.8rem" step="0.5" min="0" data-field="baseRate" value="${z.baseRate||0}" onchange="updateZoneField(${idx},'baseRate',parseFloat(this.value)||0)"/>
+        </div>
+        <div>
+          <label class="fl" style="font-size:.65rem">Gratuit dès (€ HT)</label>
+          <input type="number" class="fi" style="font-size:.8rem" step="1" min="0" placeholder="jamais" data-field="freeFrom" value="${z.freeFrom!==null&&z.freeFrom!==undefined?z.freeFrom:''}" onchange="updateZoneField(${idx},'freeFrom',this.value===''?null:parseFloat(this.value))"/>
+        </div>
+        <div>
+          <label class="fl" style="font-size:.65rem">TVA zone (%)</label>
+          <input type="number" class="fi" style="font-size:.8rem" step="0.5" min="0" max="30" data-field="vatRate" value="${(z.vatRate!==undefined?z.vatRate:21)}" onchange="updateZoneField(${idx},'vatRate',parseFloat(this.value)||21)"/>
+        </div>
+        <div>
+          <label class="fl" style="font-size:.65rem">Zone par défaut</label>
+          <input type="checkbox" ${sh.defaultZone===z.id?'checked':''} onchange="setDefaultZone('${z.id}')" style="width:18px;height:18px;accent-color:#00a8f3;margin-top:8px"/>
+        </div>
+        <button onclick="deleteZone(${idx})" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#ef4444;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:.75rem;align-self:flex-end">✕</button>
+      </div>
+    </div>`;
+  }
+
+  ct.innerHTML=`
+<div class="flex items-center justify-between mb-5">
+  <div><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Logistique</p>
+  <h2 class="font-display text-2xl font-bold text-white uppercase">Livraison <span style="color:#00a8f3">& TVA</span></h2>
+  <p class="text-white/35 text-sm mt-1">Zones de livraison, tarifs, TVA par zone et seuils de gratuité</p></div>
+  <button class="btn btn-primary btn-sm gp" onclick="addZone()">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+    Ajouter une zone
+  </button>
+</div>
+
+<div class="card p-5 mb-5">
+  <p class="font-display font-bold text-white tracking-wide mb-4">Paramètres globaux</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;flex-wrap:wrap">
+    <div>
+      <label class="fl">Seuil livraison gratuite globale (HT)</label>
+      <div style="display:flex;gap:.4rem;align-items:center">
+        <input type="number" id="sh-free" class="fi" value="${sh.freeThresholdHT||125}" step="1" min="0" style="width:120px"/>
+        <span class="text-white/40 text-sm">€ HT</span>
+      </div>
+    </div>
+    <div>
+      <label class="fl">Frais de manutention (HT)</label>
+      <div style="display:flex;gap:.4rem;align-items:center">
+        <input type="number" id="sh-handling" class="fi" value="${sh.handlingFee||0}" step="0.5" min="0" style="width:120px"/>
+        <span class="text-white/40 text-sm">€ HT</span>
+      </div>
+    </div>
+    <div>
+      <label class="fl">TVA sur livraison</label>
+      <div style="display:flex;gap:.4rem;align-items:center;margin-top:6px">
+        <input type="checkbox" id="sh-vatonship" ${sh.vatOnShipping?'checked':''} style="width:18px;height:18px;accent-color:#00a8f3"/>
+        <span class="text-white/55 text-sm">Appliquer TVA sur les frais de port</span>
+      </div>
+    </div>
+  </div>
+  <div class="mt-4">
+    <label class="fl">Note livraison (affichée au client)</label>
+    <input type="text" id="sh-note" class="fi" value="${sh.note||''}" placeholder="Ex: Livraison via Bpost. Délai 2–5 jours."/>
   </div>
 </div>
-<div class="card p-5 mb-4">
-  <p class="fl mb-3">Zones tarifaires</p>
-  ${zones.map((z,idx)=>`
-  <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem;flex-wrap:wrap">
-    <span style="min-width:160px;font-family:Inter,sans-serif;font-size:.82rem;color:white">${z.label}</span>
-    <input type="number" id="sh-z-${idx}" class="fi" style="width:110px" value="${z.baseRate||0}" step="0.5"/>
-    <span class="text-white/40 text-xs">€ HT</span>
-  </div>`).join('')}
+
+<div class="mb-5">
+  <p class="font-display font-bold text-white tracking-wide mb-3">Zones tarifaires</p>
+  <div style="display:grid;grid-template-columns:2fr 1.2fr 1.2fr 1fr 1fr auto;gap:.5rem;padding:0 1rem;margin-bottom:.4rem">
+    <span class="text-white/30 text-xs uppercase tracking-widest">Zone / Pays</span>
+    <span class="text-white/30 text-xs uppercase tracking-widest">Tarif HT</span>
+    <span class="text-white/30 text-xs uppercase tracking-widest">Gratuit dès</span>
+    <span class="text-white/30 text-xs uppercase tracking-widest">TVA %</span>
+    <span class="text-white/30 text-xs uppercase tracking-widest">Défaut</span>
+    <span></span>
+  </div>
+  <div id="zones-list">
+    ${zones.map((z,idx)=>zoneRow(z,idx)).join('')}
+  </div>
 </div>
-<button class="btn btn-primary" onclick="
+
+<button class="btn btn-primary gp" onclick="saveShipping()">
+  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+  Enregistrer toutes les zones
+</button>`;
+}
+
+function updateZoneField(idx,field,value){
+  if(!DB_CONFIG.shipping||!DB_CONFIG.shipping.zones)return;
+  DB_CONFIG.shipping.zones[idx][field]=value;
+}
+function setDefaultZone(zoneId){
   DB_CONFIG.shipping=DB_CONFIG.shipping||{};
-  DB_CONFIG.shipping.freeThresholdHT=parseFloat(document.getElementById('sh-free').value)||125;
-  sauvegarder();toast('Livraison sauvegardée','success');
-  console.log('DEBUG [btn] Shipping saved');
-">Enregistrer</button>`;
+  DB_CONFIG.shipping.defaultZone=zoneId;
+  document.querySelectorAll('[data-default-zone]').forEach(el=>{el.checked=el.getAttribute('data-default-zone')===zoneId;});
+  console.log('DEBUG [setDefaultZone] '+zoneId);
+}
+function addZone(){
+  DB_CONFIG.shipping=DB_CONFIG.shipping||{};
+  DB_CONFIG.shipping.zones=DB_CONFIG.shipping.zones||[];
+  const newId='z-'+Date.now().toString().slice(-4);
+  DB_CONFIG.shipping.zones.push({id:newId,label:'Nouvelle zone',baseRate:8,freeFrom:150,vatRate:21});
+  renderAdminShipping();
+}
+function deleteZone(idx){
+  if(!DB_CONFIG.shipping||!DB_CONFIG.shipping.zones)return;
+  DB_CONFIG.shipping.zones.splice(idx,1);
+  renderAdminShipping();
+}
+function saveShipping(){
+  DB_CONFIG.shipping=DB_CONFIG.shipping||{};
+  const freeEl=document.getElementById('sh-free');
+  const handlingEl=document.getElementById('sh-handling');
+  const vatEl=document.getElementById('sh-vatonship');
+  const noteEl=document.getElementById('sh-note');
+  if(freeEl)DB_CONFIG.shipping.freeThresholdHT=parseFloat(freeEl.value)||125;
+  if(handlingEl)DB_CONFIG.shipping.handlingFee=parseFloat(handlingEl.value)||0;
+  if(vatEl)DB_CONFIG.shipping.vatOnShipping=vatEl.checked;
+  if(noteEl)DB_CONFIG.shipping.note=noteEl.value;
+  /* Collect zone fields from DOM */
+  const zones=DB_CONFIG.shipping.zones||[];
+  zones.forEach((z,idx)=>{
+    const lbl=document.querySelector('#zone-row-'+idx+' [data-field="label"]');
+    const rate=document.querySelector('#zone-row-'+idx+' [data-field="baseRate"]');
+    const free=document.querySelector('#zone-row-'+idx+' [data-field="freeFrom"]');
+    const vat=document.querySelector('#zone-row-'+idx+' [data-field="vatRate"]');
+    if(lbl)z.label=lbl.value;
+    if(rate)z.baseRate=parseFloat(rate.value)||0;
+    if(free)z.freeFrom=free.value===''?null:parseFloat(free.value);
+    if(vat)z.vatRate=parseFloat(vat.value)||21;
+  });
+  sauvegarder();
+  toast('Livraison & zones sauvegardées ✓','success');
+  console.log('DEBUG [saveShipping] saved',DB_CONFIG.shipping.zones?.length,'zones');
 }
 
 function renderAdminContactInfo(){
