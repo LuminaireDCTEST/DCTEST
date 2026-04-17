@@ -405,7 +405,7 @@ textarea.fi{resize:vertical}
 
 <div class="toast-wrap" id="toastWrap"></div>
 <script>
-const LS={PRODUITS:'dcorp_v29_products',USERS:'dcorp_v29_users',COMMANDES:'dcorp_v29_orders',CONFIG:'dcorp_v29_config',CHAT:'dcorp_v29_chat',STOCK_LOG:'dcorp_v29_stocklog'};
+const LS={PRODUITS:'dcorp_v29_products',USERS:'dcorp_v29_users',COMMANDES:'dcorp_v29_orders',CONFIG:'dcorp_v29_config',CHAT:'dcorp_v29_chat',STOCK_LOG:'dcorp_v29_stocklog',VISUEL:'dcorp_v29_visuel'};
 const TVA=0.21,WF_AUTO_CONFIRM_DAYS=7;
 
 /* ── DEFAULTS ── */
@@ -518,6 +518,12 @@ function charger(){
   }catch(e){DB_CONFIG=JSON.parse(JSON.stringify(DEFAULT_CONFIG));}
   try{const r=localStorage.getItem(LS.CHAT);DB_CHAT=r?JSON.parse(r):[];if(!Array.isArray(DB_CHAT))DB_CHAT=[];}catch(e){DB_CHAT=[];}
   try{const r=localStorage.getItem(LS.STOCK_LOG);DB_STOCK_LOG=r?JSON.parse(r):[];if(!Array.isArray(DB_STOCK_LOG))DB_STOCK_LOG=[];}catch(e){DB_STOCK_LOG=[];}
+  /* ── Charger config_visuel séparée (fond d'accueil permanent) ── */
+  try{
+    const vs=localStorage.getItem(LS.VISUEL);
+    if(vs){const vc=JSON.parse(vs);DB_CONFIG.hero=Object.assign(DB_CONFIG.hero||{},vc);
+      console.log('DEBUG [charger] LS.VISUEL chargé: type='+vc.type);}
+  }catch(e){console.warn('[charger] LS.VISUEL erreur:',e);}
 }
 
 function verifierBaseDeDonnees(){
@@ -694,16 +700,42 @@ function sendContactMessage(){
 
 /* ── HERO ── */
 function extractYtId(url){if(!url)return '';const m=url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);return m?m[1]:(/^[a-zA-Z0-9_-]{11}$/.test(url.trim())?url.trim():'');}
-function applyHeroConfig(){
-  const cfg=DB_CONFIG.hero||{};const vid=document.getElementById('heroVideo');const ytW=document.getElementById('heroYtWrapper');const op=typeof cfg.opacity==='number'?cfg.opacity:0.35;
+function applyHeroConfig(cfgOverride){
+  const cfg=cfgOverride||DB_CONFIG.hero||{};
+  const vid=document.getElementById('heroVideo');
+  const ytW=document.getElementById('heroYtWrapper');
+  const op=typeof cfg.opacity==='number'?cfg.opacity:0.35;
+  console.log('DEBUG [applyHeroConfig] type='+cfg.type+' ytId='+cfg.ytId+' src='+String(cfg.src).slice(0,40));
   if(ytW)ytW.innerHTML='';
   if(cfg.type==='video_yt'&&cfg.ytId){
-    if(vid)vid.style.display='none';if(ytW){ytW.style.display='block';ytW.innerHTML=`<iframe src="https://www.youtube.com/embed/${cfg.ytId}?autoplay=1&mute=1&loop=1&playlist=${cfg.ytId}&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1" style="filter:brightness(${op}) saturate(.70)" allow="autoplay;encrypted-media" allowfullscreen></iframe>`;}
+    if(vid)vid.style.display='none';
+    if(ytW){
+      ytW.style.display='block';
+      ytW.innerHTML=`<iframe
+        src="https://www.youtube.com/embed/${cfg.ytId}?autoplay=1&mute=1&loop=1&playlist=${cfg.ytId}&controls=0&showinfo=0&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&enablejsapi=0"
+        allow="autoplay;encrypted-media" allowfullscreen
+        style="position:absolute;top:50%;left:50%;width:177.78vh;min-width:100%;height:56.25vw;min-height:100%;
+        transform:translate(-50%,-50%);border:none;pointer-events:none;
+        filter:brightness(${op}) saturate(.70);z-index:0"></iframe>`;
+      console.log('DEBUG [applyHeroConfig] YouTube iframe injecté ytId='+cfg.ytId);
+    }
   }else if(cfg.type==='video_url'&&cfg.src){
-    if(ytW)ytW.style.display='none';if(vid){vid.style.display='block';vid.style.filter=`brightness(${op}) saturate(.70)`;vid.innerHTML=`<source src="${cfg.src}" type="video/mp4"/>`;vid.load();vid.play().catch(()=>{});}
+    if(ytW)ytW.style.display='none';
+    if(vid){
+      vid.style.display='block';
+      vid.style.filter=`brightness(${op}) saturate(.70)`;
+      vid.innerHTML=`<source src="${cfg.src}" type="${cfg.src.endsWith('.webm')?'video/webm':'video/mp4'}"/>`;
+      vid.load();vid.play().catch(()=>{});
+    }
   }else if(cfg.type==='image'&&cfg.src){
-    if(ytW)ytW.style.display='none';if(vid)vid.style.display='none';const hs=document.querySelector('.hero-section');if(hs){hs.style.backgroundImage=`url(${cfg.src})`;hs.style.backgroundSize='cover';hs.style.backgroundPosition='center';}
-  }else{if(ytW)ytW.style.display='none';if(vid){vid.style.display='block';vid.style.filter=`brightness(${op}) saturate(.70)`;}}
+    if(ytW)ytW.style.display='none';
+    if(vid)vid.style.display='none';
+    const hs=document.querySelector('.hero-section')||document.getElementById('heroSection');
+    if(hs){hs.style.backgroundImage=`url(${cfg.src})`;hs.style.backgroundSize='cover';hs.style.backgroundPosition='center';}
+  }else{
+    if(ytW)ytW.style.display='none';
+    if(vid){vid.style.display='block';vid.style.filter=`brightness(${op}) saturate(.70)`;}
+  }
   applyHeroDesign();
 }
 function applyHeroDesign(){
@@ -725,7 +757,21 @@ function initCatalogue(){
   document.getElementById('productGrid').innerHTML='';
   _renderChooser();
 }
-function _getAvailableCatalogs(){const all=DB_CONFIG.catalogs||[];if(!currentUser)return all.filter(c=>c.id==='cat_luminaire');const allowed=currentUser.catalogs||['cat_luminaire'];return all.filter(c=>allowed.includes(c.id));}
+function _getAvailableCatalogs(){
+  const FALLBACK_LUM={id:'cat_luminaire',label:'Luminaires Auto',
+    desc:'Phares, feux, strips LED & intérieur',color:'#00a8f3',
+    icon:'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z'};
+  const all=(DB_CONFIG.catalogs&&DB_CONFIG.catalogs.length)?DB_CONFIG.catalogs:[FALLBACK_LUM];
+  if(!currentUser){
+    const pub=all.filter(c=>c.id==='cat_luminaire');
+    console.log('DEBUG [getAvailableCatalogs] public — catalogs:',pub.map(c=>c.id).join(','));
+    return pub.length?pub:[FALLBACK_LUM];
+  }
+  const allowed=currentUser.catalogs||['cat_luminaire'];
+  const avail=all.filter(c=>allowed.includes(c.id));
+  console.log('DEBUG [getAvailableCatalogs] user',currentUser.email,'— catalogs:',avail.map(c=>c.id).join(','));
+  return avail.length?avail:[FALLBACK_LUM];
+}
 function _renderChooser(){
   const el=document.getElementById('catalogChooser');
   const available=_getAvailableCatalogs();
@@ -787,13 +833,29 @@ function setTechFilter(v){activeTechFilter=activeTechFilter===v?'':v;renderSideb
 
 function renderProductGrid(){
   const grid=document.getElementById('productGrid');if(!grid)return;
-  let prods=DB_PRODUITS.filter(p=>(p.catalog_id||'cat_luminaire')===activeCatalogId);
-  if(activeSubFilter!=='all')prods=prods.filter(p=>p.cat===activeSubFilter);
+  /* ── Filtre principal par catalog_id ── */
+  const allInCat=DB_PRODUITS.filter(p=>(p.catalog_id||'cat_luminaire')===activeCatalogId);
+  console.log('DEBUG [renderProductGrid] catalog_id="'+activeCatalogId+'" → '+allInCat.length+' articles trouvés (total DB: '+DB_PRODUITS.length+')');
+  console.log('DEBUG [renderProductGrid] catalog_ids présents:',
+    [...new Set(DB_PRODUITS.map(p=>p.catalog_id||'UNDEFINED'))].join(', '));
+  let prods=allInCat;
+  if(activeSubFilter&&activeSubFilter!=='all')prods=prods.filter(p=>p.cat===activeSubFilter);
   if(activeTechFilter)prods=prods.filter(p=>p.tech===activeTechFilter);
-  if(!prods.length){const total=DB_PRODUITS.filter(p=>(p.catalog_id||'cat_luminaire')===activeCatalogId).length;grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:3rem"><p style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:rgba(255,255,255,.28);letter-spacing:.1em">${total===0?'Aucun article dans ce catalogue':'Aucun article pour ce filtre'}</p>${total===0?`<p style="font-size:.72rem;color:rgba(255,255,255,.18);margin-top:.5rem">Ajoutez des produits depuis l'admin → Produits</p>`:''}</div>`;return;}
+  console.log('DEBUG [renderProductGrid] après filtres sous-cat/tech: '+prods.length+' produits rendus');
+  if(!prods.length){
+    const msg=allInCat.length===0
+      ?'Aucun article dans ce catalogue (catalog_id="'+activeCatalogId+'")'
+      :'Aucun article pour ce filtre';
+    grid.innerHTML=`<div class="col-span-4" style="padding:3rem;text-align:center">
+      <p style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:rgba(255,255,255,.3);letter-spacing:.1em">${msg}</p>
+      <p style="font-family:Inter,sans-serif;font-size:.72rem;color:rgba(255,255,255,.2);margin-top:.5rem">
+        Vérifiez l'attribution catalog_id des articles dans l'admin</p></div>`;
+    syncPublicFilters&&syncPublicFilters();return;
+  }
   const disc=currentUser?userDiscount(currentUser):0;
   grid.innerHTML=prods.map(p=>_buildProdCard(p,disc)).join('');
   grid.onclick=e=>{const card=e.target.closest('[data-pid]');if(card)openProductModal(parseInt(card.getAttribute('data-pid'),10));};
+  syncPublicFilters&&syncPublicFilters();
   setTimeout(initReveal,60);
 }
 function _buildProdCard(p,disc){
@@ -1077,6 +1139,7 @@ function adminTab(tab){
     hero:renderAdminHero,
     herodesign:renderAdminHeroDesign,
     modeles:renderAdminModeles,
+    docs:renderAdminModeles,
     contacts:renderAdminContacts,
     emailsettings:renderAdminEmailSettings,
     chat:renderAdminChat,
@@ -1089,8 +1152,9 @@ function adminTab(tab){
   const nav=document.getElementById('anav-'+tab);if(nav)nav.classList.add('active');
   adminCurrentTab=tab;
   const fn=renders[tab];
-  if(fn)fn();
-  else document.getElementById('adminContent').innerHTML='<p class="text-white/30 p-8">Section "'+tab+'" en cours de développement.</p>';
+  if(fn){console.log('DEBUG [adminTab]',tab);fn();}
+  else{console.warn('DEBUG [adminTab] onglet inconnu:',tab);
+    document.getElementById('adminContent').innerHTML='<p class="text-white/30 p-8">Section "'+tab+'" en cours.</p>';}
 }
 
 
@@ -1264,62 +1328,143 @@ function openEditClient(uid){
 }
 
 
+/* ══ renderAdminPricing — Remises clients + paliers volume par produit ══
+   Structure de données :
+   DB_USERS[n].discount = 5  (% remise globale client, ex: 5%)
+   DB_PRODUITS[n].volumeDiscounts = [
+     {qty:10,  pct:0.5},   // à partir de 10 unités → -0.5%
+     {qty:100, pct:5},     // à partir de 100 → -5%
+     {qty:500, pct:10}     // à partir de 500 → -10%
+   ]
+   Sauvegardé dans LS.PRODUITS via sauvegarder()
+*/
 function renderAdminPricing(){
-  const ct=document.getElementById('adminContent');
-  const tiers=[0,0.5,1,2,5,10,15,20];
+  console.log('DEBUG [renderAdminPricing]');
+  const ct=document.getElementById('adminContent');if(!ct)return;
   ct.innerHTML=`
-    <div class="mb-6">
-      <p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Gestion</p>
-      <h2 class="font-display text-2xl font-bold text-white uppercase">Tarifs <span style="color:#00a8f3">Préférentiels</span></h2>
-      <p class="text-white/35 text-sm mt-1">Appliquez une remise personnalisée par client (déduite du prix HT)</p>
-    </div>
-    <!-- Tiers reference -->
-    <div class="card p-5 mb-6">
-      <p class="fl mb-3">Paliers de remise disponibles</p>
-      <div class="flex flex-wrap gap-2 mb-1">
-        ${tiers.map(t=>`<span class="chip font-display font-bold" style="${t>0?'color:#22c55e':'color:var(--textD)'}">${t === 0 ? 'Standard (0%)' : `−${t}%`}</span>`).join('')}
+<div class="mb-5">
+  <p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Gestion</p>
+  <h2 class="font-display text-2xl font-bold text-white uppercase">Remises & <span style="color:#00a8f3">Paliers</span></h2>
+  <p class="text-white/35 text-sm mt-1">Remises clients permanentes + paliers de volume par produit</p>
+</div>
+
+<!-- SECTION 1: Remises clients -->
+<div class="card p-5 mb-5">
+  <p class="fl mb-1">Remises clients (appliquée sur tous leurs achats)</p>
+  <p class="text-white/30 text-xs mb-4">Visible dans le panier et les documents PDF</p>
+  <div class="overflow-x-auto">
+  <table class="a-table">
+    <thead><tr><th>Client</th><th>Email</th><th>Remise actuelle (%)</th><th>Nouveau %</th><th>Action</th></tr></thead>
+    <tbody>
+      ${DB_USERS.filter(u=>u.role==='client').map(u=>`
+      <tr>
+        <td><p style="font-weight:600">${u.first} ${u.last}</p><p style="font-size:.68rem;color:rgba(255,255,255,.35)">${u.company||''}</p></td>
+        <td style="font-size:.75rem;color:rgba(255,255,255,.55)">${u.email}</td>
+        <td><span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:${(u.discount||0)>0?'#22c55e':'rgba(255,255,255,.3)'}">
+          ${u.discount||0}%</span></td>
+        <td><input type="number" id="disc-${u.id}" class="fi" value="${u.discount||0}" min="0" max="50" step="0.5"
+          style="width:80px;font-size:.82rem" placeholder="0"/></td>
+        <td><button onclick="console.log('DEBUG [btn] setClientDiscount ${u.id}');setClientDiscount('${u.id}')"
+          class="btn btn-primary btn-xs">Appliquer</button></td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<!-- SECTION 2: Paliers volume par produit -->
+<div class="card p-5">
+  <p class="fl mb-1">Paliers de remise volume (par produit)</p>
+  <p class="text-white/30 text-xs mb-4">La remise s'applique automatiquement dans le panier selon la quantité commandée</p>
+  <div style="display:flex;flex-direction:column;gap:1rem">
+  ${DB_PRODUITS.map(p=>{
+    const tiers=p.volumeDiscounts||[];
+    return `
+    <div class="card p-4" style="background:rgba(0,0,0,.2)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.65rem;flex-wrap:wrap;gap:.4rem">
+        <div>
+          <p style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.06em;color:white">${p.name}</p>
+          <p style="font-family:Inter,sans-serif;font-size:.65rem;color:rgba(255,255,255,.35)">${p.ref} · Prix de base : ${fmt(p.price)}/u.</p>
+        </div>
+        <button onclick="console.log('DEBUG [btn] ajouterPalier ${p.id}');ajouterPalier(${p.id})"
+          style="font-size:.7rem;font-weight:700;padding:4px 12px;border-radius:7px;border:1px solid rgba(0,168,243,.3);
+          background:rgba(0,168,243,.08);color:#00a8f3;cursor:pointer">+ Palier</button>
       </div>
-      <p class="text-white/25 text-xs mt-3 font-body">La remise s'applique automatiquement à la commande et est visible dans la modale produit pour les clients concernés.</p>
-    </div>
-    <!-- Clients pricing table -->
-    <div class="card overflow-hidden">
-      <div class="p-4 border-b border-white/5 flex items-center justify-between">
-        <p class="font-display font-bold text-white tracking-wide">Remises par client</p>
-        <p class="text-white/30 text-xs">${USERS.filter(u=>u.role==='client').length} clients</p>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="a-table">
-          <thead><tr><th>Client</th><th>Entreprise</th><th>Email</th><th>Remise actuelle</th><th>Appliquer un palier</th></tr></thead>
-          <tbody>
-            ${USERS.filter(u=>u.role==='client').map(u=>`<tr>
-              <td><div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-accent/[.08] border border-accent/15 flex items-center justify-center text-xs font-display font-bold text-accent">${u.avatar}</div><span class="text-white text-sm font-semibold">${u.first} ${u.last}</span></div></td>
-              <td class="text-white/50 text-sm">${u.company||'—'}</td>
-              <td class="text-white/40 text-xs">${u.email}</td>
-              <td>
-                <div class="flex items-center gap-2">
-                  <span class="font-display font-bold text-xl" style="color:${u.discount>0?'#22c55e':'var(--textD)'}">${u.discount||0}%</span>
-                  ${u.discount>0?`<span class="badge badge-active text-xs">Remise active</span>`:'<span class="text-white/20 text-xs">Standard</span>'}
-                </div>
-              </td>
-              <td>
-                <div class="flex flex-wrap gap-1.5">
-                  ${tiers.map(t=>`<button class="tier-btn btn-xs ${u.discount===t?'sel':''}" onclick="setClientDiscount('${u.id}',${t})">${t===0?'0%':'-'+t+'%'}</button>`).join('')}
-                </div>
-              </td>
-            </tr>`).join('')}
-          </tbody>
-        </table>
+      <div id="tiers-${p.id}" style="display:flex;flex-direction:column;gap:.3rem">
+        ${tiers.length===0
+          ?'<p style="font-family:Inter,sans-serif;font-size:.7rem;color:rgba(255,255,255,.22)">Aucun palier — prix fixe pour tous.</p>'
+          :tiers.map((t,idx)=>`
+          <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+            <span style="font-family:Inter,sans-serif;font-size:.72rem;color:rgba(255,255,255,.5);min-width:70px">Dès</span>
+            <input type="number" value="${t.qty}" min="1" style="width:80px;font-size:.78rem"
+              class="fi" onchange="updatePalier(${p.id},${idx},'qty',parseInt(this.value)||1)"
+              placeholder="Qté"/>
+            <span style="font-family:Inter,sans-serif;font-size:.72rem;color:rgba(255,255,255,.5)">unités →</span>
+            <input type="number" value="${t.pct}" min="0" max="99" step="0.5" style="width:80px;font-size:.78rem"
+              class="fi" onchange="updatePalier(${p.id},${idx},'pct',parseFloat(this.value)||0)"
+              placeholder="%"/>
+            <span style="font-family:Inter,sans-serif;font-size:.72rem;color:rgba(255,255,255,.5)">% de remise</span>
+            <span style="font-family:'Bebas Neue',sans-serif;font-size:.9rem;color:#22c55e;min-width:80px">
+              → ${fmt(p.price*(1-t.pct/100))}/u.</span>
+            <button onclick="supprimerPalier(${p.id},${idx})"
+              style="font-size:.65rem;padding:2px 8px;border-radius:5px;border:1px solid rgba(239,68,68,.3);
+              background:rgba(239,68,68,.08);color:#ef4444;cursor:pointer">✕</button>
+          </div>`).join('')}
       </div>
     </div>`;
+  }).join('')}
+  </div>
+  <div style="margin-top:1rem">
+    <button onclick="console.log('DEBUG [btn] sauvegarder paliers');sauvegarder();toast('Paliers sauvegardés ✓','success')"
+      class="btn btn-primary gp">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+      Enregistrer tous les paliers
+    </button>
+  </div>
+</div>`;
 }
 
-
-function setClientDiscount(uid,disc){
-  const u=USERS.find(x=>x.id===uid);if(!u)return;
-  u.discount=disc;
-  toast(`Remise de ${disc}% appliquée à ${u.first} ${u.last}`,'success');
+function ajouterPalier(pid){
+  const p=DB_PRODUITS.find(x=>x.id===pid);if(!p)return;
+  if(!p.volumeDiscounts)p.volumeDiscounts=[];
+  /* Suggérer la prochaine tranche logique */
+  const last=p.volumeDiscounts[p.volumeDiscounts.length-1];
+  const newQty=last?last.qty*5:10;
+  const newPct=last?Math.min(last.pct+2,50):1;
+  p.volumeDiscounts.push({qty:newQty,pct:newPct});
+  p.volumeDiscounts.sort((a,b)=>a.qty-b.qty);
+  console.log('DEBUG [ajouterPalier] pid='+pid+' nouveau palier qty='+newQty+' pct='+newPct);
   renderAdminPricing();
 }
+
+function supprimerPalier(pid,idx){
+  const p=DB_PRODUITS.find(x=>x.id===pid);if(!p||!p.volumeDiscounts)return;
+  p.volumeDiscounts.splice(idx,1);
+  console.log('DEBUG [supprimerPalier] pid='+pid+' idx='+idx);
+  renderAdminPricing();
+}
+
+function updatePalier(pid,idx,field,val){
+  const p=DB_PRODUITS.find(x=>x.id===pid);if(!p||!p.volumeDiscounts)return;
+  p.volumeDiscounts[idx][field]=val;
+  /* Re-trier par qty croissant */
+  if(field==='qty')p.volumeDiscounts.sort((a,b)=>a.qty-b.qty);
+  console.log('DEBUG [updatePalier] pid='+pid+' idx='+idx+' '+field+'='+val);
+}
+
+function setClientDiscount(uid){
+  const u=DB_USERS.find(x=>x.id===uid);if(!u)return;
+  const inp=document.getElementById('disc-'+uid);if(!inp)return;
+  u.discount=parseFloat(inp.value)||0;
+  sauvegarder();
+  toast(u.first+' '+u.last+' → '+u.discount+'% remise ✓','success');
+  console.log('DEBUG [setClientDiscount] uid='+uid+' discount='+u.discount+'%');
+  /* Mettre à jour la ligne visuellement */
+  const row=inp.closest('tr');
+  if(row){const span=row.querySelector('span');if(span){span.textContent=u.discount+'%';span.style.color=u.discount>0?'#22c55e':'rgba(255,255,255,.3)';}}
+}
+
+
 
 
 function renderAdminCatalog(){
@@ -1592,111 +1737,224 @@ function previewImage(url){
 
 
 function renderAdminModeles(){
-  var ct=document.getElementById('adminContent');
+  console.log('DEBUG [renderAdminModeles] commandes='+DB_COMMANDES.length);
+  const ct=document.getElementById('adminContent');if(!ct)return;
+  const opts=DB_COMMANDES.length
+    ? DB_COMMANDES.map(o=>`<option value="${o.id}">${o.id} · ${o.userName} · ${fmt(oTTC(o))} TTC</option>`).join('')
+    : '<option value="">Aucune commande disponible</option>';
 
-  /* Rebuild order options */
-  var orderOpts=DB_COMMANDES.map(function(o){
-    return '<option value="'+o.id+'">'+o.id+' \u00b7 '+o.userName+' \u00b7 '+fmt(oTTC(o))+' TTC</option>';
-  }).join('');
+  ct.innerHTML=`
+<div class="flex items-center justify-between mb-5">
+  <div><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Documents</p>
+  <h2 class="font-display text-2xl font-bold text-white uppercase">PDF <span style="color:#00a8f3">Professionnel</span></h2>
+  <p class="text-white/35 text-sm mt-1">Devis · Facture · BL · Acompte · Avoir — 100% navigateur, zéro serveur</p></div>
+</div>
 
-  ct.innerHTML='<div class="flex items-center justify-between mb-5">'
-    +'<div><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Documents</p>'
-    +'<h2 class="font-display text-2xl font-bold text-white uppercase">G\u00e9n\u00e9ration <span style="color:#00a8f3">PDF</span></h2>'
-    +'<p class="text-white/35 text-sm mt-1">PDF professionnel B2B — 100% navigateur, z\u00e9ro serveur</p>'
-    +'</div></div>'
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.4rem">
 
-    /* Type selector */
-    +'<div class="card p-5 mb-4">'
-    +'<p class="fl mb-3">Type de document</p>'
-    +'<div style="display:flex;flex-wrap:wrap;gap:.5rem">'
-    +DOC_TYPES.map(function(d){
-      return '<button id="pdf-btn-'+d.id+'" onclick="selectPdfType(\''+d.id+'\')" style="'
-        +'display:flex;align-items:center;gap:.5rem;padding:.5rem 1rem;border-radius:8px;border:1px solid rgba(255,255,255,.08);'
-        +'background:rgba(255,255,255,.03);cursor:pointer;transition:all .2s;font-family:Inter,sans-serif;font-size:.8rem;font-weight:600;color:rgba(255,255,255,.55)"'
-        +' onmouseover="this.style.borderColor=\''+d.color+'88\';this.style.color=\''+d.color+'\'"'
-        +' onmouseout="if(window._pdfType!==\''+d.id+'\'){this.style.borderColor=\'rgba(255,255,255,.08)\';this.style.color=\'rgba(255,255,255,.55)\'}">'
-        +'<svg style="width:15px;height:15px;flex-shrink:0;color:'+d.color+'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="'+d.icon+'"/></svg>'
-        +d.label+'</button>';
-    }).join('')
-    +'</div></div>'
+  <!-- Panneau gauche -->
+  <div>
+    <div class="card p-5 mb-4">
+      <p class="fl mb-3">Type de document</p>
+      <div style="display:flex;flex-wrap:wrap;gap:.4rem">
+        ${[{id:'commande',label:'Bon de commande',color:'#0066cc'},
+           {id:'devis',label:'Devis',color:'#7c3aed'},
+           {id:'facture',label:'Facture',color:'#d97706'},
+           {id:'livraison',label:'Bon de livraison',color:'#059669'},
+           {id:'acompte',label:'Acompte',color:'#0891b2'},
+           {id:'avoir',label:'Avoir',color:'#dc2626'}
+          ].map(d=>`<button id="pdf-btn-${d.id}"
+            onclick="selectPdfType('${d.id}')"
+            style="padding:.42rem .9rem;border-radius:8px;border:1px solid rgba(255,255,255,.1);
+            background:rgba(255,255,255,.03);cursor:pointer;font-family:Inter,sans-serif;
+            font-size:.78rem;font-weight:600;color:rgba(255,255,255,.5);transition:all .2s"
+            onmouseover="this.style.background='rgba(0,168,243,.1)';this.style.color='#00a8f3';this.style.borderColor='rgba(0,168,243,.3)'"
+            onmouseout="if(window._pdfType!=='${d.id}'){this.style.background='rgba(255,255,255,.03)';this.style.color='rgba(255,255,255,.5)';this.style.borderColor='rgba(255,255,255,.1)'}"
+            >${d.label}</button>`).join('')}
+      </div>
+    </div>
 
-    /* Config */
-    +'<div class="card p-5 mb-4">'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:1rem;align-items:end;flex-wrap:wrap">'
-    +'<div><label class="fl">Commande source</label>'
-    +'<select id="pdf-order" class="fi" style="font-size:.82rem"><option value="">— Choisir une commande —</option>'+orderOpts+'</select></div>'
-    +'<div id="pdf-acompte-field" style="display:none"><label class="fl">Pourcentage d\'acompte (%)</label>'
-    +'<input type="number" id="pdf-pct" class="fi" value="30" min="1" max="100" style="font-size:.88rem"/></div>'
-    +'<div><button class="btn btn-ghost btn-sm" onclick="previewPdf()">👁 Aperçu</button></div>'
-    +'</div></div>'
+    <div class="card p-5 mb-4">
+      <label class="fl mb-2">Commande source</label>
+      <select id="pdf-order" class="fi" style="margin-bottom:.5rem">
+        <option value="">— Sélectionner une commande —</option>
+        ${opts}
+      </select>
+      <div id="pdf-acompte-row" style="display:none;margin-top:.5rem">
+        <label class="fl mb-1">% d'acompte</label>
+        <input type="number" id="pdf-pct" class="fi" value="30" min="1" max="99" step="1" style="width:110px"/>
+      </div>
+    </div>
 
-    /* Preview + actions */
-    +'<div style="display:grid;grid-template-columns:1fr 320px;gap:1.5rem">'
+    <div style="display:flex;flex-direction:column;gap:.45rem">
+      <button onclick="console.log('DEBUG [btn] Télécharger PDF');genererDocument()"
+        class="btn btn-primary gp" style="justify-content:center">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        Télécharger PDF
+      </button>
+      <button onclick="console.log('DEBUG [btn] Aperçu PDF');aperçuDocument()"
+        class="btn btn-outline" style="justify-content:center">👁 Aperçu dans onglet</button>
+      <button onclick="console.log('DEBUG [btn] Gmail');genererEtEnvoyerDoc('gmail')"
+        class="btn btn-ghost" style="justify-content:center;color:#ea4335;border-color:rgba(234,67,53,.2)">
+        ✉ Générer + Gmail</button>
+      <button onclick="console.log('DEBUG [btn] Mailto');genererEtEnvoyerDoc('mailto')"
+        class="btn btn-ghost" style="justify-content:center">✉ Générer + client mail</button>
+    </div>
+  </div>
 
-    /* iframe preview */
-    +'<div class="card" style="padding:0;overflow:hidden;min-height:500px">'
-    +'<div style="background:rgba(255,255,255,.03);padding:.65rem 1rem;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between">'
-    +'<p style="font-family:Inter,sans-serif;font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.4)">Aperçu document</p>'
-    +'<span id="pdf-preview-badge" style="font-size:.65rem;font-family:Inter,sans-serif;color:rgba(255,255,255,.25)">Sélectionnez un type et une commande</span>'
-    +'</div>'
-    +'<iframe id="pdf-preview-frame" style="width:100%;height:520px;border:none;background:white"></iframe>'
-    +'</div>'
+  <!-- Panneau droit : tableau rapide -->
+  <div class="card p-4" style="max-height:540px;overflow-y:auto">
+    <p class="fl mb-3">Génération rapide par commande</p>
+    ${!DB_COMMANDES.length
+      ? '<p class="text-white/30 text-sm">Aucune commande.</p>'
+      : `<div style="display:flex;flex-direction:column;gap:.5rem">
+        ${DB_COMMANDES.map(o=>`
+        <div style="padding:.6rem .75rem;border:1px solid rgba(255,255,255,.07);border-radius:10px;background:rgba(255,255,255,.02)">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.4rem">
+            <div>
+              <p style="font-family:'Bebas Neue',sans-serif;font-size:.85rem;letter-spacing:.06em;color:#00a8f3">${o.id}</p>
+              <p style="font-size:.68rem;color:rgba(255,255,255,.4);font-family:Inter,sans-serif">${o.userName} · ${fmt(oTTC(o))}</p>
+            </div>
+            <span style="font-size:.62rem;color:rgba(255,255,255,.25);font-family:Inter,sans-serif">${o.date||''}</span>
+          </div>
+          <div style="display:flex;gap:.3rem;flex-wrap:wrap">
+            ${['commande','devis','facture','livraison'].map(t=>`
+            <button onclick="console.log('DEBUG [btn] PDF rapide ${t} ${o.id}');genererDocument('${t}','${o.id}')"
+              style="font-size:.62rem;font-weight:700;padding:2px 8px;border-radius:5px;
+              border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);
+              color:rgba(255,255,255,.55);cursor:pointer;font-family:Inter,sans-serif;transition:all .15s"
+              onmouseover="this.style.background='rgba(0,168,243,.12)';this.style.borderColor='rgba(0,168,243,.3)';this.style.color='#00a8f3'"
+              onmouseout="this.style.background='rgba(255,255,255,.04)';this.style.borderColor='rgba(255,255,255,.1)';this.style.color='rgba(255,255,255,.55)'">
+              📄 ${t.charAt(0).toUpperCase()+t.slice(1)}</button>`).join('')}
+          </div>
+        </div>`).join('')}
+        </div>`}
+  </div>
+</div>`;
 
-    /* Actions panel */
-    +'<div style="display:flex;flex-direction:column;gap:.75rem">'
-
-    /* Download buttons */
-    +'<div class="card p-5">'
-    +'<p class="fl mb-3">Télécharger</p>'
-    +'<div style="display:flex;flex-direction:column;gap:.4rem">'
-    +'<button class="btn btn-primary w-full gp" onclick="downloadPdf()">'
-    +'<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>'
-    +'Télécharger PDF</button>'
-    +'<button class="btn btn-outline w-full" onclick="printPdf()">'
-    +'<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>'
-    +'Imprimer</button>'
-    /* ── Dual send buttons ── */
-    +'</div>'
-    +'<div style="height:1px;background:rgba(255,255,255,.06);margin:.2rem 0"></div>'
-    +'<p style="font-family:Inter,sans-serif;font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.3);font-weight:600;padding:.1rem 0">PDF + Email au client</p>'
-    +'<div style="display:flex;flex-direction:column;gap:.4rem">'
-    +'<button class="btn-send-mail mailto" onclick="traiterDocument(window._pdfType||\'facture\',\'mailto\')">'
-      +'<span class="btn-send-icon">'
-        +'<svg style="width:16px;height:16px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>'
-      +'</span>'
-      +'<span class="btn-send-text"><strong>Outlook / Mail</strong><small>Ouvre votre logiciel mail</small></span>'
-    +'</button>'
-    +'<button class="btn-send-mail gmail" onclick="traiterDocument(window._pdfType||\'facture\',\'gmail\')">'
-      +'<span class="btn-send-icon">'
-        /* Gmail SVG logo */
-        +'<svg style="width:18px;height:18px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">'
-          +'<path d="M3 5.5L12 13.5L21 5.5" stroke="#EA4335" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
-          +'<path d="M3 5.5h18v13a1 1 0 01-1 1H4a1 1 0 01-1-1V5.5z" stroke="#4285F4" stroke-width="2"/>'
-          +'<path d="M3 5.5L12 13.5" stroke="#34A853" stroke-width="1.5" stroke-linecap="round"/>'
-          +'<path d="M21 5.5L12 13.5" stroke="#FBBC05" stroke-width="1.5" stroke-linecap="round"/>'
-        +'</svg>'
-      +'</span>'
-      +'<span class="btn-send-text"><strong>Gmail</strong><small>Ouvre Gmail dans le navigateur</small></span>'
-    +'</button>'
-    +'</div></div>'
-
-    /* Variables rapides */
-    +'<div class="card p-5" style="flex:1;overflow-y:auto">'
-    +'<p class="fl mb-2">Variables disponibles</p>'
-    +'<div style="display:flex;flex-direction:column;gap:.2rem">'
-    +MERGE_VARS.map(function(v){
-      return '<div style="display:flex;flex-direction:column;padding:.3rem .55rem;border-radius:6px;background:rgba(0,168,243,.04);border:1px solid rgba(0,168,243,.08)">'
-        +'<code style="font-family:Courier New,monospace;font-size:.65rem;color:#00a8f3">'+v.tag+'</code>'
-        +'<span style="font-size:.62rem;color:rgba(255,255,255,.3);margin-top:1px">'+v.desc+'</span>'
-        +'</div>';
-    }).join('')
-    +'</div></div>'
-
-    +'</div></div>';
-
-  /* Set default type */
-  window._pdfType=window._pdfType||'commande';
+  /* Activer type par défaut */
+  if(!window._pdfType)window._pdfType='commande';
   selectPdfType(window._pdfType);
+
+  /* Afficher/masquer champ acompte selon le type */
+  document.getElementById('pdf-order').addEventListener('change',function(){
+    document.getElementById('pdf-acompte-row').style.display=window._pdfType==='acompte'?'block':'none';
+  });
+}
+
+/* ══ genererDocument — Point d'entrée unique PDF ══
+   Structure JSON commande attendue :
+   { id, userId, userName, userEmail, date, items:[{pid,name,qty,unitPrice}],
+     shippingCostHT, shippingZoneId, status, history, wfSteps }
+   Structure client :
+   { id, first, last, email, tel, company, address, discount }
+*/
+function genererDocument(typeArg, orderIdArg){
+  const type    = typeArg   || window._pdfType || 'commande';
+  const orderId = orderIdArg|| (document.getElementById('pdf-order')&&document.getElementById('pdf-order').value)||'';
+  const pct     = parseFloat(document.getElementById('pdf-pct')&&document.getElementById('pdf-pct').value)||30;
+
+  console.log('DEBUG [genererDocument] type='+type+' orderId='+orderId+' pct='+pct);
+
+  if(!orderId){toast('Sélectionnez une commande','error');return;}
+
+  /* ── 1. Aspire données commande ── */
+  const o=DB_COMMANDES.find(x=>x.id===orderId);
+  if(!o){toast('Commande introuvable : '+orderId,'error');return;}
+
+  /* ── 2. Aspire données client ── */
+  const user=DB_USERS.find(u=>u.id===o.userId)||{
+    first:o.userName?.split(' ')[0]||'',
+    last:o.userName?.split(' ').slice(1).join(' ')||'',
+    email:o.userEmail||'',tel:'',company:'',address:o.address||''
+  };
+
+  /* ── 3. Build HTML document ── */
+  const htmlDoc=buildPdfHtml(type,orderId,pct);
+  if(!htmlDoc){toast('Erreur génération document','error');return;}
+
+  /* ── 4. Nom de fichier ── */
+  const pfx={commande:'BC',devis:'DEV',facture:'FAC',livraison:'BL',acompte:'ACP',avoir:'AVO'};
+  const docNum=(pfx[type]||type.slice(0,3).toUpperCase())+'-'+orderId+'-'+new Date().getFullYear();
+  const filename=type+'_'+docNum+'_'+new Date().toISOString().slice(0,10)+'.pdf';
+
+  /* ── 5. Téléchargement ── */
+  if(typeof html2pdf==='undefined'){
+    console.warn('DEBUG [genererDocument] html2pdf.js non chargé — ouverture onglet fallback');
+    const blob=new Blob(['<!DOCTYPE html><html><head><meta charset="utf-8"/><title>'+docNum+'</title></head><body>'+htmlDoc+'</body></html>'],
+      {type:'text/html;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    window.open(url,'_blank');
+    setTimeout(()=>URL.revokeObjectURL(url),20000);
+    return;
+  }
+
+  toast('Génération PDF…','info');
+  const wrap=document.createElement('div');
+  wrap.innerHTML=htmlDoc;
+  wrap.style.cssText='position:fixed;left:-9999px;top:0;width:210mm;z-index:-999;background:#fff';
+  document.body.appendChild(wrap);
+
+  html2pdf().set({
+    margin:0, filename,
+    image:{type:'jpeg',quality:0.98},
+    html2canvas:{scale:2,useCORS:true,letterRendering:true,logging:false,backgroundColor:'#ffffff'},
+    jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
+  }).from(wrap).save()
+    .then(()=>{
+      document.body.removeChild(wrap);
+      toast('✓ PDF téléchargé : '+filename,'success');
+      console.log('DEBUG [genererDocument] ✓ saved '+filename);
+    })
+    .catch(err=>{
+      if(document.body.contains(wrap))document.body.removeChild(wrap);
+      console.error('[genererDocument] erreur html2pdf:',err);
+      toast('Erreur PDF : '+err.message,'error');
+    });
+}
+
+function aperçuDocument(){
+  const type    = window._pdfType||'commande';
+  const orderId = document.getElementById('pdf-order')&&document.getElementById('pdf-order').value||'';
+  const pct     = parseFloat(document.getElementById('pdf-pct')&&document.getElementById('pdf-pct').value)||30;
+  if(!orderId){toast('Sélectionnez une commande','error');return;}
+  const htmlDoc=buildPdfHtml(type,orderId,pct);
+  if(!htmlDoc){toast('Commande introuvable','error');return;}
+  const blob=new Blob(['<!DOCTYPE html><html><head><meta charset="utf-8"/><style>body{margin:0;font-family:Arial,sans-serif;}</style></head><body>'+htmlDoc+'</body></html>'],
+    {type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const w=window.open(url,'_blank','width=900,height=720');
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
+  console.log('DEBUG [aperçuDocument] type='+type+' orderId='+orderId);
+}
+
+function genererEtEnvoyerDoc(methode){
+  const type    = window._pdfType||'commande';
+  const orderId = document.getElementById('pdf-order')&&document.getElementById('pdf-order').value||'';
+  if(!orderId){toast('Sélectionnez une commande','error');return;}
+  const o=DB_COMMANDES.find(x=>x.id===orderId);if(!o)return;
+  const user=DB_USERS.find(u=>u.id===o.userId)||{};
+  const ci=DB_CONFIG.contact||DB_CONFIG.contactInfo||{};
+  const pfx={commande:'BC',devis:'DEV',facture:'FAC',livraison:'BL',acompte:'ACP',avoir:'AVO'};
+  const docNum=(pfx[type]||type.slice(0,3).toUpperCase())+'-'+orderId+'-'+new Date().getFullYear();
+  const subject='[De Cooman RP] '+type.charAt(0).toUpperCase()+type.slice(1)+' n° '+docNum;
+  const body='Bonjour '+(user.first||o.userName)+',\n\nVeuillez trouver votre '+type+' n° '+docNum
+    +'.\n\nMontant TTC : '+fmt(oTTC(o))+'\n\nCordialement,\n'+(ci.companyName||'De Cooman Racing Performance');
+  const emailTo=user.email||o.userEmail||'';
+  /* Générer d'abord */
+  genererDocument(type,orderId);
+  /* Ouvrir email après délai */
+  setTimeout(()=>{
+    if(methode==='gmail'){
+      window.open('https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent(emailTo)
+        +'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body),'_blank','noopener');
+    } else {
+      const a=document.createElement('a');
+      a.href='mailto:'+emailTo+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+      document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),500);
+    }
+    toast('Email préparé ✓','info');
+  },1800);
 }
 
 
@@ -2490,16 +2748,28 @@ function heroFileUpload(input){
 
 
 function heroSaveConfig(){
-  var inp=document.getElementById('hero-src-inp');
+  const inp=document.getElementById('hero-src-inp');
   if(inp&&inp.value.trim()){
-    if(_accueilConfig.type==='video_yt'){
-      var id=extractYouTubeId(inp.value.trim());
-      if(id)_accueilConfig.yt_id=id;
-    } else if(!_accueilConfig.srcIsBlob){
-      _accueilConfig.src=inp.value.trim();
+    const url=inp.value.trim();
+    if(DB_CONFIG.hero.type==='video_yt'){
+      const id=extractYtId(url);
+      if(!id){toast('URL YouTube non reconnue','error');return;}
+      DB_CONFIG.hero.ytId=id;DB_CONFIG.hero.src='';
+      console.log('DEBUG [heroSaveConfig] YouTube ID extrait: '+id);
+    }else if(!DB_CONFIG.hero.srcBlob){
+      DB_CONFIG.hero.src=url;
     }
   }
-  saveAccueilConfig(_accueilConfig);
+  /* Persiste dans DB_CONFIG ET dans clé séparée LS.VISUEL */
+  sauvegarder();
+  try{
+    localStorage.setItem(LS.VISUEL,JSON.stringify(DB_CONFIG.hero));
+    console.log('DEBUG [heroSaveConfig] config_visuel sauvegardé dans LS.VISUEL');
+  }catch(e){console.warn('[heroSaveConfig] LS.VISUEL erreur:',e);}
+  applyHeroConfig();
+  /* Broadcast autres onglets */
+  try{window.dispatchEvent(new StorageEvent('storage',{key:LS.VISUEL,newValue:JSON.stringify(DB_CONFIG.hero)}));}catch(e){}
+  toast('Fond d\'accueil sauvegardé et diffusé ✓','success');
 }
 
 
