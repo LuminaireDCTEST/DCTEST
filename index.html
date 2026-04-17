@@ -495,13 +495,17 @@ function getVolumePct(p,qty){
 /* ── SAUVEGARDER / CHARGER ── */
 function sauvegarder(){
   try{
-    localStorage.setItem(LS.PRODUITS,JSON.stringify(DB_PRODUITS));
-    localStorage.setItem(LS.USERS,JSON.stringify(DB_USERS));
+    localStorage.setItem(LS.PRODUITS, JSON.stringify(DB_PRODUITS));
+    localStorage.setItem(LS.USERS,    JSON.stringify(DB_USERS));
     localStorage.setItem(LS.COMMANDES,JSON.stringify(DB_COMMANDES));
-    localStorage.setItem(LS.CONFIG,JSON.stringify(DB_CONFIG));
-    localStorage.setItem(LS.CHAT,JSON.stringify(DB_CHAT));
+    localStorage.setItem(LS.CONFIG,   JSON.stringify(DB_CONFIG));
+    localStorage.setItem(LS.CHAT,     JSON.stringify(DB_CHAT));
     localStorage.setItem(LS.STOCK_LOG,JSON.stringify(DB_STOCK_LOG));
-  }catch(e){console.error('[DC] sauvegarder erreur:',e);}
+    /* Broadcast : force rafraîchissement dans tous les onglets ouverts */
+    window.dispatchEvent(new StorageEvent('storage',{key:LS.PRODUITS,newValue:JSON.stringify(DB_PRODUITS)}));
+    console.log('DEBUG [sauvegarder] ✓ DB_PRODUITS='+DB_PRODUITS.length
+      +' catalog_ids:'+[...new Set(DB_PRODUITS.map(p=>p.catalog_id||'?'))].join(','));
+  }catch(e){console.error('[sauvegarder] ERREUR:',e);toast('Erreur sauvegarde: '+e.message,'error');}
 }
 function charger(){
   try{const r=localStorage.getItem(LS.PRODUITS);DB_PRODUITS=r?JSON.parse(r):JSON.parse(JSON.stringify(DEFAULT_PRODUITS));if(!Array.isArray(DB_PRODUITS)||!DB_PRODUITS.length)DB_PRODUITS=JSON.parse(JSON.stringify(DEFAULT_PRODUITS));}catch(e){DB_PRODUITS=JSON.parse(JSON.stringify(DEFAULT_PRODUITS));}
@@ -776,6 +780,7 @@ function _renderChooser(){
   const el=document.getElementById('catalogChooser');
   const available=_getAvailableCatalogs();
   console.log('DEBUG [_renderChooser] available:', available.map(c=>c.id).join(','));
+  console.table(available.map(c=>({id:c.id,label:c.label,produits:DB_PRODUITS.filter(p=>(p.catalog_id||'cat_luminaire')===c.id).length})));
   if(!available.length){
     el.innerHTML='<div style="text-align:center;padding:3rem;color:rgba(255,255,255,.32)"><p>Aucun catalogue disponible.</p></div>';
     return;
@@ -809,12 +814,27 @@ ${available.map(c=>{
 </div>`;
 }
 function selectCatalog(id){
-  activeCatalogId=id;activeSubFilter='all';activeTechFilter='';
-  document.getElementById('catalogChooser').style.display='none';
-  document.getElementById('catalogMainLayout').style.display='flex';
-  document.getElementById('catalogSidebar').style.display='block';
-  document.getElementById('catalogBackBtn').style.display=_getAvailableCatalogs().length>1?'block':'none';
-  renderSidebar();renderProductGrid();
+  console.log('DEBUG [selectCatalog] catalogue sélectionné:',id);
+  activeCatalogId=id;
+  activeSubFilter='all';
+  activeTechFilter='';
+  /* Transition UI */
+  const chooser=document.getElementById('catalogChooser');
+  const layout=document.getElementById('catalogMainLayout');
+  const sidebar=document.getElementById('catalogSidebar');
+  const backBtn=document.getElementById('catalogBackBtn');
+  if(chooser)chooser.style.display='none';
+  if(layout)layout.style.display='flex';
+  if(sidebar)sidebar.style.display='block';
+  /* Flèche retour : visible si ≥ 2 catalogues disponibles ou toujours */
+  if(backBtn){
+    backBtn.style.display='flex';
+    backBtn.style.alignItems='center';
+    backBtn.style.gap='.4rem';
+    backBtn.innerHTML='<svg style="width:16px;height:16px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg> Catalogues';
+  }
+  renderSidebar();
+  afficherProduits(id); /* appel direct */
 }
 function backToCatalogChooser(){activeCatalogId=null;initCatalogue();}
 
@@ -831,33 +851,62 @@ function renderSidebar(){
 function setSubFilter(v){activeSubFilter=v;activeTechFilter='';renderSidebar();renderProductGrid();}
 function setTechFilter(v){activeTechFilter=activeTechFilter===v?'':v;renderSidebar();renderProductGrid();}
 
-function renderProductGrid(){
-  const grid=document.getElementById('productGrid');if(!grid)return;
-  /* ── Filtre principal par catalog_id ── */
-  const allInCat=DB_PRODUITS.filter(p=>(p.catalog_id||'cat_luminaire')===activeCatalogId);
-  console.log('DEBUG [renderProductGrid] catalog_id="'+activeCatalogId+'" → '+allInCat.length+' articles trouvés (total DB: '+DB_PRODUITS.length+')');
-  console.log('DEBUG [renderProductGrid] catalog_ids présents:',
+/* ══ afficherProduits(idCat) — Point d'entrée public catalogue ══
+   Clé de filtre : p.catalog_id === idCat   (ex: 'cat_luminaire')
+   Clé LS        : LS.PRODUITS = 'dcorp_v29_products'
+   Variable glob : activeCatalogId (set par selectCatalog())
+*/
+function afficherProduits(idCat){
+  const catId=idCat||activeCatalogId||'cat_luminaire';
+  activeCatalogId=catId;
+
+  /* ── 1. Debug : afficher toutes les données en console ── */
+  console.log('DEBUG [afficherProduits] ▶ catalog_id cible =',catId);
+  console.log('DEBUG [afficherProduits] Total DB_PRODUITS =',DB_PRODUITS.length);
+
+  /* ── 2. Filtrage strict par catalog_id ── */
+  const produitsFiltrés=DB_PRODUITS.filter(p=>{
+    const pid=p.catalog_id||'cat_luminaire'; /* valeur par défaut si champ absent */
+    return pid===catId;
+  });
+
+  /* ── 3. Console.table pour débogage F12 ── */
+  console.table(produitsFiltrés.map(p=>({id:p.id,nom:p.name,catalog_id:p.catalog_id||'MISSING',prix:p.price,stock:p.stock||0})));
+  console.log('DEBUG [afficherProduits] ▶',produitsFiltrés.length,'articles trouvés pour catalog_id="'+catId+'"');
+  console.log('DEBUG [afficherProduits] catalog_ids présents dans DB:',
     [...new Set(DB_PRODUITS.map(p=>p.catalog_id||'UNDEFINED'))].join(', '));
-  let prods=allInCat;
-  if(activeSubFilter&&activeSubFilter!=='all')prods=prods.filter(p=>p.cat===activeSubFilter);
-  if(activeTechFilter)prods=prods.filter(p=>p.tech===activeTechFilter);
-  console.log('DEBUG [renderProductGrid] après filtres sous-cat/tech: '+prods.length+' produits rendus');
+
+  const grid=document.getElementById('productGrid');
+  if(!grid){console.error('DEBUG [afficherProduits] ❌ #productGrid introuvable');return;}
+
+  /* ── 4. Sous-filtres (sidebar) ── */
+  let prods=produitsFiltrés;
+  if(activeSubFilter&&activeSubFilter!=='all')
+    prods=prods.filter(p=>p.cat===activeSubFilter);
+  if(activeTechFilter)
+    prods=prods.filter(p=>p.tech===activeTechFilter);
+
+  /* ── 5. Affichage ── */
   if(!prods.length){
-    const msg=allInCat.length===0
-      ?'Aucun article dans ce catalogue (catalog_id="'+activeCatalogId+'")'
-      :'Aucun article pour ce filtre';
+    const msg=produitsFiltrés.length===0
+      ?`Aucun article pour le catalogue "${catId}"<br><small style="font-size:.7rem;color:rgba(255,255,255,.2)">catalog_ids en base : ${[...new Set(DB_PRODUITS.map(p=>p.catalog_id||'?'))].join(', ')}</small>`
+      :`Aucun résultat pour ce filtre (${produitsFiltrés.length} articles dans le catalogue)`;
     grid.innerHTML=`<div class="col-span-4" style="padding:3rem;text-align:center">
-      <p style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:rgba(255,255,255,.3);letter-spacing:.1em">${msg}</p>
-      <p style="font-family:Inter,sans-serif;font-size:.72rem;color:rgba(255,255,255,.2);margin-top:.5rem">
-        Vérifiez l'attribution catalog_id des articles dans l'admin</p></div>`;
-    syncPublicFilters&&syncPublicFilters();return;
+      <p style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:rgba(255,255,255,.3);letter-spacing:.1em">${msg}</p>
+    </div>`;
+    syncPublicFilters&&syncPublicFilters();
+    return;
   }
+
   const disc=currentUser?userDiscount(currentUser):0;
   grid.innerHTML=prods.map(p=>_buildProdCard(p,disc)).join('');
   grid.onclick=e=>{const card=e.target.closest('[data-pid]');if(card)openProductModal(parseInt(card.getAttribute('data-pid'),10));};
   syncPublicFilters&&syncPublicFilters();
   setTimeout(initReveal,60);
 }
+
+/* Compat alias */
+function renderProductGrid(){afficherProduits(activeCatalogId);}
 function _buildProdCard(p,disc){
   const effPrice=p.price*(1-disc);const imgs=(p.images&&p.images.length)?p.images:(p.img?[p.img]:[]);const mainImg=imgs[0]||PHOLDER;
   const priceHtml=currentUser?`<div>${disc>0?`<p style="text-decoration:line-through;font-size:.70rem;color:rgba(255,255,255,.22)">${fmt(p.price)}</p>`:''}<span class="prod-price">${fmt(effPrice)}</span><span style="font-size:.70rem;color:rgba(255,255,255,.25);margin-left:.2rem">/u. HT</span>${disc>0?`<p style="font-size:.68rem;color:#22c55e;font-weight:700">−${disc*100}% client</p>`:''}</div>`:'<span class="prod-price-locked" onclick="event.stopPropagation();openOverlay(\'login\')">🔒 Prix pro</span>';
@@ -1468,19 +1517,130 @@ function setClientDiscount(uid){
 
 
 function renderAdminCatalog(){
-  const ct=document.getElementById('adminContent');
-  ct.innerHTML='<div class="flex flex-wrap items-center justify-between gap-4 mb-4">'
-    +'<div><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Gestion</p><h2 class="font-display text-2xl font-bold text-white uppercase">Catalogue <span style="color:#00a8f3">produits</span></h2></div>'
-    +'<button class="btn btn-primary" onclick="openEditProduct(null)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>Ajouter un produit</button>'
-    +'</div>'
-    /* Filter editor section */
-    +'<div class="card p-5 mb-5">'
-    +'<div class="flex items-center justify-between mb-3"><p class="font-display font-bold text-white tracking-wide">Filtres du catalogue (visibles par les clients)</p><span class="text-white/30 text-xs">Répercutés instantanément</span></div>'
-    +'<div id="filterEditorList"></div>'
-    +'</div>'
-    +'<p class="text-white/30 text-xs mb-4" style="font-family:\'Exo 2\',sans-serif">Collez une URL d\'image dans le champ sous chaque produit et appuyez sur Entrée — mise à jour instantanée dans le catalogue client.</p>'
-    +'<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="catalogAdminGrid">'+renderCatalogAdminCards()+'</div>';
-  renderFilterEditor();
+  const ct=document.getElementById('adminContent');if(!ct)return;
+  console.log('DEBUG [renderAdminCatalog] DB_PRODUITS='+DB_PRODUITS.length);
+
+  /* Build product cards HTML */
+  function prodCard(p){
+    const stk=p.stock||0;
+    const stkColor=stk===0?'#ef4444':stk<20?'#f59e0b':'#4ade80';
+    const catLabel=DB_CONFIG.catalogs?DB_CONFIG.catalogs.find(c=>c.id===p.catalog_id)?.label||p.catalog_id:p.catalog_id;
+    return `<div class="card" style="padding:0;overflow:hidden">
+      <div style="position:relative;height:130px;overflow:hidden;background:#0a0a14">
+        <img src="${p.img||PHOLDER}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover;opacity:.8"
+          onerror="this.src='${PHOLDER}'"/>
+        <div style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.7);border-radius:6px;padding:2px 8px;
+          font-family:Inter,sans-serif;font-size:.65rem;font-weight:700;color:${stkColor}">Stock: ${stk}</div>
+        <div style="position:absolute;top:6px;left:6px;background:rgba(0,168,243,.15);border:1px solid rgba(0,168,243,.3);
+          border-radius:6px;padding:1px 7px;font-family:Inter,sans-serif;font-size:.6rem;color:#00a8f3">${catLabel}</div>
+      </div>
+      <div style="padding:.75rem">
+        <p style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.05em;color:white;margin-bottom:.15rem;
+          white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</p>
+        <p style="font-family:Inter,sans-serif;font-size:.65rem;color:rgba(255,255,255,.35);margin-bottom:.5rem">${p.ref}</p>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:1.05rem;color:#00a8f3">${fmt(p.price)}</span>
+          <div style="display:flex;gap:.3rem">
+            <button onclick="console.log('DEBUG [btn] Modifier produit ${p.id}');openEditProduct(${p.id})"
+              class="btn btn-ghost btn-xs">✏️ Modifier</button>
+            <button onclick="console.log('DEBUG [btn] Supprimer produit ${p.id}');deleteProduct(${p.id})"
+              style="font-size:.65rem;padding:2px 7px;border-radius:5px;border:1px solid rgba(239,68,68,.3);
+              background:rgba(239,68,68,.08);color:#ef4444;cursor:pointer">🗑</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  /* Filters */
+  const allCatIds=[...new Set(DB_PRODUITS.map(p=>p.catalog_id||'cat_luminaire'))];
+  const filterButtons=allCatIds.map(cid=>{
+    const cat=DB_CONFIG.catalogs?DB_CONFIG.catalogs.find(c=>c.id===cid):null;
+    const label=cat?cat.label:cid;
+    const count=DB_PRODUITS.filter(p=>(p.catalog_id||'cat_luminaire')===cid).length;
+    return `<button onclick="renderAdminCatalogFiltered('${cid}')"
+      style="padding:.35rem .85rem;border-radius:7px;border:1px solid rgba(255,255,255,.1);
+      background:rgba(255,255,255,.04);cursor:pointer;font-family:Inter,sans-serif;
+      font-size:.75rem;color:rgba(255,255,255,.6);transition:all .2s"
+      onmouseover="this.style.background='rgba(0,168,243,.1)';this.style.color='#00a8f3';this.style.borderColor='rgba(0,168,243,.3)'"
+      onmouseout="this.style.background='rgba(255,255,255,.04)';this.style.color='rgba(255,255,255,.6)';this.style.borderColor='rgba(255,255,255,.1)'"
+      >${label} <span style="color:rgba(255,255,255,.3)">(${count})</span></button>`;
+  }).join('');
+
+  ct.innerHTML=`
+<div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+  <div>
+    <p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Gestion</p>
+    <h2 class="font-display text-2xl font-bold text-white uppercase">Catalogue <span style="color:#00a8f3">Produits</span></h2>
+    <p class="text-white/35 text-sm mt-1">${DB_PRODUITS.length} article(s) — catalog_ids: ${[...new Set(DB_PRODUITS.map(p=>p.catalog_id||'?'))].join(', ')}</p>
+  </div>
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+    <button onclick="console.log('DEBUG [btn] Ajouter produit');openEditProduct(null)" class="btn btn-primary gp btn-sm">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      Ajouter un article
+    </button>
+  </div>
+</div>
+
+<div class="card p-4 mb-5">
+  <p class="fl mb-3">Filtres rapides par catalogue</p>
+  <div style="display:flex;flex-wrap:wrap;gap:.4rem">
+    <button onclick="renderAdminCatalogFiltered('all')"
+      style="padding:.35rem .85rem;border-radius:7px;border:1px solid rgba(0,168,243,.3);
+      background:rgba(0,168,243,.08);cursor:pointer;font-family:Inter,sans-serif;
+      font-size:.75rem;color:#00a8f3">Tous (${DB_PRODUITS.length})</button>
+    ${filterButtons}
+  </div>
+</div>
+
+<div class="card p-4 mb-4">
+  <p class="text-white/30 text-xs mb-3">
+    💡 Chaque article doit avoir un <code style="color:#00a8f3">catalog_id</code> valide (<code>cat_luminaire</code> ou <code>cat_divers</code>).
+    C'est cette clé qui détermine dans quel catalogue l'article apparaît côté client.
+  </p>
+  <div id="catalogAdminGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.9rem">
+    ${DB_PRODUITS.map(p=>prodCard(p)).join('')}
+  </div>
+</div>`;
+
+  /* Render volume tiers editor (filter editor) */
+  renderFilterEditor&&renderFilterEditor();
+}
+
+function renderAdminCatalogFiltered(catId){
+  const grid=document.getElementById('catalogAdminGrid');if(!grid)return;
+  const prods=catId==='all'?DB_PRODUITS:DB_PRODUITS.filter(p=>(p.catalog_id||'cat_luminaire')===catId);
+  console.log('DEBUG [renderAdminCatalogFiltered] catId='+catId+' → '+prods.length+' produits');
+  function prodCard(p){
+    const stk=p.stock||0;
+    const stkColor=stk===0?'#ef4444':stk<20?'#f59e0b':'#4ade80';
+    const catLabel=DB_CONFIG.catalogs?DB_CONFIG.catalogs.find(c=>c.id===p.catalog_id)?.label||p.catalog_id:p.catalog_id;
+    return `<div class="card" style="padding:0;overflow:hidden">
+      <div style="position:relative;height:130px;overflow:hidden;background:#0a0a14">
+        <img src="${p.img||PHOLDER}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover;opacity:.8"
+          onerror="this.src='${PHOLDER}'"/>
+        <div style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.7);border-radius:6px;padding:2px 8px;
+          font-family:Inter,sans-serif;font-size:.65rem;font-weight:700;color:${stkColor}">Stock: ${stk}</div>
+        <div style="position:absolute;top:6px;left:6px;background:rgba(0,168,243,.15);border:1px solid rgba(0,168,243,.3);
+          border-radius:6px;padding:1px 7px;font-family:Inter,sans-serif;font-size:.6rem;color:#00a8f3">${catLabel}</div>
+      </div>
+      <div style="padding:.75rem">
+        <p style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.05em;color:white;margin-bottom:.15rem;
+          white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</p>
+        <p style="font-family:Inter,sans-serif;font-size:.65rem;color:rgba(255,255,255,.35);margin-bottom:.5rem">${p.ref}</p>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:1.05rem;color:#00a8f3">${fmt(p.price)}</span>
+          <div style="display:flex;gap:.3rem">
+            <button onclick="console.log('DEBUG [btn] Modifier ${p.id}');openEditProduct(${p.id})" class="btn btn-ghost btn-xs">✏️</button>
+            <button onclick="console.log('DEBUG [btn] Supprimer ${p.id}');deleteProduct(${p.id})"
+              style="font-size:.65rem;padding:2px 7px;border-radius:5px;border:1px solid rgba(239,68,68,.3);
+              background:rgba(239,68,68,.08);color:#ef4444;cursor:pointer">🗑</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+  grid.innerHTML=prods.map(p=>prodCard(p)).join('');
 }
 
 
@@ -1657,6 +1817,10 @@ function saveProduct(){
   }
   closeOverlay('editProduct');
   sauvegarder();
+  /* Rafraîchir les onglets liés au produit */
+  if(adminCurrentTab==="pricing")renderAdminPricing();
+  if(adminCurrentTab==="stock")renderAdminStock();
+  console.log("DEBUG [saveProduct] produit sauvegardé catalog_id="+catalog_id);
   renderAdminCatalog();
   renderCatalog(currentCatalogFilter);
 }
@@ -2881,64 +3045,103 @@ function saveAccueilConfig(cfg){
 }
 
 
+/* ══ renderAdminCatalogs — Gestion catalogues + droits clients ══
+   Structure : DB_CONFIG.catalogs = [{id, label, desc, color, icon}]
+   Droits    : DB_USERS[n].catalogs = ['cat_luminaire','cat_divers']
+               Champ unifié — même nom partout (admin save ET catalogue filter)
+*/
 function renderAdminCatalogs(){
-  var ct=document.getElementById('adminContent');
+  const ct=document.getElementById('adminContent');if(!ct)return;
+  console.log('DEBUG [renderAdminCatalogs] catalogs=',DB_CONFIG.catalogs?.map(c=>c.id).join(','));
 
-  var catRows=DB_CONFIG.catalogs.map(function(c,idx){
-    return '<div style="display:flex;align-items:center;gap:.65rem;padding:.7rem .9rem;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:10px;flex-wrap:wrap" id="acat-'+c.id+'">'
-      /* Color dot */
-      +'<div style="width:14px;height:14px;border-radius:50%;background:'+c.color+';flex-shrink:0"></div>'
-      /* Label */
-      +'<input type="text" value="'+c.label+'" placeholder="Nom du catalogue" style="flex:1;min-width:120px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:white;padding:4px 9px;font-family:Inter,sans-serif;font-size:.82rem" oninput="DB_CONFIG.catalogs['+idx+'].label=this.value;sauvegarder()" />'
-      /* ID (readonly) */
-      +'<code style="font-family:Courier New,monospace;font-size:.7rem;color:rgba(255,255,255,.3);background:rgba(0,0,0,.3);padding:3px 7px;border-radius:5px;flex-shrink:0">'+c.id+'</code>'
-      /* Description */
-      +'<input type="text" value="'+c.desc+'" placeholder="Description" style="flex:2;min-width:160px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:rgba(255,255,255,.6);padding:4px 9px;font-family:Inter,sans-serif;font-size:.78rem" oninput="DB_CONFIG.catalogs['+idx+'].desc=this.value;sauvegarder()" />'
-      /* Color picker */
-      +'<input type="color" value="'+c.color+'" title="Couleur" style="width:32px;height:32px;border:none;border-radius:6px;cursor:pointer;background:none;padding:0" oninput="DB_CONFIG.catalogs['+idx+'].color=this.value;sauvegarder()" />'
-      /* Delete */
-      +'<button onclick="deleteCatalog(\''+c.id+'\')" style="background:none;border:1px solid rgba(239,68,68,.2);border-radius:6px;cursor:pointer;color:rgba(239,68,68,.5);padding:4px 9px;font-size:.78rem" onmouseover="this.style.color=\'#ef4444\'" onmouseout="this.style.color=\'rgba(239,68,68,.5)\'">×</button>'
-    +'</div>';
-  }).join('');
+  const cats=DB_CONFIG.catalogs||[];
+  const clients=DB_USERS.filter(u=>u.role==='client');
 
-  ct.innerHTML='<div class="flex items-center justify-between mb-5">'
-    +'<div><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Structure</p>'
-    +'<h2 class="font-display text-2xl font-bold text-white uppercase">Catalogues <span style="color:#00a8f3">& Accès</span></h2>'
-    +'<p class="text-white/35 text-sm mt-1">Gérez les catalogues et les droits d\'accès clients</p></div>'
-    +'<button class="btn btn-primary btn-sm" onclick="addCatalog()">'
-      +'<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>Nouveau catalogue</button>'
-    +'</div>'
+  ct.innerHTML=`
+<div class="mb-5">
+  <p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Configuration</p>
+  <h2 class="font-display text-2xl font-bold text-white uppercase">Catalogues <span style="color:#00a8f3">& Droits</span></h2>
+  <p class="text-white/35 text-sm mt-1">Gérez les catalogues disponibles et attribuez les droits d'accès par client</p>
+</div>
 
-    /* Catalog list */
-    +'<div class="card p-5 mb-5">'
-    +'<p class="fl mb-3">Catalogues disponibles</p>'
-    +'<div style="display:flex;flex-direction:column;gap:.45rem" id="acatList">'+catRows+'</div>'
-    +'</div>'
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.4rem">
 
-    /* Default access note */
-    +'<div class="card p-5 mb-5" style="border-color:rgba(0,168,243,.15)">'
-    +'<p class="fl mb-1">Règle d\'accès par défaut</p>'
-    +'<p style="font-family:Inter,sans-serif;font-size:.78rem;color:rgba(255,255,255,.4)">Tous les nouveaux clients reçoivent automatiquement l\'accès <code style="color:#00a8f3">cat_luminaire</code>. Les accès supplémentaires se gèrent dans chaque fiche client.</p>'
-    +'</div>'
+  <!-- Catalogues disponibles -->
+  <div class="card p-5">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <p class="fl" style="margin:0">Catalogues disponibles</p>
+      <button onclick="addNewCatalog()" class="btn btn-primary btn-xs gp">
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Ajouter
+      </button>
+    </div>
+    <div id="cats-list" style="display:flex;flex-direction:column;gap:.5rem">
+      ${cats.map((c,idx)=>`
+      <div style="display:flex;align-items:center;gap:.5rem;padding:.5rem .75rem;
+        background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:10px">
+        <div style="width:10px;height:10px;border-radius:50%;background:${c.color||'#00a8f3'};flex-shrink:0"></div>
+        <span style="flex:1;font-family:Inter,sans-serif;font-size:.82rem;color:white">${c.label}</span>
+        <code style="font-family:monospace;font-size:.65rem;color:rgba(255,255,255,.3);background:rgba(255,255,255,.04);padding:1px 5px;border-radius:3px">${c.id}</code>
+        <span style="font-family:Inter,sans-serif;font-size:.65rem;color:rgba(255,255,255,.35)">
+          ${DB_PRODUITS.filter(p=>(p.catalog_id||'cat_luminaire')===c.id).length} articles</span>
+        <button onclick="deleteCatalog('${c.id}')"
+          style="font-size:.65rem;padding:2px 6px;border-radius:5px;border:1px solid rgba(239,68,68,.25);
+          background:rgba(239,68,68,.06);color:#ef4444;cursor:pointer">✕</button>
+      </div>`).join('')}
+    </div>
+  </div>
 
-    /* Access by client table */
-    +'<div class="card p-5">'
-    +'<p class="fl mb-3">Accès par client</p>'
-    +'<div style="display:flex;flex-direction:column;gap:.35rem">'
-    +USERS.filter(function(u){return u.role==='client';}).map(function(u){
-      var cats=u.catalogs||['cat_luminaire'];
-      return '<div style="display:flex;align-items:center;gap:.65rem;padding:.55rem .85rem;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:9px;flex-wrap:wrap">'
-        +'<span style="font-family:Inter,sans-serif;font-size:.82rem;color:white;min-width:140px">'+u.first+' '+u.last+'</span>'
-        +'<span style="font-family:Inter,sans-serif;font-size:.72rem;color:rgba(255,255,255,.35);flex:1">'+u.email+'</span>'
-        +'<div style="display:flex;gap:.3rem;flex-wrap:wrap">'
-        +DB_CONFIG.catalogs.map(function(c){
-          var has=cats.indexOf(c.id)>=0;
-          return '<button onclick="toggleClientCatalog(\''+u.id+'\',\''+c.id+'\')" style="font-family:Inter,sans-serif;font-size:.68rem;font-weight:600;padding:3px 9px;border-radius:5px;cursor:pointer;transition:all .2s;border:1px solid '+(has?c.color+'88':'rgba(255,255,255,.1)')+';background:'+(has?'rgba('+hexToRgbStr(c.color||'#00a8f3')+', .12)':'rgba(255,255,255,.03)')+';color:'+(has?c.color:'rgba(255,255,255,.3)')+'">'+(has?'✓ ':'+ ')+c.label+'</button>';
-        }).join('')
-        +'</div></div>';
-    }).join('')
-    +'</div></div>';
+  <!-- Droits d'accès clients -->
+  <div class="card p-5">
+    <p class="fl mb-3">Droits d'accès par client</p>
+    <p class="text-white/25 text-xs mb-4">Champ DB : <code style="color:#00a8f3">user.catalogs</code> = tableau d'IDs (ex: ['cat_luminaire'])</p>
+    <div style="display:flex;flex-direction:column;gap:.5rem;max-height:380px;overflow-y:auto">
+      ${clients.map(u=>`
+      <div style="padding:.55rem .8rem;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:10px">
+        <p style="font-family:Inter,sans-serif;font-size:.8rem;font-weight:600;color:white;margin-bottom:.4rem">
+          ${u.first} ${u.last} <span style="color:rgba(255,255,255,.3);font-weight:400;font-size:.68rem">${u.email}</span></p>
+        <div style="display:flex;flex-wrap:wrap;gap:.35rem">
+          ${cats.map(c=>{
+            const has=(u.catalogs||[]).includes(c.id);
+            return `<button onclick="console.log('DEBUG [btn] toggleCatalogRight ${u.id} ${c.id}');toggleClientCatalog('${u.id}','${c.id}')"
+              style="font-size:.65rem;font-weight:700;padding:2px 9px;border-radius:6px;cursor:pointer;transition:all .15s;
+              border:1px solid ${has?c.color||'#00a8f3':'rgba(255,255,255,.1)'};
+              background:${has?'rgba(0,168,243,.12)':'rgba(255,255,255,.03)'};
+              color:${has?c.color||'#00a8f3':'rgba(255,255,255,.4)'}"
+              title="${has?'Retirer':'Accorder'} accès ${c.label}">
+              ${has?'✓':'○'} ${c.label}</button>`;
+          }).join('')}
+        </div>
+      </div>`).join('')}
+    </div>
+  </div>
+</div>`;
 }
+
+function addNewCatalog(){
+  const id='cat_'+Date.now().toString().slice(-4);
+  DB_CONFIG.catalogs=DB_CONFIG.catalogs||[];
+  DB_CONFIG.catalogs.push({
+    id,label:'Nouveau catalogue',
+    desc:'Description...',color:'#00a8f3',
+    icon:'M4 6h16M4 10h16M4 14h16M4 18h16'
+  });
+  sauvegarder();
+  renderAdminCatalogs();
+  toast('Catalogue créé — pensez à renommer et attribuer des droits','info');
+}
+
+function deleteCatalog(catId){
+  const inUse=DB_PRODUITS.some(p=>p.catalog_id===catId);
+  if(inUse&&!confirm('Ce catalogue contient des produits. Supprimer quand même?'))return;
+  DB_CONFIG.catalogs=(DB_CONFIG.catalogs||[]).filter(c=>c.id!==catId);
+  /* Retirer droits de tous les users */
+  DB_USERS.forEach(u=>{if(u.catalogs)u.catalogs=u.catalogs.filter(id=>id!==catId);});
+  sauvegarder();
+  renderAdminCatalogs();
+  toast('Catalogue supprimé','info');
+}
+
 
 
 function addCatalog(){
@@ -2950,14 +3153,6 @@ function addCatalog(){
 }
 
 
-function deleteCatalog(catId){
-  if(catId==='cat_luminaire'){toast('Le catalogue principal ne peut pas être supprimé','error');return;}
-  DB_CONFIG.catalogs=DB_CONFIG.catalogs.filter(function(c){return c.id!==catId;});
-  /* Remove from all users */
-  USERS.forEach(function(u){if(u.catalogs)u.catalogs=u.catalogs.filter(function(c){return c!==catId;});});
-  sauvegarder();renderAdminCatalogs();
-  toast('Catalogue supprimé','info');
-}
 
 
 function toggleClientCatalog(userId,catId){
@@ -3017,89 +3212,75 @@ function renderAdminContacts(){
 
 
 function renderAdminStock(){
-  var ct=document.getElementById('adminContent');
+  const ct=document.getElementById('adminContent');if(!ct)return;
+  console.log('DEBUG [renderAdminStock] DB_PRODUITS='+DB_PRODUITS.length);
 
-  var prodRows=DB_PRODUITS.map(function(p){
-    var stk=p.stock||0;
-    var statusColor=stk===0?'#ef4444':stk<20?'#f59e0b':'#4ade80';
-    var statusLabel=stk===0?'Rupture':stk<20?'Stock faible':'OK';
-    return '<tr>'
-      +'<td style="font-size:.75rem;color:rgba(255,255,255,.4)">'+p.ref+'</td>'
-      +'<td style="font-weight:500;color:white">'+p.name+'</td>'
-      +'<td style="text-align:center">'
-        +'<span style="font-family:\'Bebas Neue\',sans-serif;font-size:1.1rem;color:'+statusColor+'">'+stk+'</span>'
-        +'<span style="font-size:.65rem;color:rgba(255,255,255,.3);margin-left:.3rem">u.</span>'
-      +'</td>'
-      +'<td><span style="font-size:.68rem;font-weight:700;color:'+statusColor+';background:'+statusColor+'22;border-radius:4px;padding:1px 7px">'+statusLabel+'</span></td>'
-      +'<td style="text-align:right">'
-        +'<div style="display:flex;gap:.35rem;justify-content:flex-end;flex-wrap:wrap;align-items:center">'
-        /* Reason field */
-        +'<input type="text" id="stock-reason-'+p.id+'" placeholder="Raison…" style="width:110px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.08);border-radius:5px;color:rgba(255,255,255,.6);padding:3px 7px;font-size:.72rem;font-family:Inter,sans-serif"/>'
-        /* Add */
-        +'<div style="display:flex;gap:.25rem;align-items:center">'
-        +'<input type="number" id="stock-in-'+p.id+'" placeholder="qty" min="1" style="width:52px;background:rgba(0,0,0,.3);border:1px solid rgba(74,222,128,.2);border-radius:5px;color:#4ade80;text-align:center;padding:3px 4px;font-size:.78rem"/>'
-        +'<button onclick="stockAddManualUI('+p.id+')" style="background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);color:#4ade80;border-radius:5px;padding:3px 9px;cursor:pointer;font-weight:700;font-size:.78rem;font-family:Inter,sans-serif">+</button>'
-        +'</div>'
-        /* Remove */
-        +'<div style="display:flex;gap:.25rem;align-items:center">'
-        +'<input type="number" id="stock-out-'+p.id+'" placeholder="qty" min="1" style="width:52px;background:rgba(0,0,0,.3);border:1px solid rgba(239,68,68,.2);border-radius:5px;color:#ef4444;text-align:center;padding:3px 4px;font-size:.78rem"/>'
-        +'<button onclick="stockRemoveManualUI('+p.id+')" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#ef4444;border-radius:5px;padding:3px 9px;cursor:pointer;font-weight:700;font-size:.78rem;font-family:Inter,sans-serif">−</button>'
-        +'</div>'
-        +'</div>'
-      +'</td>'
-      +'</tr>';
+  const rows=DB_PRODUITS.map(p=>{
+    const stk=p.stock||0;
+    const stkColor=stk===0?'#ef4444':stk<20?'#f59e0b':'#4ade80';
+    const catLabel=DB_CONFIG.catalogs?DB_CONFIG.catalogs.find(c=>c.id===p.catalog_id)?.label||p.catalog_id:p.catalog_id;
+    /* Historique pour ce produit */
+    const hist=(DB_STOCK_LOG||[]).filter(l=>l.pid===p.id).slice(-3).reverse();
+    const histHtml=hist.length
+      ?hist.map(h=>`<div style="font-size:.6rem;color:rgba(255,255,255,.3);font-family:Inter,sans-serif">
+        ${h.date||''} · ${h.action==='+'?'<span style="color:#4ade80">+'+h.qty+'</span>':'<span style="color:#ef4444">-'+Math.abs(h.qty)+'</span>'} · ${h.reason||''}</div>`).join('')
+      :'<div style="font-size:.6rem;color:rgba(255,255,255,.2)">Aucun mouvement</div>';
+    return `<tr>
+      <td style="font-size:.72rem;color:rgba(255,255,255,.4)">${p.ref}</td>
+      <td><p style="font-weight:500;color:white;font-size:.82rem">${p.name}</p>
+          <p style="font-size:.62rem;color:rgba(255,255,255,.3)">${catLabel}</p></td>
+      <td><span style="font-family:'Bebas Neue',sans-serif;font-size:1.15rem;color:${stkColor}">${stk}</span></td>
+      <td style="min-width:130px">${histHtml}</td>
+      <td><div style="display:flex;gap:.3rem">
+        <button onclick="console.log('DEBUG [btn] +stock ${p.id}');stockAddManualUI(${p.id})"
+          style="background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);color:#4ade80;
+          border-radius:7px;padding:4px 10px;cursor:pointer;font-size:.72rem;font-weight:700">+ Stock</button>
+        <button onclick="console.log('DEBUG [btn] -stock ${p.id}');stockRemoveManualUI(${p.id})"
+          style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#ef4444;
+          border-radius:7px;padding:4px 10px;cursor:pointer;font-size:.72rem;font-weight:700">− Stock</button>
+      </div></td>
+    </tr>`;
   }).join('');
 
-  var logRows=STOCK_LOGS.slice(0,80).map(function(l){
-    var d=new Date(l.date);
-    var dateStr=d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})
-      +' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
-    return '<tr>'
-      +'<td style="font-size:.72rem;color:rgba(255,255,255,.4);white-space:nowrap">'+dateStr+'</td>'
-      +'<td style="font-size:.78rem;color:rgba(255,255,255,.7)">'+l.productName+'</td>'
-      +'<td style="text-align:center"><span style="font-weight:700;color:'+(l.action==='+'?'#4ade80':'#ef4444')+'">'+l.action+'</span></td>'
-      +'<td style="text-align:center;font-family:\'Bebas Neue\',sans-serif;font-size:.95rem;color:white">'+l.qty+'</td>'
-      +'<td style="font-size:.75rem;color:rgba(255,255,255,.5)">'+l.reason+'</td>'
-      +'<td style="font-size:.72rem;color:rgba(0,168,243,.6)">'+(l.orderId||'—')+'</td>'
-      +'</tr>';
-  }).join('');
+  ct.innerHTML=`
+<div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+  <div>
+    <p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Logistique</p>
+    <h2 class="font-display text-2xl font-bold text-white uppercase">Gestion <span style="color:#00a8f3">Stock</span></h2>
+  </div>
+  <button onclick="renderAdminStock()" class="btn btn-ghost btn-sm">🔄 Rafraîchir</button>
+</div>
 
-  ct.innerHTML='<div class="flex items-center justify-between mb-5">'
-    +'<div><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Inventaire</p>'
-    +'<h2 class="font-display text-2xl font-bold text-white uppercase">Gestion <span style="color:#00a8f3">Stock</span></h2></div>'
-    +'<button class="btn btn-ghost btn-sm" onclick="renderAdminStock()"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Actualiser</button>'
-    +'</div>'
+<div class="card overflow-hidden mb-5">
+  <div style="overflow-x:auto">
+  <table class="a-table">
+    <thead><tr>
+      <th>Réf.</th><th>Article</th><th>Stock</th><th>Derniers mouvements</th><th>Actions</th>
+    </tr></thead>
+    <tbody>${rows||'<tr><td colspan="5" style="text-align:center;color:rgba(255,255,255,.3)">Aucun produit</td></tr>'}</tbody>
+  </table>
+  </div>
+</div>
 
-    /* Stock table */
-    +'<div class="card p-0 mb-5" style="overflow:hidden">'
-    +'<table style="width:100%;border-collapse:collapse">'
-    +'<thead><tr style="background:rgba(255,255,255,.03);border-bottom:1px solid rgba(255,255,255,.07)">'
-    +'<th style="padding:.7rem 1rem;text-align:left;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.3)">Réf.</th>'
-    +'<th style="padding:.7rem 1rem;text-align:left;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.3)">Article</th>'
-    +'<th style="padding:.7rem 1rem;text-align:center;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.3)">Stock</th>'
-    +'<th style="padding:.7rem 1rem;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.3)">Statut</th>'
-    +'<th style="padding:.7rem 1rem;text-align:right;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.3)">Actions</th>'
-    +'</tr></thead>'
-    +'<tbody>'+prodRows+'</tbody>'
-    +'</table></div>'
-
-    /* Audit log */
-    +'<div class="card p-5">'
-    +'<p style="font-family:\'Inter\',sans-serif;font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.4);margin-bottom:.85rem">📋 Historique des mouvements (audit trail)</p>'
-    +(STOCK_LOGS.length===0
-      ?'<p style="font-size:.8rem;color:rgba(255,255,255,.3);text-align:center;padding:1.5rem">Aucun mouvement enregistré</p>'
-      :'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.78rem">'
-      +'<thead><tr style="border-bottom:1px solid rgba(255,255,255,.07)">'
-      +'<th style="padding:.5rem .85rem;text-align:left;color:rgba(255,255,255,.3);font-size:.62rem;text-transform:uppercase;letter-spacing:.1em">Date</th>'
-      +'<th style="padding:.5rem .85rem;text-align:left;color:rgba(255,255,255,.3);font-size:.62rem;text-transform:uppercase;letter-spacing:.1em">Article</th>'
-      +'<th style="padding:.5rem .85rem;text-align:center;color:rgba(255,255,255,.3);font-size:.62rem;text-transform:uppercase;letter-spacing:.1em">+/−</th>'
-      +'<th style="padding:.5rem .85rem;text-align:center;color:rgba(255,255,255,.3);font-size:.62rem;text-transform:uppercase;letter-spacing:.1em">Qté</th>'
-      +'<th style="padding:.5rem .85rem;text-align:left;color:rgba(255,255,255,.3);font-size:.62rem;text-transform:uppercase;letter-spacing:.1em">Raison</th>'
-      +'<th style="padding:.5rem .85rem;text-align:left;color:rgba(255,255,255,.3);font-size:.62rem;text-transform:uppercase;letter-spacing:.1em">Commande</th>'
-      +'</tr></thead>'
-      +'<tbody>'+logRows+'</tbody>'
-      +'</table></div>')
-    +'</div>';
+<div class="card p-5">
+  <p class="fl mb-3">Historique complet des mouvements</p>
+  <div style="max-height:260px;overflow-y:auto">
+  ${!(DB_STOCK_LOG&&DB_STOCK_LOG.length)
+    ? '<p class="text-white/30 text-sm">Aucun mouvement enregistré.</p>'
+    : `<table class="a-table"><thead><tr><th>Date</th><th>Article</th><th>Mouvement</th><th>Motif</th><th>Commande</th></tr></thead>
+    <tbody>${[...DB_STOCK_LOG].reverse().slice(0,50).map(l=>{
+      const p=DB_PRODUITS.find(x=>x.id===l.pid);
+      return `<tr>
+        <td style="font-size:.68rem;color:rgba(255,255,255,.4);white-space:nowrap">${(l.date||'').slice(0,16)}</td>
+        <td style="font-size:.75rem">${p?p.name:'#'+l.pid}</td>
+        <td style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:${l.action==='+'?'#4ade80':'#f87171'}">
+          ${l.action==='+'?'+':'-'}${Math.abs(l.qty||0)}</td>
+        <td style="font-size:.7rem;color:rgba(255,255,255,.5)">${l.reason||''}</td>
+        <td style="font-size:.7rem;color:#00a8f3">${l.orderId||'—'}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`}
+  </div>
+</div>`;
 }
 
 
@@ -3470,12 +3651,16 @@ function renderAdminHeroDesign(){
 
 document.addEventListener('DOMContentLoaded',function(){
   charger();
+  verifierBaseDeDonnees(); /* migre catalog_id manquants + répare DB_CONFIG */
+  applyHeroConfig();       /* applique fond d'accueil persisté */
   renderFaq&&renderFaq();
   renderContactBanner&&renderContactBanner();
   initReveal&&initReveal();
   updateAdminCounters&&updateAdminCounters();
   showView('accueil');
-  console.log('DEBUG [init] App ready DB_PRODUITS='+DB_PRODUITS.length);
+  console.log('DEBUG [init] ✓ prêt — DB_PRODUITS='+DB_PRODUITS.length
+    +' DB_USERS='+DB_USERS.length
+    +' DB_CONFIG.catalogs='+JSON.stringify((DB_CONFIG.catalogs||[]).map(c=>c.id)));
 });
 
 </script>
