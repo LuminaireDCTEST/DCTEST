@@ -395,13 +395,54 @@ textarea.fi{resize:vertical}
 <div class="overlay" id="overlay-orderDetail"><div class="modal" style="max-width:640px"><button style="position:absolute;top:1rem;right:1rem;color:rgba(255,255,255,.25);background:none;border:none;cursor:pointer;font-size:1.2rem" onclick="closeOverlay('orderDetail')">✕</button><div id="orderDetailInner"></div></div></div>
 
 <!-- OVERLAY ÉDITION PRODUIT -->
-<div class="overlay" id="overlay-editProduct"><div class="modal" style="max-width:540px"><button style="position:absolute;top:1rem;right:1rem;color:rgba(255,255,255,.25);background:none;border:none;cursor:pointer;font-size:1.2rem" onclick="closeOverlay('editProduct')">✕</button><h3 style="font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:700;color:white;text-transform:uppercase;margin-bottom:.25rem" id="editProductTitle">Produit</h3><p style="color:rgba(255,255,255,.28);font-size:.70rem;margin-bottom:1rem" id="editProductRef">—</p><div class="glow-line mb-4"></div><div class="space-y-3"><div class="grid grid-cols-2 gap-3"><div><label class="fl">Nom *</label><input type="text" id="ep-name" class="fi"/></div><div><label class="fl">Référence *</label><input type="text" id="ep-ref" class="fi"/></div></div><div class="grid grid-cols-2 gap-3"><div><label class="fl">Prix HT (€) *</label><input type="number" id="ep-price" class="fi" step="0.01" min="0"/></div><div><label class="fl">Catégorie *</label><select id="ep-cat" class="fi"><option value="phares">Phares</option><option value="feux">Feux arrière</option><option value="interieur">Intérieur</option><option value="strips">LED strips</option><option value="divers">Divers</option></select></div></div><div class="grid grid-cols-2 gap-3"><div><label class="fl">Technologie</label><select id="ep-tech" class="fi"><option value="led">LED</option><option value="halogene">Halogène</option><option value="xenon">Xénon</option><option value="">Non spécifié</option></select></div><div><label class="fl">Badge</label><input type="text" id="ep-badge" class="fi" placeholder="Best-seller…"/></div></div><div style="background:rgba(0,168,243,.05);border:1px solid rgba(0,168,243,.18);border-radius:9px;padding:.75rem 1rem"><label class="fl" style="color:rgba(0,168,243,.70)">Catalogue * <span style="font-weight:400;text-transform:none;font-size:.68rem;color:rgba(255,255,255,.28)">(obligatoire)</span></label><select id="ep-catalog" class="fi" style="font-weight:600"><option value="">— Choisir —</option></select></div><div style="background:rgba(0,168,243,.04);border:1px solid rgba(0,168,243,.12);border-radius:9px;padding:.75rem 1rem"><label class="fl" style="color:rgba(0,168,243,.55);margin-bottom:.6rem">📉 Remises dégressives (%)</label><div id="ep-volTiers" style="display:flex;flex-wrap:wrap;gap:.5rem"></div></div><div><label class="fl mb-2">Images</label><div id="ep-imgList" style="display:flex;flex-direction:column;gap:.35rem;margin-bottom:.5rem"></div><div style="display:flex;gap:.35rem"><input type="text" id="ep-imgNew" class="fi" style="flex:1;font-size:.78rem" placeholder="URL https://…"/><button type="button" onclick="epAddImageUrl()" class="btn btn-ghost btn-sm" style="white-space:nowrap">+ URL</button><label class="btn btn-ghost btn-sm" style="cursor:pointer;white-space:nowrap" title="Importer">📁<input type="file" id="ep-imgFile" accept="image/*" style="display:none" onchange="epAddImageFile(this)"/></label></div><p style="font-size:.63rem;color:rgba(255,255,255,.22);margin-top:.3rem">JPG, PNG, WebP — 1ère image = principale</p></div><div id="ep-stockRow" style="display:none;background:rgba(74,222,128,.04);border:1px solid rgba(74,222,128,.14);border-radius:8px;padding:.70rem 1rem"><label class="fl" style="color:#4ade80">Stock initial (u.)</label><input type="number" id="ep-initStock" class="fi" value="0" min="0" style="width:120px"/></div><div style="display:flex;align-items:center;gap:.6rem"><input type="checkbox" id="ep-isNew" style="width:16px;height:16px;accent-color:var(--gold)"/><label for="ep-isNew" class="fl" style="margin:0;color:rgba(255,255,255,.60);cursor:pointer">Marquer "Nouveau"</label></div><div style="display:flex;gap:.5rem"><button class="btn btn-ghost flex-1" onclick="closeOverlay('editProduct')">Annuler</button><button class="btn btn-primary flex-1" onclick="saveProduct()">✓ Enregistrer</button></div></div></div></div>
+<div class="overlay" id="overlay-editProduct"><div class="modal" style="max-width:540px"><button style="position:absolute;top:1rem;right:1rem;color:rgba(255,255,255,.25);background:none;border:none;cursor:pointer;font-size:1.2rem" onclick="closeOverlay('editProduct')">✕</button><h3 style="font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:700;color:white;text-transform:uppercase;margin-bottom:.25rem" id="editProductTitle">Produit</h3><p style="color:rgba(255,255,255,.28);font-size:.70rem;margin-bottom:1rem" id="editProductRef">—</p><div class="glow-line mb-4"></div><div class="space-y-3"><div class="grid grid-cols-2 gap-3"><div><label class="fl">Nom *</label><input type="text" id="ep-name" class="fi"/></div><div><label class="fl">Référence *</label><input type="text" id="ep-ref" class="fi"/></div></div><div class="grid grid-cols-2 gap-3"><div><label class="fl">Prix HT (€) *</label><input type="number" id="ep-price" class="fi" step="0.01" min="0"/></div><div><label class="fl">Catégorie *</label><select id="ep-cat" class="fi"><option value="phares">Phares</option><option value="feux">Feux arrière</option><option value="interieur">Intérieur</option><option value="strips">LED strips</option><option value="divers">Divers</option></select></div></div><div class="grid grid-cols-2 gap-3"><div><label class="fl">Technologie</label><select id="ep-tech" class="fi"><option value="led">LED</option><option value="halogene">Halogène</option><option value="xenon">Xénon</option><option value="">Non spécifié</option></select></div><div><label class="fl">Badge</label><input type="text" id="ep-badge" class="fi" placeholder="Best-seller…"/></div></div><div style="background:rgba(0,168,243,.05);border:1px solid rgba(0,168,243,.18);border-radius:9px;padding:.75rem 1rem"><label class="fl" style="color:rgba(0,168,243,.70)">Catalogue * <span style="font-weight:400;text-transform:none;font-size:.68rem;color:rgba(255,255,255,.28)">(obligatoire)</span></label><select id="ep-catalog" class="fi" required style="font-size:.82rem"><option value="">— Choisir un catalogue (obligatoire) —</option></select></div><div style="background:rgba(0,168,243,.04);border:1px solid rgba(0,168,243,.12);border-radius:9px;padding:.75rem 1rem"><label class="fl" style="color:rgba(0,168,243,.55);margin-bottom:.6rem">📉 Remises dégressives (%)</label><div id="ep-volTiers" style="display:flex;flex-wrap:wrap;gap:.5rem"></div></div><div><label class="fl mb-2">Images</label><div id="ep-imgList" style="display:flex;flex-direction:column;gap:.35rem;margin-bottom:.5rem"></div><div style="display:flex;gap:.35rem"><input type="text" id="ep-imgNew" class="fi" style="flex:1;font-size:.78rem" placeholder="URL https://…"/><button type="button" onclick="epAddImageUrl()" class="btn btn-ghost btn-sm" style="white-space:nowrap">+ URL</button><label class="btn btn-ghost btn-sm" style="cursor:pointer;white-space:nowrap" title="Importer">📁<input type="file" id="ep-imgFile" accept="image/*" style="display:none" onchange="epAddImageFile(this)"/></label></div><p style="font-size:.63rem;color:rgba(255,255,255,.22);margin-top:.3rem">JPG, PNG, WebP — 1ère image = principale</p></div><div id="ep-stockRow" style="display:none;background:rgba(74,222,128,.04);border:1px solid rgba(74,222,128,.14);border-radius:8px;padding:.70rem 1rem"><label class="fl" style="color:#4ade80">Stock initial (u.)</label><input type="number" id="ep-initStock" class="fi" value="0" min="0" style="width:120px"/></div><div style="display:flex;align-items:center;gap:.6rem"><input type="checkbox" id="ep-isNew" style="width:16px;height:16px;accent-color:var(--gold)"/><label for="ep-isNew" class="fl" style="margin:0;color:rgba(255,255,255,.60);cursor:pointer">Marquer "Nouveau"</label></div><div style="display:flex;gap:.5rem"><button class="btn btn-ghost flex-1" onclick="closeOverlay('editProduct')">Annuler</button><button class="btn btn-primary flex-1" onclick="saveProduct()">✓ Enregistrer</button></div></div></div></div>
 
 <!-- OVERLAY ÉDITION COMMANDE -->
 <div class="overlay" id="overlay-editOrder"><div class="modal" style="max-width:500px"><button style="position:absolute;top:1rem;right:1rem;color:rgba(255,255,255,.25);background:none;border:none;cursor:pointer;font-size:1.2rem" onclick="closeOverlay('editOrder')">✕</button><h3 style="font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:700;color:white;text-transform:uppercase;margin-bottom:.25rem">Modifier la commande</h3><p id="editOrderId" style="color:rgba(255,255,255,.28);font-size:.70rem;margin-bottom:1rem">—</p><div class="glow-line mb-4"></div><div class="space-y-3"><div><label class="fl">Statut</label><select id="eo-status" class="fi"><option value="pending">En attente</option><option value="confirmed">Confirmée</option><option value="shipped">Expédiée</option><option value="delivered">Livrée</option><option value="cancelled">Annulée</option></select></div><div><label class="fl">Paiement</label><select id="eo-payment" class="fi"><option>Carte bancaire</option><option>Facture proforma</option><option>Paiement fin de mois</option><option>Virement bancaire</option><option>Chèque</option></select></div><div><label class="fl">Adresse</label><input type="text" id="eo-addr" class="fi"/></div><div><label class="fl">Notes</label><textarea id="eo-notes" class="fi" rows="2"></textarea></div><div><label class="fl">Note historique</label><input type="text" id="eo-histNote" class="fi" placeholder="Raison…"/></div></div><div style="display:flex;gap:.5rem;margin-top:1.2rem"><button class="btn btn-ghost flex-1" onclick="closeOverlay('editOrder')">Annuler</button><button class="btn btn-primary flex-1" onclick="saveOrderEdit()">✓ Enregistrer</button></div></div></div>
 
 <!-- OVERLAY ÉDITION CLIENT -->
 <div class="overlay" id="overlay-editClient"><div class="modal" style="max-width:520px"><button style="position:absolute;top:1rem;right:1rem;color:rgba(255,255,255,.25);background:none;border:none;cursor:pointer;font-size:1.2rem" onclick="closeOverlay('editClient')">✕</button><h3 style="font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:700;color:white;text-transform:uppercase;margin-bottom:.25rem">Éditer le client</h3><p id="editClientId" style="color:rgba(255,255,255,.28);font-size:.70rem;margin-bottom:1rem">—</p><div class="glow-line mb-4"></div><div class="space-y-3"><div class="grid grid-cols-2 gap-3"><div><label class="fl">Prénom *</label><input type="text" id="ec-first" class="fi"/></div><div><label class="fl">Nom *</label><input type="text" id="ec-last" class="fi"/></div></div><div><label class="fl">Email *</label><input type="email" id="ec-email" class="fi"/></div><div><label class="fl">Téléphone</label><input type="tel" id="ec-tel" class="fi"/></div><div><label class="fl">Adresse</label><input type="text" id="ec-addr" class="fi"/></div><div><label class="fl">Entreprise</label><input type="text" id="ec-company" class="fi"/></div><div class="grid grid-cols-2 gap-3"><div><label class="fl">Rôle</label><select id="ec-role" class="fi" onchange="updateEditClientRoleUI()"><option value="client">Client</option><option value="admin">Administrateur</option></select></div><div><label class="fl">Statut</label><select id="ec-status" class="fi"><option value="active">Actif</option><option value="inactive">Inactif</option></select></div></div><div id="ec-adminWarn" class="hidden" style="background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.20);border-radius:8px;padding:.60rem .90rem;font-size:.75rem;color:var(--orange)">⚠ Rôle Admin : accès complet.</div><div><label class="fl">Remise (%)</label><input type="number" id="ec-discount" class="fi" min="0" max="100" step="0.5"/></div><div><label class="fl mb-2">Accès catalogues</label><div id="ec-catalogAccess" style="display:flex;flex-wrap:wrap;gap:.4rem"></div></div></div><div style="display:flex;gap:.5rem;margin-top:1.2rem"><button class="btn btn-ghost flex-1" onclick="closeOverlay('editClient')">Annuler</button><button class="btn btn-primary flex-1" onclick="saveClientEdit()">✓ Enregistrer</button></div></div></div>
+
+
+<!-- OVERLAY AJOUT CLIENT -->
+<div class="overlay" id="overlay-addClient">
+  <div class="modal" style="max-width:520px">
+    <button style="position:absolute;top:1rem;right:1rem;color:rgba(255,255,255,.25);background:none;border:none;cursor:pointer;font-size:1.2rem" onclick="closeOverlay('addClient')">✕</button>
+    <h3 style="font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:700;color:white;text-transform:uppercase;margin-bottom:.25rem">Nouveau Client</h3>
+    <p style="color:rgba(255,255,255,.28);font-size:.70rem;margin-bottom:1rem">Créer un compte client dans DB_USERS</p>
+    <div class="glow-line mb-4"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:.7rem">
+      <div><label class="fl">Prénom *</label><input type="text" id="nc-first" class="fi" placeholder="Tony"/></div>
+      <div><label class="fl">Nom *</label><input type="text" id="nc-last" class="fi" placeholder="Koru"/></div>
+    </div>
+    <div style="margin-bottom:.7rem"><label class="fl">Email *</label><input type="email" id="nc-email" class="fi" placeholder="tony@client.fr"/></div>
+    <div style="margin-bottom:.7rem"><label class="fl">Mot de passe *</label><input type="text" id="nc-pwd" class="fi" placeholder="motdepasse123"/></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:.7rem">
+      <div><label class="fl">Téléphone</label><input type="text" id="nc-tel" class="fi" placeholder="+32 6 00 00 00"/></div>
+      <div><label class="fl">Société</label><input type="text" id="nc-company" class="fi" placeholder="Ma Société SARL"/></div>
+    </div>
+    <div style="margin-bottom:.7rem"><label class="fl">Adresse</label><input type="text" id="nc-addr" class="fi" placeholder="1 rue..."/></div>
+    <div style="margin-bottom:1rem">
+      <label class="fl mb-2">Droits Catalogues</label>
+      <div id="nc-catalogs-check" style="display:flex;flex-wrap:wrap;gap:.5rem;padding:.65rem;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:8px">
+        <!-- Peuplé dynamiquement par openAddClient() -->
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1rem">
+      <div><label class="fl">Remise globale (%)</label><input type="number" id="nc-discount" class="fi" value="0" min="0" max="50" step="0.5"/></div>
+      <div><label class="fl">Rôle</label>
+        <select id="nc-role" class="fi">
+          <option value="client">Client</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+    </div>
+    <button onclick="console.log('Bouton Créer client cliqué');saveNewClient()" class="btn btn-primary w-full gp">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+      Créer le compte client
+    </button>
+  </div>
+</div>
 
 <div class="toast-wrap" id="toastWrap"></div>
 <script>
@@ -1208,6 +1249,31 @@ function adminTab(tab){
 
 
 
+function renderClientsTable(users){
+  const tbody=document.getElementById('clientsTableBody');if(!tbody)return;
+  const list=users||DB_USERS;
+  if(!list.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:rgba(255,255,255,.3);padding:2rem">Aucun client.</td></tr>';return;}
+  tbody.innerHTML=list.map(u=>{
+    const cats=(u.catalogs||[]).map(cid=>{const c=(DB_CONFIG.catalogs||[]).find(x=>x.id===cid);
+      return `<span style="font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:4px;border:1px solid ${c?c.color+'44':'rgba(255,255,255,.15)'};color:${c?c.color:'rgba(255,255,255,.4)'};background:${c?c.color+'11':'rgba(255,255,255,.04)'}">${c?c.label:cid}</span>`;
+    }).join(' ');
+    return `<tr>
+      <td><p style="font-weight:600;font-size:.82rem">${u.first} ${u.last}</p></td>
+      <td style="font-size:.75rem">${u.email}</td>
+      <td style="font-size:.75rem;color:rgba(255,255,255,.4)">${u.tel||'—'}</td>
+      <td style="font-size:.75rem;color:rgba(255,255,255,.4)">${u.company||'—'}</td>
+      <td><span class="badge ${u.role==='admin'?'badge-admin':'badge-client'}">${u.role}</span></td>
+      <td><span style="font-size:.7rem;color:${u.status==='active'?'#4ade80':'#f87171'}">${u.status==='active'?'✓ Actif':'✗ Inactif'}</span></td>
+      <td style="font-family:'Bebas Neue',sans-serif;font-size:.95rem;color:${(u.discount||0)>0?'#22c55e':'rgba(255,255,255,.3)'}">${u.discount||0}%</td>
+      <td style="max-width:160px">${cats||'<span style="font-size:.65rem;color:rgba(255,255,255,.25)">Aucun</span>'}</td>
+      <td><div style="display:flex;gap:.3rem">
+        <button onclick="console.log('Bouton Modifier client ${u.id} cliqué');openEditClient('${u.id}')" class="btn btn-ghost btn-xs">✏️</button>
+        <button onclick="console.log('Bouton Supprimer client ${u.id} cliqué');deleteClient('${u.id}')" style="font-size:.65rem;padding:2px 7px;border-radius:5px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.06);color:#ef4444;cursor:pointer">🗑</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
 function renderAdminClients(){
   const ct=document.getElementById('adminContent');
   ct.innerHTML=`
@@ -1360,19 +1426,24 @@ function rejectRequest(rid){
 
 
 function openEditClient(uid){
-  const u=USERS.find(x=>x.id===uid);if(!u)return;
+  console.log('Bouton Modifier client cliqué — openEditClient uid='+uid);
+  const u=DB_USERS.find(x=>x.id===uid);
+  if(!u){toast('Client introuvable: '+uid,'error');return;}
   editingClientId=uid;
-  document.getElementById('editClientId').textContent='Client — '+u.email;
-  document.getElementById('ec-first').value=u.first;
-  document.getElementById('ec-last').value=u.last;
-  document.getElementById('ec-email').value=u.email;
-  document.getElementById('ec-tel').value=u.tel||'';
-  document.getElementById('ec-addr').value=u.addr||'';
-  document.getElementById('ec-company').value=u.company||'';
-  document.getElementById('ec-role').value=u.role;
-  document.getElementById('ec-status').value=u.status;
-  document.getElementById('ec-discount').value=u.discount||0;
-  updateEditClientRoleUI();
+  const idEl=document.getElementById('editClientId');if(idEl)idEl.textContent='Client — '+u.email;
+  const fs={'ec-first':u.first,'ec-last':u.last,'ec-email':u.email,
+    'ec-tel':u.tel||'','ec-addr':u.addr||'','ec-company':u.company||'',
+    'ec-role':u.role,'ec-status':u.status||'active','ec-discount':u.discount||0};
+  Object.entries(fs).forEach(([id,val])=>{const el=document.getElementById(id);if(el)el.value=val;});
+  const catsDiv=document.getElementById('ec-catalogs');
+  if(catsDiv){
+    const cats=DB_CONFIG.catalogs||[];
+    catsDiv.innerHTML=cats.map(c=>`<label style="display:flex;align-items:center;gap:.4rem;font-family:Inter,sans-serif;font-size:.78rem;color:rgba(255,255,255,.65);cursor:pointer">
+      <input type="checkbox" value="${c.id}" ${(u.catalogs||[]).includes(c.id)?'checked':''}
+        style="accent-color:${c.color||'#00a8f3'};width:15px;height:15px"/>
+      <span style="color:${c.color||'#00a8f3'}">${c.label}</span></label>`).join('');
+  }
+  updateEditClientRoleUI&&updateEditClientRoleUI();
   openOverlay('editClient');
 }
 
@@ -1712,8 +1783,40 @@ function syncPublicFilters(){
 }
 
 
+
+/* ══ chargerSelectCatalogues — peuple le <select id="ep-catalog"> ══
+   Appelé à chaque ouverture de la modale produit
+   Structure : DB_CONFIG.catalogs = [{id:'cat_luminaire',label:'Luminaires Auto',...}]
+*/
+function chargerSelectCatalogues(selectedId){
+  const sel=document.getElementById('ep-catalog');
+  if(!sel){console.warn('[chargerSelectCatalogues] #ep-catalog introuvable');return;}
+  const cats=DB_CONFIG.catalogs||[];
+  console.log('DEBUG [chargerSelectCatalogues] peuplement avec',cats.length,'catalogues, selectedId='+selectedId);
+  /* Vider + option vide */
+  sel.innerHTML='<option value="">— Choisir un catalogue (obligatoire) —</option>';
+  cats.forEach(c=>{
+    const opt=document.createElement('option');
+    opt.value=c.id;
+    opt.textContent=c.label+(c.id==='cat_luminaire'?' 💡':c.id==='cat_divers'?' 🔧':' 📦');
+    if(c.id===selectedId)opt.selected=true;
+    sel.appendChild(opt);
+  });
+  /* Fallback si aucun catalogue configuré */
+  if(!cats.length){
+    sel.innerHTML='<option value="cat_luminaire">Luminaires Auto (défaut)</option>'
+      +'<option value="cat_divers">Accessoires & Divers</option>';
+    if(selectedId){sel.value=selectedId;}
+    console.warn('[chargerSelectCatalogues] DB_CONFIG.catalogs vide — utilisation valeurs hardcodées');
+  }
+  if(selectedId)sel.value=selectedId;
+  console.log('DEBUG [chargerSelectCatalogues] sel.value='+sel.value+' options='+sel.options.length);
+}
+
 function openEditProduct(pid){
   console.log('[Admin] openEditProduct called with pid='+pid);
+  /* Toujours peupler le select catalogues */
+  chargerSelectCatalogues('');
   editingProductId=pid;
   _epImages=[];
 
@@ -2758,6 +2861,28 @@ function renderAdminChat(){
   if(_adminChatOrderId){
     var el=document.getElementById('adminChatMsgs');
     if(el)renderChatMessages(_adminChatOrderId,el);
+  /* Real-time: écouter les nouveaux messages via storage event */
+  if(!window._chatStorageListenerActive){
+    window._chatStorageListenerActive=true;
+    window.addEventListener('storage',function(ev){
+      if(ev.key===LS.CHAT&&adminCurrentTab==='chat'){
+        try{const d=JSON.parse(ev.newValue);if(Array.isArray(d))DB_CHAT=d;}catch(e){}
+        renderAdminChat();
+      }
+    });
+    console.log('DEBUG [renderAdminChat] storage listener activé');
+  }
+  }
+  /* Real-time: écouter les nouveaux messages via storage event */
+  if(!window._chatStorageListenerActive){
+    window._chatStorageListenerActive=true;
+    window.addEventListener('storage',function(ev){
+      if(ev.key===LS.CHAT&&adminCurrentTab==='chat'){
+        try{const d=JSON.parse(ev.newValue);if(Array.isArray(d))DB_CHAT=d;}catch(e){}
+        renderAdminChat();
+      }
+    });
+    console.log('DEBUG [renderAdminChat] storage listener activé');
   }
 }
 
@@ -2912,6 +3037,7 @@ function heroFileUpload(input){
 
 
 function heroSaveConfig(){
+  console.log('Bouton Enregistrer fond d\'accueil cliqué — heroSaveConfig');
   const inp=document.getElementById('hero-src-inp');
   if(inp&&inp.value.trim()){
     const url=inp.value.trim();
@@ -3368,19 +3494,27 @@ function markMsgRead(id){
 }
 
 function saveClientEdit(){
-  console.log('DEBUG [saveClientEdit]');
-  const uid=document.getElementById('editClientId')&&document.getElementById('editClientId').value;
-  const u=DB_USERS.find(x=>x.id===uid);if(!u)return;
-  u.first=document.getElementById('editClientFirst').value.trim()||u.first;
-  u.last=document.getElementById('editClientLast').value.trim()||u.last;
-  u.email=document.getElementById('editClientEmail').value.trim()||u.email;
-  u.tel=document.getElementById('editClientTel').value.trim()||u.tel;
-  u.company=document.getElementById('editClientCompany').value.trim()||u.company;
-  u.discount=parseFloat(document.getElementById('editClientDiscount').value)||0;
-  u.status=document.getElementById('editClientStatus').value||u.status;
+  console.log('Bouton Sauvegarder client cliqué — saveClientEdit editingClientId='+editingClientId);
+  const u=DB_USERS.find(x=>x.id===editingClientId);if(!u){toast('Client introuvable','error');return;}
+  const fs={'ec-first':'first','ec-last':'last','ec-email':'email','ec-tel':'tel','ec-addr':'addr','ec-company':'company'};
+  Object.entries(fs).forEach(([id,field])=>{const el=document.getElementById(id);if(el&&el.value.trim())u[field]=el.value.trim();});
+  const rEl=document.getElementById('ec-role');if(rEl)u.role=rEl.value;
+  const stEl=document.getElementById('ec-status');if(stEl)u.status=stEl.value;
+  const dEl=document.getElementById('ec-discount');if(dEl)u.discount=parseFloat(dEl.value)||0;
+  const cDiv=document.getElementById('ec-catalogs');
+  if(cDiv){u.catalogs=[...cDiv.querySelectorAll('input:checked')].map(cb=>cb.value);
+    console.log('DEBUG saveClientEdit catalogs='+u.catalogs.join(','));}
   sauvegarder();closeOverlay('editClient');
-  toast('Client '+u.first+' '+u.last+' mis à jour','success');
-  renderAdminClients();
+  toast(u.first+' '+u.last+' mis à jour ✓','success');renderAdminClients();
+}
+
+function deleteClient(uid){
+  console.log('Bouton Supprimer client cliqué — deleteClient uid='+uid);
+  const u=DB_USERS.find(x=>x.id===uid);if(!u)return;
+  if(!confirm('Supprimer le compte de '+u.first+' '+u.last+' ?'))return;
+  DB_USERS.splice(DB_USERS.indexOf(u),1);
+  sauvegarder();renderAdminClients();
+  toast('Client supprimé','info');
 }
 
 function saveOrderEdit(){
@@ -3647,6 +3781,59 @@ function renderAdminHeroDesign(){
     ">Enregistrer</button>
   </div>
 </div>`;
+}
+
+
+function openAddClient(){
+  console.log('Bouton Ajouter client cliqué — openAddClient');
+  /* Reset form fields */
+  ['nc-first','nc-last','nc-email','nc-pwd','nc-tel','nc-company','nc-addr'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  const discEl=document.getElementById('nc-discount');if(discEl)discEl.value='0';
+  const roleEl=document.getElementById('nc-role');if(roleEl)roleEl.value='client';
+  /* Peuple les checkboxes catalogues */
+  const div=document.getElementById('nc-catalogs-check');
+  if(div){
+    const cats=DB_CONFIG.catalogs||[];
+    if(!cats.length){div.innerHTML='<p style="font-size:.72rem;color:rgba(255,255,255,.3)">Aucun catalogue configuré.</p>';}
+    else{div.innerHTML=cats.map(c=>`
+      <label style="display:flex;align-items:center;gap:.4rem;font-family:Inter,sans-serif;font-size:.78rem;color:rgba(255,255,255,.65);cursor:pointer">
+        <input type="checkbox" name="nc-cat" value="${c.id}" ${c.id==='cat_luminaire'?'checked':''}
+          style="accent-color:${c.color||'#00a8f3'};width:15px;height:15px"/>
+        <span style="color:${c.color||'#00a8f3'}">${c.label}</span>
+      </label>`).join('');}
+  }
+  openOverlay('addClient');
+}
+
+function saveNewClient(){
+  console.log('Bouton Créer client cliqué — saveNewClient');
+  const first=(document.getElementById('nc-first')?.value||'').trim();
+  const last=(document.getElementById('nc-last')?.value||'').trim();
+  const email=(document.getElementById('nc-email')?.value||'').trim().toLowerCase();
+  const pwd=(document.getElementById('nc-pwd')?.value||'').trim();
+  if(!first||!last||!email||!pwd){toast('Prénom, Nom, Email et Mot de passe requis','error');return;}
+  if(DB_USERS.find(u=>u.email.toLowerCase()===email)){toast('Email déjà utilisé: '+email,'error');return;}
+  const cats=[...document.querySelectorAll('#nc-catalogs-check input:checked')].map(cb=>cb.value);
+  const newUser={
+    id:'u'+Date.now().toString().slice(-6),
+    first,last,email,pwd,
+    tel:(document.getElementById('nc-tel')?.value||'').trim(),
+    company:(document.getElementById('nc-company')?.value||'').trim(),
+    addr:(document.getElementById('nc-addr')?.value||'').trim(),
+    role:document.getElementById('nc-role')?.value||'client',
+    status:'active',
+    avatar:first[0]+(last[0]||''),
+    discount:parseFloat(document.getElementById('nc-discount')?.value)||0,
+    catalogs:cats.length?cats:['cat_luminaire']
+  };
+  DB_USERS.push(newUser);
+  sauvegarder();
+  closeOverlay('addClient');
+  toast('Client '+first+' '+last+' créé ✓ ('+newUser.id+')','success');
+  console.log('DEBUG [saveNewClient] created user='+JSON.stringify({id:newUser.id,email:newUser.email,catalogs:newUser.catalogs}));
+  renderAdminClients();
 }
 
 document.addEventListener('DOMContentLoaded',function(){
