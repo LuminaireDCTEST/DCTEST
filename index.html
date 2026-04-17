@@ -444,8 +444,32 @@ textarea.fi{resize:vertical}
   </div>
 </div>
 
+
+<!-- OVERLAY APERÇU PDF -->
+<div class="overlay" id="overlay-pdfPreview">
+  <div class="modal" style="max-width:860px;padding:0;overflow:hidden;height:90vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.25rem;border-bottom:1px solid rgba(255,255,255,.08)">
+      <div style="display:flex;align-items:center;gap:.75rem">
+        <p style="font-family:'Cormorant Garamond',serif;font-size:1.1rem;font-weight:700;color:white;margin:0" id="pdfPreviewTitle">Aperçu document</p>
+        <span id="pdfPreviewType" style="font-size:.65rem;font-weight:700;padding:2px 9px;border-radius:5px;background:rgba(0,168,243,.15);color:#00a8f3;border:1px solid rgba(0,168,243,.25)">DOCUMENT</span>
+      </div>
+      <div style="display:flex;gap:.5rem;align-items:center">
+        <button onclick="console.log('Bouton Télécharger PDF depuis aperçu');genererDocument(window._previewType,window._previewOrderId)"
+          class="btn btn-primary btn-sm gp">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          Télécharger PDF
+        </button>
+        <button onclick="console.log('Bouton Gmail depuis aperçu');window._pdfType=window._previewType;document.getElementById('pdf-order').value=window._previewOrderId;genererEtEnvoyerDoc('gmail')"
+          class="btn btn-ghost btn-sm" style="color:#ea4335;border-color:rgba(234,67,53,.2)">✉ Gmail</button>
+        <button onclick="closeOverlay('pdfPreview')" style="background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;font-size:1.3rem;padding:0 .25rem">✕</button>
+      </div>
+    </div>
+    <iframe id="pdfPreviewFrame" style="flex:1;border:none;background:#fff" srcdoc="<p>Chargement...</p>"></iframe>
+  </div>
+</div>
+
 <div class="toast-wrap" id="toastWrap"></div>
-<script>
+
 const LS={PRODUITS:'dcorp_v29_products',USERS:'dcorp_v29_users',COMMANDES:'dcorp_v29_orders',CONFIG:'dcorp_v29_config',CHAT:'dcorp_v29_chat',STOCK_LOG:'dcorp_v29_stocklog',VISUEL:'dcorp_v29_visuel'};
 const TVA=0.21,WF_AUTO_CONFIRM_DAYS=7;
 
@@ -2116,289 +2140,502 @@ function renderAdminModeles(){
    Structure client :
    { id, first, last, email, tel, company, address, discount }
 */
-function genererDocument(typeArg, orderIdArg){
-  const type    = typeArg   || window._pdfType || 'commande';
-  const orderId = orderIdArg|| (document.getElementById('pdf-order')&&document.getElementById('pdf-order').value)||'';
-  const pct     = parseFloat(document.getElementById('pdf-pct')&&document.getElementById('pdf-pct').value)||30;
 
-  console.log('DEBUG [genererDocument] type='+type+' orderId='+orderId+' pct='+pct);
+/* ══════════════════════════════════════════════════════════════════
+   MOTEUR PDF & EMAIL — De Cooman Racing Performance
+   ── Structure de données attendue ──
+   Commande  : {id, userId, userName, userEmail, date, items[{pid,name,qty,unitPrice}],
+                shippingCostHT, shippingZoneLabel, payment, addr, notes, status}
+   Client    : {first, last, email, tel, company, addr, discount}
+   Entreprise: DB_CONFIG.contact.{companyName, address, email, phone}
+   ── Clé LS ── LS.PRODUITS, LS.COMMANDES, LS.USERS
+══════════════════════════════════════════════════════════════════ */
 
-  if(!orderId){toast('Sélectionnez une commande','error');return;}
+/* ── CONFIG_EMAILS : templates par type de document ── */
+var CONFIG_EMAILS = {
+  commande: {
+    sujet: 'Votre bon de commande {numero_doc} — De Cooman Racing Performance',
+    corps:  'Bonjour {client_prenom} {client_nom},\n\n'
+          + 'Nous avons bien reçu votre commande n° {numero_doc} du {date}.\n\n'
+          + '📦 Récapitulatif :\n{lignes_articles}\n\n'
+          + '💰 Total TTC : {total_ttc}\n\n'
+          + 'Nous vous contacterons dès que votre commande sera prête à être expédiée.\n\n'
+          + 'Cordialement,\nL\'équipe De Cooman Racing Performance\n{lien_site}'
+  },
+  devis: {
+    sujet: 'Votre devis n° {numero_doc} — De Cooman Racing Performance',
+    corps:  'Bonjour {client_prenom} {client_nom},\n\n'
+          + 'Veuillez trouver ci-joint votre devis n° {numero_doc} établi le {date}.\n\n'
+          + '📋 Ce devis est valable 30 jours.\n\n'
+          + '💰 Montant TTC : {total_ttc}\n\n'
+          + 'Pour toute question ou pour confirmer votre commande, n\'hésitez pas à nous contacter.\n\n'
+          + 'Cordialement,\nL\'équipe De Cooman Racing Performance\n{lien_site}'
+  },
+  facture: {
+    sujet: 'Votre facture n° {numero_doc} — De Cooman Racing Performance',
+    corps:  'Bonjour {client_prenom} {client_nom},\n\n'
+          + 'Veuillez trouver ci-joint votre facture n° {numero_doc} du {date}.\n\n'
+          + '💶 Montant à régler : {total_ttc}\n\n'
+          + 'Règlement par virement bancaire à réception de la présente facture.\n\n'
+          + 'Merci de votre confiance.\n\n'
+          + 'Cordialement,\nL\'équipe De Cooman Racing Performance\n{lien_site}'
+  },
+  acompte: {
+    sujet: 'Facture d\'acompte n° {numero_doc} — De Cooman Racing Performance',
+    corps:  'Bonjour {client_prenom} {client_nom},\n\n'
+          + 'Veuillez trouver ci-joint la facture d\'acompte n° {numero_doc} du {date}.\n\n'
+          + '💶 Acompte à régler : {total_ttc}\n\n'
+          + 'Le solde vous sera facturé à la livraison.\n\n'
+          + 'Cordialement,\nL\'équipe De Cooman Racing Performance\n{lien_site}'
+  },
+  avoir: {
+    sujet: 'Avoir n° {numero_doc} — De Cooman Racing Performance',
+    corps:  'Bonjour {client_prenom} {client_nom},\n\n'
+          + 'Veuillez trouver ci-joint l\'avoir n° {numero_doc} du {date}.\n\n'
+          + '↩ Montant de l\'avoir : {total_ttc}\n\n'
+          + 'Ce montant sera déduit de votre prochain règlement ou remboursé selon votre préférence.\n\n'
+          + 'Cordialement,\nL\'équipe De Cooman Racing Performance\n{lien_site}'
+  },
+  livraison: {
+    sujet: 'Bon de livraison {numero_doc} — Commande {numero_doc}',
+    corps:  'Bonjour {client_prenom} {client_nom},\n\n'
+          + 'Votre commande n° {numero_doc} a été expédiée le {date}.\n\n'
+          + '🚚 Veuillez trouver ci-joint le bon de livraison détaillant les articles expédiés.\n\n'
+          + 'Cordialement,\nL\'équipe De Cooman Racing Performance\n{lien_site}'
+  }
+};
 
-  /* ── 1. Aspire données commande ── */
-  const o=DB_COMMANDES.find(x=>x.id===orderId);
-  if(!o){toast('Commande introuvable : '+orderId,'error');return;}
+/* ── resoudreVarsEmail : remplace {var} par les valeurs réelles ── */
+function resoudreVarsEmail(tpl, o, user, docNum){
+  var ci=DB_CONFIG.contact||{};
+  var lignes=(o.items||[]).map(function(it){
+    return '  • '+it.name+' × '+it.qty+' u. = '+(it.unitPrice*it.qty).toFixed(2)+' € HT';
+  }).join('\n');
+  var vars={
+    '{client_prenom}': user.first||o.userName||'Client',
+    '{client_nom}':    user.last||'',
+    '{client_email}':  user.email||o.userEmail||'',
+    '{client_tel}':    user.tel||'Non renseigné',
+    '{client_adresse}':user.addr||o.addr||'Adresse non renseignée',
+    '{client_societe}':user.company||'Non renseignée',
+    '{numero_doc}':    docNum,
+    '{date}':          new Date(o.date||Date.now()).toLocaleDateString('fr-BE',{day:'2-digit',month:'long',year:'numeric'}),
+    '{total_ht}':      oHT(o).toFixed(2)+' €',
+    '{total_tva}':     oTVA(o).toFixed(2)+' €',
+    '{total_ttc}':     fmt(oTTC(o)),
+    '{lignes_articles}':lignes,
+    '{lien_site}':     ci.website||'https://decooman-racing.be',
+    '{societe}':       ci.companyName||'De Cooman Racing Performance',
+    '{societe_email}': ci.email||'DCRkoru@gmail.com',
+    '{societe_tel}':   ci.phone||ci.tel||''
+  };
+  var result=tpl;
+  Object.keys(vars).forEach(function(k){
+    result=result.split(k).join(vars[k]);
+  });
+  return result;
+}
 
-  /* ── 2. Aspire données client ── */
-  const user=DB_USERS.find(u=>u.id===o.userId)||{
-    first:o.userName?.split(' ')[0]||'',
-    last:o.userName?.split(' ').slice(1).join(' ')||'',
-    email:o.userEmail||'',tel:'',company:'',address:o.address||''
+/* ── PDF_CSS : feuille de styles professionnelle pour les documents PDF ── */
+var PDF_CSS = [
+  '@page{margin:0}',
+  'body{margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;font-size:9.5pt;color:#1a1a2e;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}',
+  '.pdf-page{padding:0;width:210mm;min-height:297mm;box-sizing:border-box;background:#fff}',
+  /* Header */
+  '.pdf-header{display:flex;align-items:flex-start;justify-content:space-between;padding:8mm 10mm 6mm;border-bottom:3px solid var(--doc-color,#0066cc)}',
+  '.pdf-logo{font-family:Georgia,serif;font-size:14pt;font-weight:700;color:#1a1a2e;line-height:1.2}',
+  '.pdf-logo span{color:var(--doc-color,#0066cc)}',
+  '.pdf-logo small{display:block;font-size:7.5pt;color:#555;font-weight:400;font-family:Arial,sans-serif;margin-top:2px}',
+  '.pdf-doc-type{text-align:right}',
+  '.pdf-doc-type .type-label{font-size:18pt;font-weight:700;color:var(--doc-color,#0066cc);letter-spacing:1.5px;line-height:1}',
+  '.pdf-doc-type .doc-num{font-size:9pt;color:#555;margin-top:3px}',
+  '.pdf-doc-type .doc-date{font-size:8.5pt;color:#777;margin-top:2px}',
+  /* Meta band */
+  '.pdf-meta{display:flex;gap:0;background:#f7f8fc;border-bottom:1px solid #e5e7eb;padding:4mm 10mm;flex-wrap:wrap;gap:6mm}',
+  '.pdf-meta-item .lbl{font-size:7pt;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:1px}',
+  '.pdf-meta-item .val{font-size:8.5pt;font-weight:600;color:#1a1a2e}',
+  /* Parties */
+  '.pdf-parties{display:flex;gap:0;padding:5mm 10mm 4mm;border-bottom:1px solid #e5e7eb}',
+  '.pdf-party{flex:1;padding:0 6mm 0 0}',
+  '.pdf-party:last-child{padding:0;border-left:1px solid #e5e7eb;padding-left:6mm}',
+  '.party-lbl{font-size:7pt;text-transform:uppercase;letter-spacing:1px;color:var(--doc-color,#0066cc);font-weight:700;margin-bottom:3px}',
+  '.pdf-party p{margin:0;font-size:8.5pt;line-height:1.55;color:#2d2d2d}',
+  /* Table */
+  '.pdf-table{width:100%;border-collapse:collapse;margin:0 10mm;width:calc(100% - 20mm)}',
+  'table.pdf-table{margin-left:10mm;margin-right:10mm;width:calc(100% - 20mm);border-collapse:collapse}',
+  '.pdf-table thead tr{background:var(--doc-color,#0066cc)}',
+  '.pdf-table thead th{color:#fff;font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3mm 4mm;text-align:left}',
+  '.pdf-table thead th.right{text-align:right}',
+  '.pdf-table tbody tr:nth-child(even){background:#f9fafb}',
+  '.pdf-table tbody tr:hover{background:#f0f4ff}',
+  '.pdf-table tbody td{padding:2.5mm 4mm;font-size:8.5pt;vertical-align:top;border-bottom:1px solid #f0f0f0}',
+  '.pdf-table tbody td.ref{color:#888;font-size:7.5pt;white-space:nowrap}',
+  '.pdf-table tbody td.right{text-align:right}',
+  '.col-prix,.col-total{text-align:right!important;white-space:nowrap}',
+  '.price-strike{text-decoration:line-through;color:#bbb;margin-right:3px;font-size:7.5pt}',
+  '.disc-badge{display:inline-block;font-size:6.5pt;font-weight:700;padding:0 4px;border-radius:3px;margin-left:2px}',
+  '.disc-client{background:#dcfce7;color:#166534}',
+  '.disc-vol{background:#dbeafe;color:#1e40af}',
+  /* Totals */
+  '.pdf-totals{display:flex;justify-content:flex-end;padding:4mm 10mm}',
+  '.pdf-totals-inner{width:72mm;border:1px solid #e5e7eb;border-radius:4px;overflow:hidden}',
+  '.pdf-total-row{display:flex;justify-content:space-between;padding:2mm 4mm;font-size:8.5pt;border-bottom:1px solid #f0f0f0}',
+  '.pdf-total-row.ht{background:#f7f8fc;color:#555}',
+  '.pdf-total-row.tva{background:#f7f8fc;color:#555}',
+  '.pdf-total-row.ttc{background:var(--doc-color,#0066cc);color:#fff;font-size:10pt;font-weight:700;border-bottom:none}',
+  '.pdf-total-row.savings{background:#f0fdf4;color:#166534}',
+  '.pdf-total-row.ship{background:#fafafa;color:#555}',
+  /* Acompte */
+  '.pdf-acompte-row{margin:0 10mm 4mm;padding:4mm;background:#fffbeb;border:2px solid #f59e0b;border-radius:6px}',
+  '.pdf-acompte-row .pct{font-size:18pt;font-weight:700;color:#92400e}',
+  '.pdf-acompte-row .amount{font-size:18pt;font-weight:700;color:#92400e}',
+  /* Notes */
+  '.pdf-notes{margin:2mm 10mm;padding:3mm 4mm;background:#f9fafb;border-left:3px solid var(--doc-color,#0066cc);font-size:8pt;color:#444;line-height:1.5}',
+  /* Footer */
+  '.pdf-footer{position:fixed;bottom:6mm;left:10mm;right:10mm;display:flex;justify-content:space-between;align-items:flex-end;font-size:7pt;color:#aaa;border-top:1px solid #e5e7eb;padding-top:3mm}',
+  /* Avoir */
+  '.pdf-avoir .pdf-doc-type .type-label{color:#dc2626}',
+  '.pdf-avoir .pdf-header{border-bottom-color:#dc2626}',
+  '.pdf-avoir{--doc-color:#dc2626}',
+  /* Livraison */
+  '.pdf-bl{--doc-color:#059669}',
+  /* Devis */
+  '.pdf-devis{--doc-color:#7c3aed}',
+  /* Facture */
+  '.pdf-facture{--doc-color:#d97706}',
+  /* Acompte */
+  '.pdf-acompte{--doc-color:#0891b2}'
+].join('\n');
+
+/* ── genererTemplateHTML : construit le HTML complet du document ── */
+function genererTemplateHTML(type, orderId, acomptePct){
+  console.log('PDF: Début de génération pour', type, 'orderId='+orderId);
+
+  /* ── Sécurisation des données ── */
+  var o=DB_COMMANDES.find(function(x){return x.id===orderId;});
+  if(!o){console.error('PDF: commande introuvable '+orderId);return null;}
+
+  var userRaw=DB_USERS.find(function(u){return u.id===o.userId;});
+  /* Valeurs sécurisées — jamais undefined */
+  var user={
+    first:     (userRaw&&userRaw.first)||o.userName||'Client',
+    last:      (userRaw&&userRaw.last)||'',
+    email:     (userRaw&&userRaw.email)||o.userEmail||'Non renseigné',
+    tel:       (userRaw&&userRaw.tel)||'Non renseigné',
+    company:   (userRaw&&userRaw.company)||'Non renseignée',
+    addr:      (userRaw&&userRaw.addr)||o.addr||'Adresse non renseignée',
+    discount:  (userRaw&&userRaw.discount)||0
+  };
+  var ci=DB_CONFIG.contact||DB_CONFIG.contactInfo||{};
+  var societe={
+    nom:  ci.companyName||'De Cooman Racing Performance',
+    addr: ci.address||'Belgique',
+    email:ci.email||'DCRkoru@gmail.com',
+    tel:  ci.phone||ci.tel||''
   };
 
-  /* ── 3. Build HTML document ── */
-  const htmlDoc=buildPdfHtml(type,orderId,pct);
-  if(!htmlDoc){toast('Erreur génération document','error');return;}
+  var docLabels={commande:'BON DE COMMANDE',livraison:'BON DE LIVRAISON',
+    facture:'FACTURE',devis:'DEVIS',acompte:"FACTURE D'ACOMPTE",avoir:'AVOIR'};
+  var docClasses={commande:'',livraison:' pdf-bl',facture:' pdf-facture',
+    devis:' pdf-devis',acompte:' pdf-acompte',avoir:' pdf-avoir'};
+  var docColors={commande:'#0066cc',livraison:'#059669',facture:'#d97706',
+    devis:'#7c3aed',acompte:'#0891b2',avoir:'#dc2626'};
+  var pfx={commande:'BC',devis:'DEV',facture:'FAC',livraison:'BL',acompte:'ACP',avoir:'AVO'};
 
-  /* ── 4. Nom de fichier ── */
-  const pfx={commande:'BC',devis:'DEV',facture:'FAC',livraison:'BL',acompte:'ACP',avoir:'AVO'};
-  const docNum=(pfx[type]||type.slice(0,3).toUpperCase())+'-'+orderId+'-'+new Date().getFullYear();
-  const filename=type+'_'+docNum+'_'+new Date().toISOString().slice(0,10)+'.pdf';
-
-  /* ── 5. Téléchargement ── */
-  if(typeof html2pdf==='undefined'){
-    console.warn('DEBUG [genererDocument] html2pdf.js non chargé — ouverture onglet fallback');
-    const blob=new Blob(['<!DOCTYPE html><html><head><meta charset="utf-8"/><title>'+docNum+'</title></head><body>'+htmlDoc+'</body></html>'],
-      {type:'text/html;charset=utf-8'});
-    const url=URL.createObjectURL(blob);
-    window.open(url,'_blank');
-    setTimeout(()=>URL.revokeObjectURL(url),20000);
-    return;
-  }
-
-  toast('Génération PDF…','info');
-  const wrap=document.createElement('div');
-  wrap.innerHTML=htmlDoc;
-  wrap.style.cssText='position:fixed;left:-9999px;top:0;width:210mm;z-index:-999;background:#fff';
-  document.body.appendChild(wrap);
-
-  html2pdf().set({
-    margin:0, filename,
-    image:{type:'jpeg',quality:0.98},
-    html2canvas:{scale:2,useCORS:true,letterRendering:true,logging:false,backgroundColor:'#ffffff'},
-    jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
-  }).from(wrap).save()
-    .then(()=>{
-      document.body.removeChild(wrap);
-      toast('✓ PDF téléchargé : '+filename,'success');
-      console.log('DEBUG [genererDocument] ✓ saved '+filename);
-    })
-    .catch(err=>{
-      if(document.body.contains(wrap))document.body.removeChild(wrap);
-      console.error('[genererDocument] erreur html2pdf:',err);
-      toast('Erreur PDF : '+err.message,'error');
-    });
-}
-
-function aperçuDocument(){
-  const type    = window._pdfType||'commande';
-  const orderId = document.getElementById('pdf-order')&&document.getElementById('pdf-order').value||'';
-  const pct     = parseFloat(document.getElementById('pdf-pct')&&document.getElementById('pdf-pct').value)||30;
-  if(!orderId){toast('Sélectionnez une commande','error');return;}
-  const htmlDoc=buildPdfHtml(type,orderId,pct);
-  if(!htmlDoc){toast('Commande introuvable','error');return;}
-  const blob=new Blob(['<!DOCTYPE html><html><head><meta charset="utf-8"/><style>body{margin:0;font-family:Arial,sans-serif;}</style></head><body>'+htmlDoc+'</body></html>'],
-    {type:'text/html;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const w=window.open(url,'_blank','width=900,height=720');
-  setTimeout(()=>URL.revokeObjectURL(url),30000);
-  console.log('DEBUG [aperçuDocument] type='+type+' orderId='+orderId);
-}
-
-function genererEtEnvoyerDoc(methode){
-  const type    = window._pdfType||'commande';
-  const orderId = document.getElementById('pdf-order')&&document.getElementById('pdf-order').value||'';
-  if(!orderId){toast('Sélectionnez une commande','error');return;}
-  const o=DB_COMMANDES.find(x=>x.id===orderId);if(!o)return;
-  const user=DB_USERS.find(u=>u.id===o.userId)||{};
-  const ci=DB_CONFIG.contact||DB_CONFIG.contactInfo||{};
-  const pfx={commande:'BC',devis:'DEV',facture:'FAC',livraison:'BL',acompte:'ACP',avoir:'AVO'};
-  const docNum=(pfx[type]||type.slice(0,3).toUpperCase())+'-'+orderId+'-'+new Date().getFullYear();
-  const subject='[De Cooman RP] '+type.charAt(0).toUpperCase()+type.slice(1)+' n° '+docNum;
-  const body='Bonjour '+(user.first||o.userName)+',\n\nVeuillez trouver votre '+type+' n° '+docNum
-    +'.\n\nMontant TTC : '+fmt(oTTC(o))+'\n\nCordialement,\n'+(ci.companyName||'De Cooman Racing Performance');
-  const emailTo=user.email||o.userEmail||'';
-  /* Générer d'abord */
-  genererDocument(type,orderId);
-  /* Ouvrir email après délai */
-  setTimeout(()=>{
-    if(methode==='gmail'){
-      window.open('https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent(emailTo)
-        +'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body),'_blank','noopener');
-    } else {
-      const a=document.createElement('a');
-      a.href='mailto:'+emailTo+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
-      document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),500);
-    }
-    toast('Email préparé ✓','info');
-  },1800);
-}
-
-
-function buildPdfHtml(type, orderId, acomptePct){
-  var o=DB_COMMANDES.find(function(x){return x.id===orderId;});if(!o)return null;
-  var user=DB_USERS.find(function(u){return u.id===o.userId;})||{};
-  var ci=DB_CONFIG.contact||DB_CONFIG.contactInfo||{companyName:'De Cooman Racing Performance',address:'Belgique',email:'DCRkoru@gmail.com'};
-  var societeEmail=ci.email||ci.emails&&ci.emails[0]&&ci.emails[0].address||'DCRkoru@gmail.com';
-  var societeTel=ci.phone||ci.tel||'';
-
-  var docLabels={commande:'BON DE COMMANDE',livraison:'BON DE LIVRAISON',facture:'FACTURE',devis:'DEVIS',acompte:'FACTURE D\'ACOMPTE',avoir:'AVOIR'};
-  var docColors={commande:'#0066cc',livraison:'#059669',facture:'#d97706',devis:'#7c3aed',acompte:'#0891b2',avoir:'#dc2626'};
   var docLabel=docLabels[type]||type.toUpperCase();
-  var docColor=docColors[type]||'#1a1a2e';
-  var docNum=type.slice(0,3).toUpperCase()+'-'+o.id+'-'+new Date().getFullYear();
+  var docClass=(docClasses[type]||'');
+  var docColor=docColors[type]||'#0066cc';
+  var docNum=(pfx[type]||type.slice(0,3).toUpperCase())+'-'+o.id+'-'+new Date().getFullYear();
+  var dateStr=new Date(o.date||Date.now()).toLocaleDateString('fr-BE',{day:'2-digit',month:'long',year:'numeric'});
 
+  /* ── Calculs ── */
   var clientDisc=(user.discount||0)/100;
   var ht=oHT(o), ship=oShip(o), tva=oTVA(o), ttc=oTTC(o);
-  var totalGross=o.items.reduce(function(s,i){var p=DB_PRODUITS.find(function(x){return x.id===i.pid;})||{};return s+(p.price||i.unitPrice)*i.qty;},0);
+  var totalGross=(o.items||[]).reduce(function(s,it){
+    var p=DB_PRODUITS.find(function(x){return x.id===it.pid;})||{};
+    return s+((p.price||it.unitPrice)*it.qty);
+  },0);
   var totalSaved=totalGross-ht;
+  var pct=parseFloat(acomptePct)||30;
+  var acompteAmount=ttc*(pct/100);
 
-  /* ── Table rows ── */
-  var tableRows=o.items.map(function(i){
-    var prod=DB_PRODUITS.find(function(p){return p.id===i.pid;})||{};
-    var catPrice=prod.price||i.unitPrice;
-    var volPct=(typeof getVolumePct==='function')?getVolumePct(prod,i.qty):0;
-    var hasDisco=i.unitPrice<catPrice-0.001;
+  var showPrices=type!=='livraison';
+
+  /* ── Lignes articles ── */
+  var tableRows=(o.items||[]).map(function(it){
+    var prod=DB_PRODUITS.find(function(p){return p.id===it.pid;})||{};
+    var catPrice=prod.price||it.unitPrice;
+    var volPct=(typeof getVolumePct==='function')?getVolumePct(prod,it.qty):0;
     var badges='';
-    if(clientDisc>0) badges+='<span class="disc-badge disc-client">\u2212'+(clientDisc*100)+'% client</span>';
-    if(volPct>0) badges+='<span class="disc-badge disc-vol">\u2212'+volPct+'% vol.</span>';
-    var strike=hasDisco?'<span class="price-strike">'+catPrice.toFixed(2)+'\u00a0\u20ac</span> ':'';
-    var showPrices=type!=='livraison';
+    if(clientDisc>0)badges+='<span class="disc-badge disc-client">−'+(clientDisc*100)+'% client</span>';
+    if(volPct>0)badges+='<span class="disc-badge disc-vol">−'+volPct+'% vol.</span>';
+    var strikeHtml=(it.unitPrice<catPrice-0.001)
+      ?'<span class="price-strike">'+catPrice.toFixed(2)+' €</span> ':'' ;
     return '<tr>'
-      +'<td class="ref">REF-'+String(i.pid).padStart(4,'0')+'</td>'
-      +'<td><div style="font-weight:600;color:#1a1a2e">'+i.name+'</div>'+(badges?'<div style="margin-top:1px">'+badges+'</div>':'')+'</td>'
-      +'<td style="text-align:right">'+i.qty.toLocaleString('fr-FR')+' u.</td>'
-      +(showPrices?'<td class="right col-prix">'+strike+i.unitPrice.toFixed(2)+'\u00a0\u20ac</td>':'')
-      +(showPrices?'<td class="right col-total">'+(i.unitPrice*i.qty).toFixed(2)+'\u00a0\u20ac</td>':'')
+      +'<td class="ref">'+String(it.pid).padStart(5,'0')+'</td>'
+      +'<td><div style="font-weight:600">'+it.name+'</div>'
+        +(badges?'<div style="margin-top:1px">'+badges+'</div>':'')+'</td>'
+      +'<td style="text-align:right">'+Number(it.qty).toLocaleString('fr-FR')+' u.</td>'
+      +(showPrices?'<td class="right col-prix">'+strikeHtml+it.unitPrice.toFixed(2)+' €</td>':'')
+      +(showPrices?'<td class="right col-total">'+(it.unitPrice*it.qty).toFixed(2)+' €</td>':'')
       +'</tr>';
   }).join('');
 
-  /* ── Totals ── */
-  var savingsRow=totalSaved>0.01
-    ?'<div class="pdf-total-row savings"><span>\ud83d\udcb8 \u00c9conomie remises</span><span>\u2212'+totalSaved.toFixed(2)+'\u00a0\u20ac</span></div>'
-    :'';
-  var shipRow=ship>0
-    ?'<div class="pdf-total-row ship"><span>Livraison'+(o.shippingZoneLabel?' ('+o.shippingZoneLabel+')':'')+'</span><span>'+ship.toFixed(2)+'\u00a0\u20ac</span></div>'
-    :(o.shippingZone?'<div class="pdf-total-row ship" style="color:#059669"><span>Livraison</span><span>Gratuite \u2713</span></div>':'');
-
-  /* Acompte calculation */
-  var pct=parseFloat(acomptePct)||30;
-  var acompteAmount=ttc*(pct/100);
-  var acompteHtml='';
-  if(type==='acompte'){
-    acompteHtml='<div class="pdf-acompte-row">'
-      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2mm">'
-        +'<div><div style="font-size:8pt;text-transform:uppercase;letter-spacing:1.5px;color:#92400e;font-weight:600;margin-bottom:1px">Acompte demand\u00e9</div>'
-          +'<div class="pct">'+pct+'%</div><div style="font-size:8pt;color:#92400e">du montant TTC total</div>'
-        +'</div>'
-        +'<div style="text-align:right"><div style="font-size:8pt;color:#92400e;font-weight:600;margin-bottom:1px">Montant \u00e0 r\u00e9gler maintenant</div>'
-          +'<div class="amount">'+acompteAmount.toFixed(2)+'\u00a0\u20ac</div>'
-          +'<div style="font-size:7.5pt;color:#a16207">Solde restant : '+(ttc-acompteAmount).toFixed(2)+'\u00a0\u20ac TTC</div>'
-        +'</div>'
-      +'</div>'
-      +'</div>';
-  }
-
-  /* ── Avoir note ── */
-  var avoirNote=type==='avoir'
-    ?'<div class="pdf-notes" style="border-left-color:#dc2626"><strong>Document d\'avoir</strong> \u2014 Ce document annule et remplace la facture ou le bon de commande correspondant. Les montants indiqu\u00e9s seront d\u00e9duits de votre prochaine facture ou rembours\u00e9s selon les modalit\u00e9s convenues.</div>'
+  /* ── Acompte block ── */
+  var acompteBlock=type==='acompte'
+    ?'<div class="pdf-acompte-row">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center">'
+          +'<div><div style="font-size:8pt;text-transform:uppercase;letter-spacing:1px;color:#92400e;font-weight:700">Acompte demandé</div>'
+            +'<div class="pct">'+pct+'%</div><div style="font-size:8pt;color:#92400e">du montant TTC</div></div>'
+          +'<div style="text-align:right"><div style="font-size:8pt;color:#92400e;font-weight:700">Montant à régler maintenant</div>'
+            +'<div class="amount">'+acompteAmount.toFixed(2)+' €</div>'
+            +'<div style="font-size:7.5pt;color:#a16207">Solde : '+(ttc-acompteAmount).toFixed(2)+' € TTC</div></div>'
+        +'</div></div>'
     :'';
 
-  /* ── Notes commande ── */
-  var notesHtml=o.notes
-    ?'<div class="pdf-notes"><strong>Notes :</strong> '+o.notes+'</div>'
-    :'';
-
-  /* ── Conditions ── */
-  var condHtml='<div class="pdf-notes"><strong>R\u00e8glement :</strong> '+o.payment
-    +(ship>0?' \u00b7 <strong>Livraison :</strong> '+o.shippingZoneLabel+' '+ship.toFixed(2)+'\u00a0\u20ac HT':'')
-    +(DB_CONFIG.shipping&&DB_CONFIG.shipping.note?' \u00b7 '+DB_CONFIG.shipping.note:'')
-    +'</div>';
-
-  /* ── Table header ── */
-  var showPrices=type!=='livraison';
-  var thPrice=showPrices?'<th class="col-prix right">P.U. HT</th><th class="col-total right">Total HT</th>':'';
-
-  /* ── Full HTML ── */
-  var bodyClass='pdf-page'+(type==='avoir'?' pdf-avoir':'')+(type==='livraison'?' pdf-bl':'');
-
+  /* ── Build full HTML ── */
   return '<!DOCTYPE html>'
     +'<html lang="fr"><head><meta charset="UTF-8">'
-    +'<style>'+PDF_CSS+'</style></head>'
-    +'<body><div class="'+bodyClass+'">'
+    +'<style>:root{--doc-color:'+docColor+'}'+PDF_CSS+'</style>'
+    +'</head>'
+    +'<body><div class="pdf-page'+docClass+'">'
 
     /* HEADER */
     +'<div class="pdf-header">'
-      +'<div><div class="pdf-logo-name">De Cooman</div>'
-        +'<div class="pdf-logo-sub">Racing Performance</div>'
-        +'<div style="font-size:8pt;color:#999;margin-top:4px">'+ci.address+'</div>'
-        +'<div style="font-size:8pt;color:#999">'+societeEmail+(societeTel?' \u00b7 '+societeTel:'')+'</div>'
-      +'</div>'
-      +'<div class="pdf-doc-type">'
-        +'<h1 style="color:'+docColor+'">'+docLabel+'</h1>'
-        +'<div class="doc-num">N\u00b0 '+docNum+'</div>'
-        +'<div class="doc-date">Date : '+new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})+'</div>'
-        +'<div class="doc-date" style="margin-top:2px">R\u00e9f. commande : '+o.id+'</div>'
-      +'</div>'
+      +'<div class="pdf-logo">De Cooman<span> Racing</span><small>Performance · Luminaires & Accessoires Auto</small></div>'
+      +'<div class="pdf-doc-type"><div class="type-label">'+docLabel+'</div>'
+        +'<div class="doc-num">N° '+docNum+'</div>'
+        +'<div class="doc-date">'+dateStr+'</div></div>'
     +'</div>'
-
-    +'<div class="pdf-accent" style="background:linear-gradient(90deg,'+docColor+' 0%,#1a1a2e 100%)"></div>'
 
     /* META */
     +'<div class="pdf-meta">'
-      +'<div class="pdf-meta-item"><div class="lbl">N\u00b0 document</div><div class="val">'+docNum+'</div></div>'
-      +'<div class="pdf-meta-item"><div class="lbl">Date</div><div class="val">'+new Date().toLocaleDateString('fr-FR')+'</div></div>'
-      +'<div class="pdf-meta-item"><div class="lbl">Statut</div><div class="val">'+(SL[o.status]||o.status)+'</div></div>'
-      +'<div class="pdf-meta-item"><div class="lbl">R\u00e8glement</div><div class="val">'+o.payment+'</div></div>'
+      +'<div class="pdf-meta-item"><div class="lbl">Commande</div><div class="val">'+o.id+'</div></div>'
+      +'<div class="pdf-meta-item"><div class="lbl">Date</div><div class="val">'+dateStr+'</div></div>'
+      +'<div class="pdf-meta-item"><div class="lbl">Statut</div><div class="val">'+(SL&&SL[o.status]||o.status||'—')+'</div></div>'
+      +'<div class="pdf-meta-item"><div class="lbl">Règlement</div><div class="val">'+(o.payment||'—')+'</div></div>'
     +'</div>'
 
     /* PARTIES */
     +'<div class="pdf-parties">'
       +'<div class="pdf-party emetteur">'
-        +'<div class="party-lbl">\u00c9mis par</div>'
-        +'<p><strong>'+ci.companyName+'</strong><br/>'+ci.address+'<br/>'+societeEmail+(societeTel?'<br/>'+societeTel:'')+'</p>'
+        +'<div class="party-lbl">Émis par</div>'
+        +'<p><strong>'+societe.nom+'</strong><br/>'
+          +societe.addr+'<br/>'
+          +societe.email
+          +(societe.tel?'<br/>'+societe.tel:'')
+        +'</p>'
       +'</div>'
       +'<div class="pdf-party client">'
-        +'<div class="party-lbl">Factur\u00e9 \u00e0</div>'
-        +'<p><strong>'+(user.company||o.userName)+'</strong><br/>'
-          +(user.first||'')+' '+(user.last||'')+'<br/>'
-          +(o.addr||user.addr||'\u2014')+'<br/>'
-          +(user.email||o.userEmail||'\u2014')
-          +(user.tel?'<br/>'+user.tel:'')
-          +(clientDisc>0?'<br/><span style="color:#065f46;font-weight:700;font-size:8.5pt">Remise client : \u2212'+(clientDisc*100)+'%</span>':'')
+        +'<div class="party-lbl">Facturé à</div>'
+        +'<p><strong>'+(user.company!=='Non renseignée'?user.company:(user.first+' '+user.last))+'</strong><br/>'
+          +user.first+' '+user.last+'<br/>'
+          +user.addr+'<br/>'
+          +user.email
+          +(user.tel!=='Non renseigné'?'<br/>'+user.tel:'')
+          +(clientDisc>0?'<br/><span style="color:#065f46;font-weight:700;font-size:8pt">Remise client : −'+(clientDisc*100)+'%</span>':'')
         +'</p>'
       +'</div>'
     +'</div>'
 
     /* TABLE */
     +'<table class="pdf-table"><thead><tr>'
-      +'<th style="width:12%">R\u00e9f.</th>'
-      +'<th>D\u00e9signation</th>'
-      +'<th style="text-align:right;width:8%">Qt\u00e9</th>'
-      +thPrice
+      +'<th style="width:12%">Réf.</th>'
+      +'<th>Désignation</th>'
+      +'<th style="text-align:right;width:8%">Qté</th>'
+      +(showPrices?'<th class="right" style="width:14%">P.U. HT</th>':'')
+      +(showPrices?'<th class="right" style="width:14%">Total HT</th>':'')
     +'</tr></thead><tbody>'+tableRows+'</tbody></table>'
 
     /* TOTALS */
-    +(type!=='livraison'?
-      '<div class="pdf-totals"><div class="pdf-totals-inner">'
-      +savingsRow
-      +'<div class="pdf-total-row ht"><span>Sous-total HT</span><span>'+ht.toFixed(2)+'\u00a0\u20ac</span></div>'
-      +shipRow
-      +'<div class="pdf-total-row tva"><span>TVA 21%</span><span>'+tva.toFixed(2)+'\u00a0\u20ac</span></div>'
-      +'<div class="pdf-total-row ttc"><span>TOTAL TTC</span><span>'+(type==='avoir'?'\u2212':'')+ttc.toFixed(2)+'\u00a0\u20ac</span></div>'
-      +'</div></div>'
-    :'')
+    +(showPrices
+      ?'<div class="pdf-totals"><div class="pdf-totals-inner">'
+          +(totalSaved>0.01?'<div class="pdf-total-row savings"><span>💸 Économie remises</span><span>−'+totalSaved.toFixed(2)+' €</span></div>':'')
+          +'<div class="pdf-total-row ht"><span>Sous-total HT</span><span>'+ht.toFixed(2)+' €</span></div>'
+          +(ship>0?'<div class="pdf-total-row ship"><span>Livraison'+(o.shippingZoneLabel?' ('+o.shippingZoneLabel+')':'')+'</span><span>'+ship.toFixed(2)+' €</span></div>':'')
+          +(ship===0&&o.shippingZone?'<div class="pdf-total-row ship" style="color:#059669"><span>Livraison</span><span>Gratuite ✓</span></div>':'')
+          +'<div class="pdf-total-row tva"><span>TVA 21%</span><span>'+tva.toFixed(2)+' €</span></div>'
+          +'<div class="pdf-total-row ttc"><span>TOTAL TTC</span><span>'+(type==='avoir'?'−':'')+ttc.toFixed(2)+' €</span></div>'
+        +'</div></div>'
+      :'')
 
     /* ACOMPTE */
-    +acompteHtml
+    +acompteBlock
 
     /* AVOIR NOTE */
-    +avoirNote
+    +(type==='avoir'?'<div class="pdf-notes" style="border-left-color:#dc2626"><strong>Document d\'avoir</strong> — Ce document annule et remplace la facture originale à hauteur du montant indiqué.</div>':'')
 
     /* NOTES */
-    +notesHtml
+    +(o.notes?'<div class="pdf-notes"><strong>Notes :</strong> '+o.notes+'</div>':'')
 
     /* CONDITIONS */
-    +condHtml
+    +'<div class="pdf-notes"><strong>Règlement :</strong> '+(o.payment||'—')
+      +(ship>0?' · <strong>Livraison :</strong> '+ship.toFixed(2)+' € HT':'')
+      +(DB_CONFIG.shipping&&DB_CONFIG.shipping.note?' · '+DB_CONFIG.shipping.note:'')
+    +'</div>'
 
     /* FOOTER */
     +'<div class="pdf-footer">'
-      +'<div class="left">'+ci.companyName+' \u00b7 '+ci.address+'<br/>'+societeEmail+(societeTel?' \u00b7 '+societeTel:'')+'<br/><em>Document g\u00e9n\u00e9r\u00e9 le '+new Date().toLocaleDateString('fr-FR')+' \u2014 Toute reproduction interdite</em></div>'
-      +'<div class="right">'+docLabel+'<br/>'+docNum+'</div>'
+      +'<div class="left">'+societe.nom+' · '+societe.addr+'<br/>'+societe.email+(societe.tel?' · '+societe.tel:'')+'<br/><em>Document généré le '+new Date().toLocaleDateString('fr-BE')+'</em></div>'
+      +'<div style="text-align:right">'+docLabel+'<br/>'+docNum+'</div>'
     +'</div>'
 
     +'</div></body></html>';
 }
+
+/* ── genererDocument : téléchargement PDF ── */
+function genererDocument(typeArg, orderIdArg){
+  var type    = typeArg    || window._pdfType || 'commande';
+  var orderId = orderIdArg || (document.getElementById('pdf-order')&&document.getElementById('pdf-order').value)||'';
+  var pct     = parseFloat(document.getElementById('pdf-pct')&&document.getElementById('pdf-pct').value)||30;
+
+  console.log('PDF: Début de génération pour', type, '— orderId='+orderId);
+  if(!orderId){toast('Sélectionnez une commande','error');return;}
+
+  var htmlDoc=genererTemplateHTML(type, orderId, pct);
+  if(!htmlDoc){toast('Erreur : commande ou données manquantes','error');return;}
+
+  var pfx={commande:'BC',devis:'DEV',facture:'FAC',livraison:'BL',acompte:'ACP',avoir:'AVO'};
+  var docNum=(pfx[type]||type.slice(0,3).toUpperCase())+'-'+orderId+'-'+new Date().getFullYear();
+  var filename=docNum+'_'+new Date().toISOString().slice(0,10)+'.pdf';
+
+  if(typeof html2pdf==='undefined'){
+    console.warn('PDF: html2pdf.js non chargé — fallback onglet');
+    var blob=new Blob([htmlDoc],{type:'text/html;charset=utf-8'});
+    var url=URL.createObjectURL(blob);
+    window.open(url,'_blank');
+    setTimeout(function(){URL.revokeObjectURL(url);},30000);
+    return;
+  }
+
+  toast('⏳ Génération PDF en cours…','info');
+  var wrap=document.createElement('div');
+  wrap.innerHTML=htmlDoc;
+  wrap.style.cssText='position:fixed;left:-9999px;top:0;width:210mm;background:#fff;z-index:-999';
+  document.body.appendChild(wrap);
+
+  html2pdf().set({
+    margin:      10,
+    filename:    filename,
+    image:       {type:'jpeg', quality:0.98},
+    html2canvas: {scale:2, useCORS:true, letterRendering:true, logging:false, backgroundColor:'#ffffff'},
+    jsPDF:       {unit:'mm', format:'a4', orientation:'portrait'}
+  }).from(wrap).save()
+    .then(function(){
+      document.body.removeChild(wrap);
+      toast('✓ PDF téléchargé : '+filename,'success');
+      console.log('PDF: ✓ saved', filename);
+    })
+    .catch(function(err){
+      if(document.body.contains(wrap))document.body.removeChild(wrap);
+      console.error('PDF: erreur html2pdf:', err);
+      toast('Erreur PDF : '+err.message,'error');
+    });
+}
+
+/* ── aperçuDocument : affiche le PDF dans une modale ── */
+function aperçuDocument(typeArg, orderIdArg){
+  window._previewType=typeArg||window._pdfType||'commande';
+  window._previewOrderId=orderIdArg||(document.getElementById('pdf-order')&&document.getElementById('pdf-order').value)||'';
+  var type    = typeArg    || window._pdfType || 'commande';
+  var orderId = orderIdArg || (document.getElementById('pdf-order')&&document.getElementById('pdf-order').value)||'';
+  var pct     = parseFloat(document.getElementById('pdf-pct')&&document.getElementById('pdf-pct').value)||30;
+
+  console.log('PDF: Aperçu pour', type, 'orderId='+orderId);
+  if(!orderId){toast('Sélectionnez une commande','error');return;}
+
+  var htmlDoc=genererTemplateHTML(type, orderId, pct);
+  if(!htmlDoc){toast('Erreur : données manquantes','error');return;}
+
+  /* Modale d'aperçu inline */
+  var modal=document.getElementById('overlay-pdfPreview');
+  if(modal){
+    var frame=document.getElementById('pdfPreviewFrame');
+    if(frame){
+      frame.srcdoc=htmlDoc;
+      openOverlay('pdfPreview');
+      return;
+    }
+  }
+  /* Fallback : nouvel onglet */
+  var blob=new Blob([htmlDoc],{type:'text/html;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var w=window.open(url,'_blank','width=920,height=780');
+  if(!w)toast('Autorisez les popups pour l\'aperçu','error');
+  setTimeout(function(){URL.revokeObjectURL(url);},30000);
+}
+
+/* ── genererEtEnvoyerDoc : PDF + Gmail ou mailto ── */
+function genererEtEnvoyerDoc(methode){
+  var type    = window._pdfType || 'commande';
+  var orderId = (document.getElementById('pdf-order')&&document.getElementById('pdf-order').value)||'';
+  if(!orderId){toast('Sélectionnez une commande','error');return;}
+
+  var o=DB_COMMANDES.find(function(x){return x.id===orderId;});if(!o)return;
+  var userRaw=DB_USERS.find(function(u){return u.id===o.userId;})||{};
+  var user={
+    first:(userRaw.first||o.userName||'Client'),
+    last:(userRaw.last||''),
+    email:(userRaw.email||o.userEmail||'')
+  };
+  var ci=DB_CONFIG.contact||{};
+  var pfx={commande:'BC',devis:'DEV',facture:'FAC',livraison:'BL',acompte:'ACP',avoir:'AVO'};
+  var docNum=(pfx[type]||type.slice(0,3).toUpperCase())+'-'+orderId+'-'+new Date().getFullYear();
+
+  /* Récupérer template email */
+  var tpl=CONFIG_EMAILS[type]||CONFIG_EMAILS.commande;
+  var sujet=resoudreVarsEmail(tpl.sujet, o, user, docNum);
+  var corps=resoudreVarsEmail(tpl.corps, o, user, docNum);
+  var emailTo=user.email;
+
+  console.log('PDF: Envoi '+methode+' pour', type, 'to='+emailTo);
+
+  /* Générer le PDF d'abord */
+  genererDocument(type, orderId);
+
+  /* Ouvrir email après 2s (laisser le PDF se générer) */
+  setTimeout(function(){
+    if(methode==='gmail'){
+      /* Encode avec gestion des sauts de ligne %0D%0A */
+      var bodyEncoded=encodeURIComponent(corps).replace(/%0A/g,'%0D%0A');
+      var gmailUrl='https://mail.google.com/mail/?view=cm&fs=1'
+        +'&to='+encodeURIComponent(emailTo)
+        +'&su='+encodeURIComponent(sujet)
+        +'&body='+bodyEncoded;
+      console.log('PDF: Gmail URL créée — to='+emailTo);
+      window.open(gmailUrl,'_blank','noopener,noreferrer');
+    } else {
+      /* mailto: */
+      var mailtoUrl='mailto:'+encodeURIComponent(emailTo)
+        +'?subject='+encodeURIComponent(sujet)
+        +'&body='+encodeURIComponent(corps);
+      var a=document.createElement('a');
+      a.href=mailtoUrl;
+      document.body.appendChild(a);a.click();
+      setTimeout(function(){a.remove();},500);
+    }
+    toast('✓ Email préparé pour '+emailTo,'info');
+  },2000);
+}
+
+/* ── ouvrirModalePDF : depuis les commandes — choisir type + générer ── */
+function ouvrirModalePDF(orderId){
+  console.log('PDF: ouvrirModalePDF orderId='+orderId);
+  var o=DB_COMMANDES.find(function(x){return x.id===orderId;});
+  if(!o){toast('Commande introuvable','error');return;}
+
+  /* Basculer sur l'onglet docs avec la commande pré-sélectionnée */
+  adminTab('docs');
+  /* Attendre que renderAdminModeles ait peuplé le select */
+  setTimeout(function(){
+    var sel=document.getElementById('pdf-order');
+    if(sel)sel.value=orderId;
+    /* Déclencher visuel du select */
+    selectPdfType(window._pdfType||'commande');
+    toast('Commande '+orderId+' sélectionnée — choisissez le type de document','info');
+  },150);
+}
+
 
 
 function traiterDocument(type, methode){
@@ -3529,35 +3766,41 @@ function saveOrderEdit(){
 /* ════ MISSING ADMIN RENDER FUNCTIONS ════ */
 
 function renderAdminOrders(){
-  console.log('DEBUG [renderAdminOrders]');
-  const ct=document.getElementById('adminContent');if(!ct)return;
-  ct.innerHTML=`
-<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:1.2rem">
-  <div><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Gestion</p>
-  <h2 class="font-display text-2xl font-bold text-white uppercase">Commandes <span style="color:#00a8f3">(${DB_COMMANDES.length})</span></h2></div>
-</div>
-<div class="card overflow-hidden">
-  <div style="overflow-x:auto">
-  <table class="a-table"><thead><tr>
-    <th>Réf.</th><th>Client</th><th>Date</th><th>Montant TTC</th><th>Statut</th><th>Actions</th>
-  </tr></thead>
-  <tbody>${DB_COMMANDES.map(o=>`
-    <tr>
-      <td><code style="color:#00a8f3">${o.id}</code></td>
-      <td>${o.userName||''}</td>
-      <td>${o.date||''}</td>
-      <td style="font-weight:700">${fmt(oTTC(o))}</td>
-      <td>${sBadge(o.status)}</td>
-      <td style="display:flex;gap:.4rem;flex-wrap:wrap">
-        <button onclick="console.log('DEBUG [btn] Voir commande ${o.id}');openEditOrder('${o.id}')" class="btn btn-ghost btn-xs">Voir</button>
-        <select onchange="console.log('DEBUG [btn] Statut commande ${o.id}');adminUpdateStatus('${o.id}',this.value)" style="font-size:.7rem;background:rgba(0,0,0,.4);color:white;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:2px 6px">
-          ${Object.entries(SL).map(([k,v])=>`<option value="${k}" ${o.status===k?'selected':''}>${v}</option>`).join('')}
-        </select>
-      </td>
-    </tr>`).join('')}
-  </tbody></table>
-  </div>
-</div>`;
+  console.log('Bouton Commandes cliqué — renderAdminOrders DB_COMMANDES='+DB_COMMANDES.length);
+  var ct=document.getElementById('adminContent');if(!ct)return;
+
+  var rows=DB_COMMANDES.length===0
+    ?'<tr><td colspan="7" style="text-align:center;padding:2rem;color:rgba(255,255,255,.3)">Aucune commande.</td></tr>'
+    :DB_COMMANDES.map(function(o){
+      return '<tr>'
+        +'<td><code style="color:#00a8f3;font-size:.78rem">'+o.id+'</code></td>'
+        +'<td style="font-size:.8rem"><p style="font-weight:600">'+o.userName+'</p><p style="font-size:.65rem;color:rgba(255,255,255,.4)">'+o.userEmail+'</p></td>'
+        +'<td style="font-size:.75rem;color:rgba(255,255,255,.4)">'+o.date+'</td>'
+        +'<td style="font-weight:700;font-family:\'Bebas Neue\',sans-serif;font-size:1rem;color:#00a8f3">'+fmt(oTTC(o))+'</td>'
+        +'<td>'+sBadge(o.status)+'</td>'
+        +'<td><select onchange="console.log(\'Statut commande '+o.id+'\');adminUpdateStatus(\''+o.id+'\',this.value)" '
+          +'style="font-size:.7rem;background:rgba(0,0,0,.4);color:white;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:2px 6px;cursor:pointer">'
+          +Object.entries(SL).map(function(e){return '<option value="'+e[0]+'" '+(o.status===e[0]?'selected':'')+'>'+e[1]+'</option>';}).join('')
+        +'</select></td>'
+        +'<td><div style="display:flex;gap:.3rem;flex-wrap:wrap">'
+          +'<button onclick="console.log(\'Bouton Voir commande '+o.id+'\');openEditOrder(\''+o.id+'\')" class="btn btn-ghost btn-xs">📋 Voir</button>'
+          +'<button onclick="console.log(\'Bouton PDF commande '+o.id+'\');ouvrirModalePDF(\''+o.id+'\')" '
+            +'class="btn btn-xs" style="background:rgba(0,168,243,.1);border:1px solid rgba(0,168,243,.25);color:#00a8f3;border-radius:6px;padding:3px 9px;cursor:pointer;font-size:.68rem;font-weight:700">'
+            +'📄 PDF</button>'
+        +'</div></td>'
+      +'</tr>';
+    }).join('');
+
+  ct.innerHTML='<div class="flex flex-wrap items-center justify-between gap-4 mb-5">'
+    +'<div><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Gestion</p>'
+    +'<h2 class="font-display text-2xl font-bold text-white uppercase">Commandes <span style="color:#00a8f3">('+DB_COMMANDES.length+')</span></h2></div>'
+    +'<div style="display:flex;gap:.5rem">'
+      +'<button onclick="console.log(\'Export commandes\');exportCommandes()" class="btn btn-ghost btn-sm">📥 Export CSV</button>'
+    +'</div></div>'
+    +'<div class="card overflow-hidden"><div style="overflow-x:auto">'
+    +'<table class="a-table"><thead><tr>'
+      +'<th>Réf.</th><th>Client</th><th>Date</th><th>TTC</th><th>Statut</th><th>Changer statut</th><th>Actions</th>'
+    +'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
 }
 
 function renderAdminEmailSettings(){
