@@ -739,6 +739,7 @@ function verifierBaseDeDonnees(){
     console.log('%c✓ Base de données saine — aucune correction','color:#4ade80');
   }
   return c;
+  verifierCatalogues();
 }
 
 /* ── TOAST ── */
@@ -959,6 +960,16 @@ function applyHeroDesign(){
 }
 
 /* ── CATALOGUE ── */
+
+/* ── getCatalogById / getCatalogLabel : lookup par ID stable ── */
+function getCatalogById(id){
+  return (DB_CONFIG.catalogs||[]).find(c=>c.id===id)||null;
+}
+function getCatalogLabel(id){
+  const c=getCatalogById(id);
+  return c ? c.label : id;   /* fallback = l'ID lui-même */
+}
+
 function initCatalogue(){
   activeCatalogId=null;activeSubFilter='all';activeTechFilter='';
   document.getElementById('catalogChooser').style.display='block';
@@ -969,19 +980,26 @@ function initCatalogue(){
   _renderChooser();
 }
 function _getAvailableCatalogs(){
-  const FALLBACK_LUM={id:'cat_luminaire',label:'Luminaires Auto',
-    desc:'Phares, feux, strips LED & intérieur',color:'#00a8f3',
-    icon:'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z'};
-  const all=(DB_CONFIG.catalogs&&DB_CONFIG.catalogs.length)?DB_CONFIG.catalogs:[FALLBACK_LUM];
-  if(!currentUser){
-    const pub=all.filter(c=>c.id==='cat_luminaire');
-    console.log('DEBUG [getAvailableCatalogs] public — catalogs:',pub.map(c=>c.id).join(','));
-    return pub.length?pub:[FALLBACK_LUM];
+  const all=DB_CONFIG.catalogs||[];
+  /* Si DB vide : fallback luminaire par défaut */
+  if(!all.length){
+    return [{id:'cat_luminaire',label:'Luminaires Auto',
+      desc:'Phares, feux, strips LED & intérieur',color:'#00a8f3',
+      icon:'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z',
+      public:true}];
   }
-  const allowed=currentUser.catalogs||['cat_luminaire'];
+  if(!currentUser){
+    /* Public : catalogues marqués public:true — dynamique */
+    const pub=all.filter(c=>c.public===true);
+    const result=pub.length ? pub : [all[0]]; /* premier catalogue si aucun public */
+    console.log('[catalog] public →',result.map(c=>c.label).join(', '));
+    return result;
+  }
+  /* Connecté : catalogues dans user.catalogs[] */
+  const allowed=currentUser.catalogs||[];
   const avail=all.filter(c=>allowed.includes(c.id));
-  console.log('DEBUG [getAvailableCatalogs] user',currentUser.email,'— catalogs:',avail.map(c=>c.id).join(','));
-  return avail.length?avail:[FALLBACK_LUM];
+  console.log('[catalog] '+currentUser.email+' → catalogs:',avail.map(c=>c.label).join(', ')||'aucun');
+  return avail.length ? avail : [];
 }
 function _renderChooser(){
   const el=document.getElementById('catalogChooser');
@@ -2059,27 +2077,18 @@ function syncPublicFilters(){
 */
 function chargerSelectCatalogues(selectedId){
   const sel=document.getElementById('ep-catalog');
-  if(!sel){console.warn('[chargerSelectCatalogues] #ep-catalog introuvable');return;}
+  if(!sel){console.warn('[catalog] #ep-catalog introuvable');return;}
   const cats=DB_CONFIG.catalogs||[];
-  console.log('DEBUG [chargerSelectCatalogues] peuplement avec',cats.length,'catalogues, selectedId='+selectedId);
-  /* Vider + option vide */
-  sel.innerHTML='<option value="">— Choisir un catalogue (obligatoire) —</option>';
-  cats.forEach(c=>{
-    const opt=document.createElement('option');
-    opt.value=c.id;
-    opt.textContent=c.label+(c.id==='cat_luminaire'?' 💡':c.id==='cat_divers'?' 🔧':' 📦');
-    if(c.id===selectedId)opt.selected=true;
-    sel.appendChild(opt);
-  });
-  /* Fallback si aucun catalogue configuré */
+  /* Option vide obligatoire */
+  sel.innerHTML='<option value="">— Choisir un catalogue —</option>'
+    +cats.map(c=>`<option value="${c.id}" ${c.id===selectedId?'selected':''}>${c.label}</option>`).join('');
   if(!cats.length){
-    sel.innerHTML='<option value="cat_luminaire">Luminaires Auto (défaut)</option>'
-      +'<option value="cat_divers">Accessoires & Divers</option>';
-    if(selectedId){sel.value=selectedId;}
-    console.warn('[chargerSelectCatalogues] DB_CONFIG.catalogs vide — utilisation valeurs hardcodées');
+    /* Fallback: créer depuis DEFAULT_CONFIG si tout est vide */
+    sel.innerHTML='<option value="">— Aucun catalogue configuré —</option>';
+    console.warn('[catalog] DB_CONFIG.catalogs vide');
   }
   if(selectedId)sel.value=selectedId;
-  console.log('DEBUG [chargerSelectCatalogues] sel.value='+sel.value+' options='+sel.options.length);
+  console.log('[catalog] ep-catalog →',cats.map(c=>c.id+':'+c.label).join(' | '));
 }
 
 function openEditProduct(pid){
@@ -3660,122 +3669,289 @@ function saveAccueilConfig(cfg){
 */
 function renderAdminCatalogs(){
   const ct=document.getElementById('adminContent');if(!ct)return;
-  console.log('DEBUG [renderAdminCatalogs] catalogs=',DB_CONFIG.catalogs?.map(c=>c.id).join(','));
-
   const cats=DB_CONFIG.catalogs||[];
   const clients=DB_USERS.filter(u=>u.role==='client');
+  console.log('[renderAdminCatalogs] catalogs='+cats.length+' clients='+clients.length);
+
+  /* ── Ligne catalogue éditable ── */
+  function catRow(c){
+    const np=DB_PRODUITS.filter(p=>p.catalog_id===c.id).length;
+    const nu=DB_USERS.filter(u=>(u.catalogs||[]).includes(c.id)).length;
+    const col=c.color||'#00a8f3';
+    return `<div id="cat-row-${c.id}" style="padding:.7rem .85rem;margin-bottom:.45rem;
+      background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);
+      border-radius:12px;transition:border-color .2s"
+      onmouseover="this.style.borderColor='${col}44'"
+      onmouseout="this.style.borderColor='rgba(255,255,255,.07)'">
+      <!-- Ligne normale (affichage) -->
+      <div id="cat-view-${c.id}" style="display:flex;align-items:center;gap:.65rem">
+        <div style="width:34px;height:34px;border-radius:9px;background:${col}20;border:1px solid ${col}44;
+          display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg style="width:16px;height:16px;color:${col}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="${c.icon||'M4 6h16M4 10h16M4 14h16M4 18h16'}"/>
+          </svg>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:.4rem">
+            <span style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.05em;color:white">${c.label}</span>
+            ${c.public?'<span style="font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:#22c55e">PUBLIC</span>':'<span style="font-size:.6rem;color:rgba(255,255,255,.25);border:1px solid rgba(255,255,255,.1);padding:1px 6px;border-radius:4px">PRIVÉ</span>'}
+          </div>
+          <div style="display:flex;gap:.5rem;align-items:center;margin-top:1px">
+            <code style="font-size:.58rem;color:rgba(255,255,255,.25);font-family:monospace">${c.id}</code>
+            <span style="font-size:.62rem;color:rgba(255,255,255,.3)">${np} art. · ${nu} client${nu!==1?'s':''}</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:.3rem;flex-shrink:0">
+          <button onclick="console.log('Edit cat ${c.id}');startEditCatalog('${c.id}')"
+            style="padding:3px 9px;border-radius:7px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:rgba(255,255,255,.6);cursor:pointer;font-size:.7rem;font-weight:700;transition:all .15s"
+            onmouseover="this.style.borderColor='#00a8f3';this.style.color='#00a8f3'"
+            onmouseout="this.style.borderColor='rgba(255,255,255,.12)';this.style.color='rgba(255,255,255,.6)'">✏️ Modifier</button>
+          <button onclick="console.log('Toggle public ${c.id}');toggleCatalogPublic('${c.id}')"
+            style="padding:3px 9px;border-radius:7px;cursor:pointer;font-size:.7rem;font-weight:700;transition:all .15s;
+            border:1px solid ${c.public?'rgba(34,197,94,.3)':'rgba(255,255,255,.1)'};
+            background:${c.public?'rgba(34,197,94,.08)':'rgba(255,255,255,.03)'};
+            color:${c.public?'#22c55e':'rgba(255,255,255,.4)'}">${c.public?'🌐 Public':'🔒 Privé'}</button>
+          ${np===0?`<button onclick="if(confirm('Supprimer \\'${c.label}\\' ?'))deleteThisCatalog('${c.id}')"
+            style="padding:3px 8px;border-radius:7px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.07);color:#ef4444;cursor:pointer;font-size:.7rem">🗑</button>`:''}
+        </div>
+      </div>
+      <!-- Ligne édition (cachée) -->
+      <div id="cat-edit-${c.id}" style="display:none">
+        <div style="display:flex;flex-direction:column;gap:.5rem;padding-top:.5rem;border-top:1px solid rgba(255,255,255,.07);margin-top:.5rem">
+          <div style="display:flex;gap:.4rem;align-items:center">
+            <label style="font-family:Inter,sans-serif;font-size:.7rem;color:rgba(255,255,255,.4);white-space:nowrap;min-width:60px">Nom *</label>
+            <input type="text" id="cat-inp-${c.id}" value="${c.label}"
+              style="flex:1;background:rgba(0,0,0,.35);border:1px solid rgba(0,168,243,.4);border-radius:7px;
+              padding:5px 10px;color:white;font-family:Inter,sans-serif;font-size:.82rem;outline:none"
+              onkeydown="if(event.key==='Enter')saveCatalogName('${c.id}');if(event.key==='Escape')cancelEditCatalog('${c.id}')"/>
+          </div>
+          <div style="display:flex;gap:.4rem;align-items:center">
+            <label style="font-family:Inter,sans-serif;font-size:.7rem;color:rgba(255,255,255,.4);white-space:nowrap;min-width:60px">Description</label>
+            <input type="text" id="cat-desc-${c.id}" value="${c.desc||''}" placeholder="Description courte…"
+              style="flex:1;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.1);border-radius:7px;
+              padding:5px 10px;color:white;font-family:Inter,sans-serif;font-size:.78rem;outline:none"/>
+          </div>
+          <div style="display:flex;gap:.4rem;align-items:center">
+            <label style="font-family:Inter,sans-serif;font-size:.7rem;color:rgba(255,255,255,.4);white-space:nowrap;min-width:60px">Couleur</label>
+            <input type="color" id="cat-color-${c.id}" value="${c.color||'#00a8f3'}"
+              style="width:42px;height:28px;border:none;border-radius:6px;cursor:pointer;background:none"/>
+            <span style="font-family:monospace;font-size:.7rem;color:rgba(255,255,255,.4)" id="cat-colorhex-${c.id}">${c.color||'#00a8f3'}</span>
+          </div>
+          <div style="display:flex;gap:.4rem;justify-content:flex-end;margin-top:.25rem">
+            <button onclick="cancelEditCatalog('${c.id}')"
+              style="padding:4px 12px;border-radius:7px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:rgba(255,255,255,.5);cursor:pointer;font-size:.75rem">Annuler</button>
+            <button onclick="saveCatalogName('${c.id}')"
+              style="padding:4px 14px;border-radius:7px;border:1px solid rgba(34,197,94,.4);background:rgba(34,197,94,.1);color:#22c55e;cursor:pointer;font-size:.75rem;font-weight:700">✓ Valider</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
 
   ct.innerHTML=`
-<div class="mb-5">
-  <p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Configuration</p>
-  <h2 class="font-display text-2xl font-bold text-white uppercase">Catalogues <span style="color:#00a8f3">& Droits</span></h2>
-  <p class="text-white/35 text-sm mt-1">Gérez les catalogues disponibles et attribuez les droits d'accès par client</p>
+<div class="flex items-center justify-between mb-5 flex-wrap gap-3">
+  <div>
+    <p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Configuration</p>
+    <h2 class="font-display text-2xl font-bold text-white uppercase">Catalogues <span style="color:#00a8f3">& Droits</span></h2>
+    <p class="text-white/35 text-sm mt-1">Les noms sont éditables. L'ID reste stable — renommer n'affecte pas les produits liés.</p>
+  </div>
+  <button onclick="console.log('Nouveau catalogue');addNewCatalog()" class="btn btn-primary btn-sm gp">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+    Nouveau catalogue
+  </button>
 </div>
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.4rem">
 
-  <!-- Catalogues disponibles -->
+  <!-- Catalogues éditables -->
   <div class="card p-5">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
-      <p class="fl" style="margin:0">Catalogues disponibles</p>
-      <button onclick="addNewCatalog()" class="btn btn-primary btn-xs gp">
-        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-        Ajouter
-      </button>
-    </div>
-    <div id="cats-list" style="display:flex;flex-direction:column;gap:.5rem">
-      ${cats.map((c,idx)=>`
-      <div style="display:flex;align-items:center;gap:.5rem;padding:.5rem .75rem;
-        background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:10px">
-        <div style="width:10px;height:10px;border-radius:50%;background:${c.color||'#00a8f3'};flex-shrink:0"></div>
-        <span style="flex:1;font-family:Inter,sans-serif;font-size:.82rem;color:white">${c.label}</span>
-        <code style="font-family:monospace;font-size:.65rem;color:rgba(255,255,255,.3);background:rgba(255,255,255,.04);padding:1px 5px;border-radius:3px">${c.id}</code>
-        <span style="font-family:Inter,sans-serif;font-size:.65rem;color:rgba(255,255,255,.35)">
-          ${DB_PRODUITS.filter(p=>(p.catalog_id||'cat_luminaire')===c.id).length} articles</span>
-        <button onclick="deleteCatalog('${c.id}')"
-          style="font-size:.65rem;padding:2px 6px;border-radius:5px;border:1px solid rgba(239,68,68,.25);
-          background:rgba(239,68,68,.06);color:#ef4444;cursor:pointer">✕</button>
-      </div>`).join('')}
-    </div>
+    <p class="fl mb-3" style="margin-bottom:1rem">Catalogues <span style="color:rgba(255,255,255,.35);font-size:.7rem;font-weight:400">(${cats.length})</span></p>
+    ${cats.length===0
+      ?'<p style="color:rgba(255,255,255,.3);font-family:Inter,sans-serif;font-size:.82rem">Aucun catalogue. Créez-en un.</p>'
+      :cats.map(c=>catRow(c)).join('')}
   </div>
 
-  <!-- Droits d'accès clients -->
+  <!-- Droits clients -->
   <div class="card p-5">
-    <p class="fl mb-3">Droits d'accès par client</p>
-    <p class="text-white/25 text-xs mb-4">Champ DB : <code style="color:#00a8f3">user.catalogs</code> = tableau d'IDs (ex: ['cat_luminaire'])</p>
-    <div style="display:flex;flex-direction:column;gap:.5rem;max-height:380px;overflow-y:auto">
-      ${clients.map(u=>`
-      <div style="padding:.55rem .8rem;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:10px">
-        <p style="font-family:Inter,sans-serif;font-size:.8rem;font-weight:600;color:white;margin-bottom:.4rem">
-          ${u.first} ${u.last} <span style="color:rgba(255,255,255,.3);font-weight:400;font-size:.68rem">${u.email}</span></p>
-        <div style="display:flex;flex-wrap:wrap;gap:.35rem">
-          ${cats.map(c=>{
-            const has=(u.catalogs||[]).includes(c.id);
-            return `<button onclick="console.log('DEBUG [btn] toggleCatalogRight ${u.id} ${c.id}');toggleClientCatalog('${u.id}','${c.id}')"
-              style="font-size:.65rem;font-weight:700;padding:2px 9px;border-radius:6px;cursor:pointer;transition:all .15s;
-              border:1px solid ${has?c.color||'#00a8f3':'rgba(255,255,255,.1)'};
-              background:${has?'rgba(0,168,243,.12)':'rgba(255,255,255,.03)'};
-              color:${has?c.color||'#00a8f3':'rgba(255,255,255,.4)'}"
-              title="${has?'Retirer':'Accorder'} accès ${c.label}">
-              ${has?'✓':'○'} ${c.label}</button>`;
-          }).join('')}
-        </div>
-      </div>`).join('')}
+    <p class="fl mb-1" style="margin-bottom:.3rem">Droits d'accès par client</p>
+    <p style="font-family:Inter,sans-serif;font-size:.65rem;color:rgba(255,255,255,.3);margin-bottom:1rem">
+      Cochez les catalogues auxquels chaque client peut accéder. L'ID est utilisé — renommer un catalogue ne casse pas les droits.
+    </p>
+    <div style="display:flex;flex-direction:column;gap:.45rem;max-height:480px;overflow-y:auto">
+      ${clients.length===0
+        ?'<p style="color:rgba(255,255,255,.3);font-family:Inter,sans-serif;font-size:.82rem">Aucun client enregistré.</p>'
+        :clients.map(u=>`
+        <div style="padding:.55rem .85rem;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:10px">
+          <p style="font-family:Inter,sans-serif;font-size:.8rem;font-weight:600;color:white;margin-bottom:.4rem">
+            ${u.first} ${u.last}
+            <span style="color:rgba(255,255,255,.3);font-weight:400;font-size:.66rem"> ${u.email}</span>
+          </p>
+          <div style="display:flex;flex-wrap:wrap;gap:.3rem">
+            ${cats.map(c=>{
+              const has=(u.catalogs||[]).includes(c.id);
+              const col=c.color||'#00a8f3';
+              return `<button onclick="toggleClientCatalog('${u.id}','${c.id}')"
+                style="font-size:.65rem;font-weight:700;padding:2px 10px;border-radius:6px;cursor:pointer;transition:all .15s;
+                border:1px solid ${has?col+'66':'rgba(255,255,255,.1)'};
+                background:${has?col+'18':'rgba(255,255,255,.03)'};
+                color:${has?col:'rgba(255,255,255,.35)'}">
+                ${has?'✓':'○'} ${c.label}</button>`;
+            }).join('')}
+          </div>
+        </div>`).join('')}
     </div>
   </div>
 </div>`;
 }
 
+/* ── addNewCatalog : génère un ID timestamp unique ── */
 function addNewCatalog(){
-  const id='cat_'+Date.now().toString().slice(-4);
+  const id='cat_'+Date.now().toString(36); /* ID stable, jamais réutilisé */
+  const palette=['#00a8f3','#f59e0b','#22c55e','#a855f7','#f97316','#ec4899','#14b8a6','#64748b'];
+  const col=palette[(DB_CONFIG.catalogs||[]).length % palette.length];
   DB_CONFIG.catalogs=DB_CONFIG.catalogs||[];
   DB_CONFIG.catalogs.push({
-    id,label:'Nouveau catalogue',
-    desc:'Description...',color:'#00a8f3',
-    icon:'M4 6h16M4 10h16M4 14h16M4 18h16'
+    id, label:'Nouveau catalogue',
+    desc:'Description du catalogue',
+    color:col,
+    icon:'M4 6h16M4 10h16M4 14h16M4 18h16',
+    public:false
   });
   sauvegarder();
+  console.log('[catalog] Nouveau catalogue créé id='+id);
+  toast('Catalogue créé — renommez-le via ✏️','info');
   renderAdminCatalogs();
-  toast('Catalogue créé — pensez à renommer et attribuer des droits','info');
+  /* Passer immédiatement en mode édition */
+  setTimeout(()=>startEditCatalog(id),60);
+  /* Rafraîchir le select produit si ouvert */
+  chargerSelectCatalogues(null);
 }
 
-function deleteCatalog(catId){
-  const inUse=DB_PRODUITS.some(p=>p.catalog_id===catId);
-  if(inUse&&!confirm('Ce catalogue contient des produits. Supprimer quand même?'))return;
-  DB_CONFIG.catalogs=(DB_CONFIG.catalogs||[]).filter(c=>c.id!==catId);
-  /* Retirer droits de tous les users */
-  DB_USERS.forEach(u=>{if(u.catalogs)u.catalogs=u.catalogs.filter(id=>id!==catId);});
+/* ── startEditCatalog : bascule la row en mode édition ── */
+function startEditCatalog(id){
+  const view=document.getElementById('cat-view-'+id);
+  const edit=document.getElementById('cat-edit-'+id);
+  if(!view||!edit){console.warn('[catalog] row non trouvée pour id='+id);return;}
+  view.style.display='none';
+  edit.style.display='block';
+  const inp=document.getElementById('cat-inp-'+id);
+  if(inp){inp.focus();inp.select();}
+  /* Live preview couleur */
+  const colInp=document.getElementById('cat-color-'+id);
+  const hexLabel=document.getElementById('cat-colorhex-'+id);
+  if(colInp&&hexLabel){
+    colInp.oninput=function(){
+      hexLabel.textContent=this.value;
+    };
+  }
+}
+
+/* ── cancelEditCatalog : re-render annule ── */
+function cancelEditCatalog(id){
+  renderAdminCatalogs();
+}
+
+/* ── saveCatalogName : persiste label, desc, color — ID inchangé ── */
+function saveCatalogName(id){
+  const cat=getCatalogById(id);
+  if(!cat){toast('Catalogue introuvable','error');return;}
+  const inp  =document.getElementById('cat-inp-'+id);
+  const desc =document.getElementById('cat-desc-'+id);
+  const color=document.getElementById('cat-color-'+id);
+  const newLabel=inp?inp.value.trim():'';
+  if(!newLabel){toast('Le nom ne peut pas être vide','error');inp&&inp.focus();return;}
+  const oldLabel=cat.label;
+  cat.label=newLabel;
+  if(desc) cat.desc =desc.value.trim();
+  if(color)cat.color=color.value;
   sauvegarder();
+  console.log('[catalog] "'+oldLabel+'" → "'+newLabel+'" (id='+id+' — produits liés conservés)');
+  toast('✓ "'+oldLabel+'" renommé → "'+newLabel+'" · ID conservé · '+DB_PRODUITS.filter(p=>p.catalog_id===id).length+' article(s) intact(s)','success');
   renderAdminCatalogs();
-  toast('Catalogue supprimé','info');
+  chargerSelectCatalogues(null); /* mise à jour select produit */
 }
 
-
-
-function addCatalog(){
-  var newId='cat_'+Date.now().toString().slice(-5);
-  DB_CONFIG.catalogs.push({id:newId,label:'Nouveau catalogue',desc:'Description...',color:'#00a8f3',icon:'M4 6h16M4 10h16M4 14h16M4 18h16',filterValue:'all'});
+/* ── toggleCatalogPublic : visible sans connexion ou non ── */
+function toggleCatalogPublic(id){
+  const cat=getCatalogById(id);if(!cat)return;
+  cat.public=!cat.public;
   sauvegarder();
+  const msg=cat.public?'public (visible sans connexion)':'privé (connexion requise)';
+  console.log('[catalog] "'+cat.label+'" → '+msg);
+  toast('"'+cat.label+'" est maintenant '+msg,'info');
   renderAdminCatalogs();
-  toast('Catalogue ajouté — modifiez son nom','success');
 }
 
+/* ── deleteThisCatalog : seulement si aucun produit lié ── */
+function deleteThisCatalog(id){
+  const cat=getCatalogById(id);if(!cat)return;
+  const linked=DB_PRODUITS.filter(p=>p.catalog_id===id).length;
+  if(linked>0){
+    toast('Impossible : '+linked+' article(s) lié(s). Réattribuez-les d\'abord.','error');
+    return;
+  }
+  DB_CONFIG.catalogs=(DB_CONFIG.catalogs||[]).filter(c=>c.id!==id);
+  /* Retirer les droits chez tous les users */
+  DB_USERS.forEach(u=>{if(u.catalogs)u.catalogs=u.catalogs.filter(cid=>cid!==id);});
+  sauvegarder();
+  console.log('[catalog] Supprimé "'+cat.label+'" id='+id);
+  toast('"'+cat.label+'" supprimé','info');
+  renderAdminCatalogs();
+  chargerSelectCatalogues(null);
+}
 
+/* Alias de compatibilité */
+function deleteCatalog(id){deleteThisCatalog(id);}
+function addCatalog(){addNewCatalog();}
 
-
+/* ── toggleClientCatalog : toggle droit client sur un catalogue ── */
 function toggleClientCatalog(userId,catId){
-  var u=USERS.find(function(x){return x.id===userId;});if(!u)return;
-  if(!u.catalogs)u.catalogs=['cat_luminaire'];
-  var idx=u.catalogs.indexOf(catId);
-  if(idx>=0){
-    if(catId==='cat_luminaire'){toast('L\'accès cat_luminaire est obligatoire','error');return;}
-    u.catalogs.splice(idx,1);
-  } else {
+  const u=DB_USERS.find(x=>x.id===userId);if(!u)return;
+  if(!Array.isArray(u.catalogs))u.catalogs=[];
+  const has=u.catalogs.includes(catId);
+  if(has){
+    u.catalogs=u.catalogs.filter(id=>id!==catId);
+  }else{
     u.catalogs.push(catId);
   }
+  const cat=getCatalogById(catId);
+  const catName=cat?cat.label:catId;
+  console.log('[catalog] '+u.email+' : "'+catName+'" '+(has?'retiré':'ajouté'));
   sauvegarder();
   renderAdminCatalogs();
-  toast('Accès mis à jour pour '+u.first,'success');
+  toast(u.first+' — "'+catName+'" '+(has?'retiré':'accordé'),'info');
+}
+
+/* ── verifierCatalogues : boot — garantit les 2 catalogues de base ── */
+function verifierCatalogues(){
+  DB_CONFIG.catalogs=DB_CONFIG.catalogs||[];
+  if(!getCatalogById('cat_luminaire')){
+    DB_CONFIG.catalogs.unshift({
+      id:'cat_luminaire',label:'Luminaires Auto',
+      desc:'Phares, feux, strips LED & intérieur automobile',
+      color:'#00a8f3',public:true,
+      icon:'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z'
+    });
+    console.warn('[catalog] cat_luminaire créé');
+  }else{
+    const lum=getCatalogById('cat_luminaire');
+    if(lum.public===undefined)lum.public=true;
+  }
+  if(!getCatalogById('cat_divers')){
+    DB_CONFIG.catalogs.push({
+      id:'cat_divers',label:'Accessoires & Divers',
+      desc:'Câblage, connectique, pièces détachées',
+      color:'#f59e0b',public:false,
+      icon:'M4 6h16M4 10h16M4 14h16M4 18h16'
+    });
+    console.warn('[catalog] cat_divers créé');
+  }
+  /* Migrer produits sans catalog_id */
+  let m=0;
+  DB_PRODUITS.forEach(p=>{if(!p.catalog_id){p.catalog_id='cat_luminaire';m++;}});
+  if(m)console.warn('[catalog] '+m+' produits migrés → cat_luminaire');
+  /* Migrer users sans catalogs[] */
+  DB_USERS.forEach(u=>{if(!Array.isArray(u.catalogs))u.catalogs=['cat_luminaire'];});
 }
 
 
@@ -4429,6 +4605,20 @@ window.markAllUserNotifRead  = typeof markAllUserNotifRead!=='undefined'?markAll
 window.updateCheckoutShipping= typeof updateCheckoutShipping!=='undefined'?updateCheckoutShipping:function(){};
 window.exportCommandes    = typeof exportCommandes!=='undefined'?exportCommandes:function(){toast('Export CSV non implémenté','info');};
 console.log('✅ window exports enregistrés');
+
+
+/* Exports catalogue module */
+window.getCatalogById      = getCatalogById;
+window.getCatalogLabel     = getCatalogLabel;
+window.addNewCatalog       = addNewCatalog;
+window.startEditCatalog    = startEditCatalog;
+window.cancelEditCatalog   = cancelEditCatalog;
+window.saveCatalogName     = saveCatalogName;
+window.toggleCatalogPublic = toggleCatalogPublic;
+window.deleteThisCatalog   = deleteThisCatalog;
+window.deleteCatalog       = deleteCatalog;
+window.toggleClientCatalog = toggleClientCatalog;
+window.verifierCatalogues  = verifierCatalogues;
 
 document.addEventListener('DOMContentLoaded',function(){
   console.log('=== De Cooman Racing Performance v38 ===');
