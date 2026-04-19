@@ -2617,10 +2617,141 @@ function renderAdminCatalog(){
   <div id="catalogAdminGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.9rem">
     ${DB_PRODUITS.map(p=>prodCard(p)).join('')}
   </div>
-</div>`;
+</div>
+
+<div id="catalogFilterEditor" style="margin-top:1rem"></div>`;
 
   /* Render volume tiers editor (filter editor) */
   renderFilterEditor&&renderFilterEditor();
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   renderFilterEditor — Éditeur des filtres produit (cat + tech)
+   Injecté dans #catalogFilterEditor après le rendu des cartes.
+   Permet d'ajouter/supprimer les valeurs p.cat et p.tech
+   qui alimentent la sidebar de filtrage côté catalogue client.
+════════════════════════════════════════════════════════════════ */
+function renderFilterEditor(){
+  const container=document.getElementById('catalogFilterEditor');
+  if(!container)return;
+
+  /* Collecter les valeurs existantes depuis DB_PRODUITS */
+  const allCats =[...new Set(DB_PRODUITS.map(p=>p.cat ).filter(Boolean))].sort();
+  const allTechs=[...new Set(DB_PRODUITS.map(p=>p.tech).filter(Boolean))].sort();
+
+  /* Compter les produits par valeur */
+  const countCat =c=>DB_PRODUITS.filter(p=>p.cat ===c).length;
+  const countTech=t=>DB_PRODUITS.filter(p=>p.tech===t).length;
+
+  function chipHtml(val, count, type){
+    const col=type==='cat'?'#00a8f3':'#a855f7';
+    return `<span style="display:inline-flex;align-items:center;gap:.3rem;padding:2px 8px;border-radius:20px;
+      font-family:Inter,sans-serif;font-size:.68rem;font-weight:600;
+      background:${col}18;border:1px solid ${col}44;color:${col};margin:.2rem .15rem">
+      ${val}
+      <span style="color:rgba(255,255,255,.3);font-weight:400">${count}</span>
+      <span onclick="retirerFiltreValeur('${type}','${val}')" title="Retirer"
+        style="cursor:pointer;opacity:.55;font-size:.75rem;line-height:1;padding:0 2px;border-radius:3px"
+        onmouseover="this.style.opacity=1;this.style.background='rgba(239,68,68,.2)'"
+        onmouseout="this.style.opacity=.55;this.style.background='none'">✕</span>
+    </span>`;
+  }
+
+  container.innerHTML=`
+<div class="card p-4" style="margin-top:0">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem">
+
+    <!-- Catégories produit (p.cat) -->
+    <div>
+      <p class="fl mb-1" style="margin-bottom:.4rem">
+        Catégories internes
+        <span style="font-family:Inter,sans-serif;font-size:.65rem;font-weight:400;
+          color:rgba(255,255,255,.3);margin-left:.4rem">(p.cat — filtrage sidebar)</span>
+      </p>
+      <div id="filter-cats-list" style="min-height:28px;margin-bottom:.5rem">
+        ${allCats.length
+          ? allCats.map(c=>chipHtml(c,countCat(c),'cat')).join('')
+          : '<span style="font-size:.72rem;color:rgba(255,255,255,.25)">Aucune catégorie définie</span>'}
+      </div>
+      <div style="display:flex;gap:.35rem">
+        <input type="text" id="new-cat-inp" class="fi" style="font-size:.78rem;flex:1"
+          placeholder="ex: phares, feux, strips…"
+          onkeydown="if(event.key==='Enter')ajouterFiltreValeur('cat')"/>
+        <button onclick="ajouterFiltreValeur('cat')"
+          class="btn btn-ghost btn-sm">+ Ajouter</button>
+      </div>
+      <p style="font-family:Inter,sans-serif;font-size:.62rem;color:rgba(255,255,255,.25);margin-top:.35rem">
+        Attribuée via le champ Catégorie dans l'édition produit
+      </p>
+    </div>
+
+    <!-- Technologies (p.tech) -->
+    <div>
+      <p class="fl mb-1" style="margin-bottom:.4rem">
+        Technologies
+        <span style="font-family:Inter,sans-serif;font-size:.65rem;font-weight:400;
+          color:rgba(255,255,255,.3);margin-left:.4rem">(p.tech — filtrage sidebar)</span>
+      </p>
+      <div id="filter-techs-list" style="min-height:28px;margin-bottom:.5rem">
+        ${allTechs.length
+          ? allTechs.map(t=>chipHtml(t,countTech(t),'tech')).join('')
+          : '<span style="font-size:.72rem;color:rgba(255,255,255,.25)">Aucune techno définie</span>'}
+      </div>
+      <div style="display:flex;gap:.35rem">
+        <input type="text" id="new-tech-inp" class="fi" style="font-size:.78rem;flex:1"
+          placeholder="ex: led, xenon, halogene…"
+          onkeydown="if(event.key==='Enter')ajouterFiltreValeur('tech')"/>
+        <button onclick="ajouterFiltreValeur('tech')"
+          class="btn btn-ghost btn-sm">+ Ajouter</button>
+      </div>
+      <p style="font-family:Inter,sans-serif;font-size:.62rem;color:rgba(255,255,255,.25);margin-top:.35rem">
+        Attribuée via le champ Technologie dans l'édition produit
+      </p>
+    </div>
+
+  </div>
+  <p style="font-family:Inter,sans-serif;font-size:.62rem;color:rgba(255,255,255,.2);margin-top:.75rem;border-top:1px solid rgba(255,255,255,.05);padding-top:.5rem">
+    💡 Ces valeurs sont extraites de vos produits existants. "Ajouter" crée la valeur dans la liste — attribuez-la ensuite aux produits via ✏️ Modifier.
+    "✕" retire la valeur de tous les produits liés.
+  </p>
+</div>`;
+}
+
+/* ── ajouterFiltreValeur : crée une nouvelle cat ou tech ── */
+function ajouterFiltreValeur(type){
+  const inpId=type==='cat'?'new-cat-inp':'new-tech-inp';
+  const inp=document.getElementById(inpId);
+  if(!inp)return;
+  const val=inp.value.trim().toLowerCase().replace(/\s+/g,'_');
+  if(!val){toast('Entrez une valeur','error');return;}
+
+  /* Vérifier si elle existe déjà */
+  const exists=DB_PRODUITS.some(p=>p[type]===val);
+  if(exists){toast('"'+val+'" existe déjà dans les produits','info');inp.value='';return;}
+
+  /* La valeur n'existe pas encore → informer l'admin */
+  toast('"'+val+'" créée — attribuez-la aux produits via ✏️ Modifier','info');
+  inp.value='';
+  console.log('[filterEditor] Nouvelle valeur '+type+'='+val+' — à attribuer manuellement');
+  /* Pas de sauvegarde ici car cat/tech ne sont pas dans DB_CONFIG
+     mais dans chaque p.cat / p.tech — attribuer via openEditProduct */
+  renderFilterEditor();
+}
+
+/* ── retirerFiltreValeur : retire une cat ou tech de tous les produits ── */
+function retirerFiltreValeur(type, val){
+  const count=DB_PRODUITS.filter(p=>p[type]===val).length;
+  if(count>0){
+    if(!confirm('Retirer la valeur "'+val+'" de '+count+' produit(s) ? Elle sera remplacée par une chaîne vide.'))return;
+    DB_PRODUITS.forEach(p=>{if(p[type]===val)p[type]='';});
+    sauvegarder();
+    toast('"'+val+'" retiré de '+count+' produit(s)','info');
+    console.log('[filterEditor] Retiré '+type+'='+val+' de '+count+' produits');
+  }else{
+    toast('"'+val+'" n\'est attribué à aucun produit','info');
+  }
+  renderFilterEditor();
 }
 
 function renderAdminCatalogFiltered(catId){
@@ -5882,6 +6013,12 @@ function hideTabLoader(){
 
 /* ── Patch adminTab pour utiliser le loader ── */
 
+
+
+/* Exports filter editor */
+window.renderFilterEditor   = renderFilterEditor;
+window.ajouterFiltreValeur  = ajouterFiltreValeur;
+window.retirerFiltreValeur  = retirerFiltreValeur;
 
 /* ── Exports manquants — connecte le HTML dynamique au scope global ── */
 window.saveOrderEdit        = saveOrderEdit;
