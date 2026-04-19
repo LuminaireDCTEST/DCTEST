@@ -539,6 +539,110 @@ const fmtN=n=>n.toLocaleString('fr-FR');
 const today=()=>new Date().toISOString().slice(0,10);
 const uid=()=>'CMD-'+String(Date.now()).slice(-5);
 const escH=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+
+/* ════════════════════════════════════════════════════════════════
+   MODULE VIDEO LOCALE — IndexedDB
+   Pourquoi IndexedDB et pas LocalStorage ?
+   LS max ≈ 5 MB — une vidéo MP4 fait souvent 20-200 MB
+   IDB peut stocker des GB, stocke des Blob natifs
+   La blob URL est recréée à chaque session depuis le binaire stocké
+
+   DB : 'DeCoomanDB'  Store : 'videoStore'  Key : 'heroBg'
+════════════════════════════════════════════════════════════════ */
+
+/* ── Ouvrir la base IDB (singleton) ── */
+var _idbPromise=null;
+function _openIDB(){
+  if(_idbPromise)return _idbPromise;
+  _idbPromise=new Promise(function(resolve,reject){
+    var req=indexedDB.open('DeCoomanDB',1);
+    req.onupgradeneeded=function(e){
+      var db=e.target.result;
+      if(!db.objectStoreNames.contains('videoStore')){
+        db.createObjectStore('videoStore');
+        console.log('[idb] videoStore créé');
+      }
+    };
+    req.onsuccess=function(e){resolve(e.target.result);};
+    req.onerror=function(e){
+      console.error('[idb] Erreur ouverture:',e.target.error);
+      reject(e.target.error);
+    };
+  });
+  return _idbPromise;
+}
+
+/* ── Sauvegarder un Blob dans IDB ── */
+function idbSaveBlob(key, blob){
+  return _openIDB().then(function(db){
+    return new Promise(function(resolve,reject){
+      var tx=db.transaction('videoStore','readwrite');
+      var store=tx.objectStore('videoStore');
+      var req=store.put(blob,key);
+      req.onsuccess=function(){
+        console.log('[idb] Blob sauvegardé key='+key+' size='+Math.round(blob.size/1024)+'KB');
+        resolve(true);
+      };
+      req.onerror=function(e){reject(e.target.error);};
+    });
+  });
+}
+
+/* ── Lire un Blob depuis IDB → créer une blob URL ── */
+function idbGetBlobURL(key){
+  return _openIDB().then(function(db){
+    return new Promise(function(resolve,reject){
+      var tx=db.transaction('videoStore','readonly');
+      var store=tx.objectStore('videoStore');
+      var req=store.get(key);
+      req.onsuccess=function(e){
+        var blob=e.target.result;
+        if(!blob){resolve(null);return;}
+        var url=URL.createObjectURL(blob);
+        console.log('[idb] Blob URL recréée key='+key+' url='+url.slice(0,40));
+        resolve(url);
+      };
+      req.onerror=function(e){reject(e.target.error);};
+    });
+  });
+}
+
+/* ── Supprimer un Blob de IDB ── */
+function idbDeleteBlob(key){
+  return _openIDB().then(function(db){
+    return new Promise(function(resolve,reject){
+      var tx=db.transaction('videoStore','readwrite');
+      var store=tx.objectStore('videoStore');
+      store.delete(key).onsuccess=function(){
+        console.log('[idb] Blob supprimé key='+key);
+        resolve(true);
+      };
+    });
+  }).catch(function(e){console.warn('[idb] Erreur suppression:',e);});
+}
+
+/* ── Vérifier si une blob URL est encore valide ── */
+function _isBlobURLValid(url){
+  if(!url||!url.startsWith('blob:'))return false;
+  /* fetch HEAD sur la blob URL pour tester */
+  try{
+    var xhr=new XMLHttpRequest();
+    xhr.open('HEAD',url,false); /* synchrone */
+    xhr.send();
+    return xhr.status===200||xhr.status===0;
+  }catch(e){return false;}
+}
+
+/* ── Révocation des blob URLs obsolètes ── */
+var _currentBlobURL=null;
+function _revokeOldBlobURL(){
+  if(_currentBlobURL&&_currentBlobURL.startsWith('blob:')){
+    URL.revokeObjectURL(_currentBlobURL);
+    console.log('[video] Ancienne blob URL révoquée');
+  }
+  _currentBlobURL=null;
+}
+
 const oHT=o=>(o.items||[]).reduce((s,i)=>s+i.unitPrice*i.qty,0);
 const oShip=o=>o.shippingCostHT||0;
 const oTVA=o=>(oHT(o)+oShip(o))*TVA;
@@ -986,7 +1090,7 @@ function appliquerConfigurationVisuelle(){
   }
 
   /* ── 2. Fond d'accueil ── */
-  applyHeroConfig(hero);
+  applyHeroConfig(hero); /* restaurerVideoLocale() appelé dedans si type===video_local */
 
   /* ── 3. Textes héros ── */
   applyHeroDesign(hd);
@@ -1020,41 +1124,77 @@ function sauvegarderApparence(){
 }
 
 function applyHeroConfig(cfgOverride){
-  const cfg=cfgOverride||DB_CONFIG.hero||{};
-  const vid=document.getElementById('heroVideo');
-  const ytW=document.getElementById('heroYtWrapper');
-  const op=typeof cfg.opacity==='number'?cfg.opacity:0.35;
-  console.log('DEBUG [applyHeroConfig] type='+cfg.type+' ytId='+cfg.ytId+' src='+String(cfg.src).slice(0,40));
-  if(ytW)ytW.innerHTML='';
+  var cfg=cfgOverride||DB_CONFIG.hero||{};
+  var vid=document.getElementById('heroVideo');
+  var ytW=document.getElementById('heroYtWrapper');
+  var op=typeof cfg.opacity==='number'?cfg.opacity:0.35;
+  console.log('[applyHeroConfig] type='+cfg.type+' ytId='+(cfg.ytId||'')
+    +' src='+String(cfg.src||'').slice(0,40));
+
+  /* Reset */
+  if(ytW){ytW.innerHTML='';ytW.style.display='none';}
+  var heroSection=document.getElementById('heroSection');
+
   if(cfg.type==='video_yt'&&cfg.ytId){
+    /* ── YouTube ── */
     if(vid)vid.style.display='none';
     if(ytW){
       ytW.style.display='block';
-      ytW.innerHTML=`<iframe
-        src="https://www.youtube.com/embed/${cfg.ytId}?autoplay=1&mute=1&loop=1&playlist=${cfg.ytId}&controls=0&showinfo=0&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&enablejsapi=0"
-        allow="autoplay;encrypted-media" allowfullscreen
-        style="position:absolute;top:50%;left:50%;width:177.78vh;min-width:100%;height:56.25vw;min-height:100%;
-        transform:translate(-50%,-50%);border:none;pointer-events:none;
-        filter:brightness(${op}) saturate(.70);z-index:0"></iframe>`;
-      console.log('DEBUG [applyHeroConfig] YouTube iframe injecté ytId='+cfg.ytId);
+      ytW.innerHTML='<iframe'
+        +' src="https://www.youtube.com/embed/'+cfg.ytId+'?autoplay=1&mute=1&loop=1&playlist='+cfg.ytId+'&controls=0&showinfo=0&rel=0&modestbranding=1"'
+        +' allow="autoplay;encrypted-media" allowfullscreen'
+        +' style="position:absolute;top:50%;left:50%;width:177.78vh;min-width:100%;height:56.25vw;min-height:100%;'
+          +'transform:translate(-50%,-50%);border:none;pointer-events:none;'
+          +'filter:brightness('+op+') saturate(.70);z-index:0"></iframe>';
+      console.log('[applyHeroConfig] YouTube iframe → ytId='+cfg.ytId);
     }
+
+  }else if(cfg.type==='video_local'&&cfg.idbKey){
+    /* ── Vidéo locale (IDB) — restauration asynchrone ── */
+    if(vid)vid.style.display='none';
+    restaurerVideoLocale();
+    /* restaurerVideoLocale() appelle _applyVideoLocale() en async */
+
   }else if(cfg.type==='video_url'&&cfg.src){
+    /* ── Vidéo par URL (MP4 distant ou blob URL session) ── */
     if(ytW)ytW.style.display='none';
     if(vid){
       vid.style.display='block';
-      vid.style.filter=`brightness(${op}) saturate(.70)`;
-      vid.innerHTML=`<source src="${cfg.src}" type="${cfg.src.endsWith('.webm')?'video/webm':'video/mp4'}"/>`;
-      vid.load();vid.play().catch(()=>{});
+      vid.style.filter='brightness('+op+') saturate(.70)';
+      vid.innerHTML='<source src="'+cfg.src+'" type="'+(cfg.src.endsWith('.webm')?'video/webm':'video/mp4')+'"/>';
+      vid.load();
+      vid.play().then(function(){
+        console.log('[applyHeroConfig] Vidéo URL chargée avec succès:', cfg.src.slice(0,50));
+      }).catch(function(e){
+        console.warn('[applyHeroConfig] Vidéo URL autoplay bloqué:', e.message);
+        _showVideoFallback();
+      });
+      /* Erreur de chargement → fallback */
+      vid.onerror=function(){
+        console.warn('[applyHeroConfig] Vidéo URL inaccessible → fallback');
+        _showVideoFallback();
+      };
     }
+
   }else if(cfg.type==='image'&&cfg.src){
+    /* ── Image de fond ── */
     if(ytW)ytW.style.display='none';
     if(vid)vid.style.display='none';
-    const hs=document.querySelector('.hero-section')||document.getElementById('heroSection');
-    if(hs){hs.style.backgroundImage=`url(${cfg.src})`;hs.style.backgroundSize='cover';hs.style.backgroundPosition='center';}
+    if(heroSection){
+      heroSection.style.backgroundImage='url('+cfg.src+')';
+      heroSection.style.backgroundSize='cover';
+      heroSection.style.backgroundPosition='center';
+    }
+
   }else{
+    /* ── Défaut : vidéo vide ou type inconnu ── */
     if(ytW)ytW.style.display='none';
-    if(vid){vid.style.display='block';vid.style.filter=`brightness(${op}) saturate(.70)`;}
+    if(vid){
+      vid.style.display='block';
+      vid.style.filter='brightness('+op+') saturate(.70)';
+    }
   }
+
   applyHeroDesign();
 }
 function applyHeroDesign(){
@@ -3886,10 +4026,22 @@ function renderAdminAppearance(){
       </div>
       <label class="btn btn-ghost btn-sm" style="cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;margin-bottom:.75rem">
         📁 Importer fichier local
-        <input type="file" accept="image/*,video/mp4,video/webm" style="display:none" onchange="heroFileUpload(this)"/>
+        <input type="file" id="ap-video-file" accept="video/mp4,video/webm" style="display:none" onchange="heroFileUpload(this)"/>
       </label>
       <div style="display:flex;align-items:center;gap:.75rem">
         <label class="fl" style="margin:0;white-space:nowrap">Luminosité</label>
+
+          <div id="ap-video-status" style="margin-bottom:.5rem;padding:.4rem .6rem;border-radius:7px;
+            background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15);
+            font-family:Inter,sans-serif;font-size:.7rem;color:#22c55e;
+            display:${(DB_CONFIG.hero&&DB_CONFIG.hero.type==='video_local'&&DB_CONFIG.hero.fileName)?'flex':'none'};
+            align-items:center;gap:.4rem">
+            ✓ Vidéo locale stockée :
+            <strong>${DB_CONFIG.hero&&DB_CONFIG.hero.fileName?DB_CONFIG.hero.fileName+' ('+DB_CONFIG.hero.fileSizeMB+' MB)':''}</strong>
+            <button onclick="supprimerVideoLocale()" style="margin-left:auto;font-size:.6rem;
+              border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.07);color:#ef4444;
+              border-radius:5px;padding:1px 7px;cursor:pointer">✕ Supprimer</button>
+          </div>
         <input type="range" id="ap-opacity" min="5" max="90" value="${opPct}"
           style="flex:1;accent-color:#00a8f3"
           oninput="document.getElementById('ap-opacity-val').textContent=this.value+'%'"/>
@@ -4108,7 +4260,9 @@ function appliquerEtSauvegarder(){
   /* Fond */
   DB_CONFIG.hero=DB_CONFIG.hero||{};
   var heroSrc=document.getElementById('ap-hero-src');
-  if(heroSrc&&heroSrc.value.trim()){
+  /* Ne pas écraser la vidéo locale depuis le champ URL si IDB est actif */
+  var _isVideoLocal=DB_CONFIG.hero&&DB_CONFIG.hero.type==='video_local'&&DB_CONFIG.hero.idbKey;
+  if(heroSrc&&heroSrc.value.trim()&&!_isVideoLocal){
     var srcVal=heroSrc.value.trim();
     if(DB_CONFIG.hero.type==='video_yt'){
       var ytId=extractYtId(srcVal);
@@ -4184,25 +4338,210 @@ function heroApplySrc(){
 
 
 function heroFileUpload(input){
-  var file=input&&input.files&&input.files[0];if(!file)return;
+  var file=input&&input.files&&input.files[0];
+  if(!file){return;}
+
   var isVideo=file.type.startsWith('video/');
-  var maxMB=isVideo?50:5;
-  if(file.size>maxMB*1024*1024){toast('Fichier > '+maxMB+'MB. Utilisez une URL.','error');input.value='';return;}
+  var isImage=file.type.startsWith('image/');
+
+  /* Limite : 5 MB pour images (base64 → LS), pas de limite stricte vidéo → IDB */
+  if(isImage&&file.size>5*1024*1024){
+    toast('Image trop lourde (max 5 MB). Utilisez une URL.','error');
+    input.value='';return;
+  }
+  if(!isVideo&&!isImage){
+    toast('Format non supporté. Utilisez MP4, WebM ou une image.','error');
+    input.value='';return;
+  }
+
   if(isVideo){
-    var url=URL.createObjectURL(file);
-    _accueilConfig.src=url;_accueilConfig.type='video_url';_accueilConfig.srcIsBlob=true;
-    applyAccueilConfig(_accueilConfig);renderAdminHero();
-    toast('Vidéo locale chargée (session uniquement)','info');
+    /* ─── VIDÉO LOCALE → IndexedDB ───
+       1. Stocker le Blob dans IDB (persiste entre sessions)
+       2. Créer une blob URL pour lecture immédiate
+       3. Mettre à jour DB_CONFIG.hero avec type + métadonnées
+    */
+    var sizeMB=Math.round(file.size/1024/1024*10)/10;
+    console.log('[video] Import vidéo locale:', file.name, sizeMB+'MB', file.type);
+
+    /* Créer blob URL immédiatement pour preview */
+    _revokeOldBlobURL();
+    var blobURL=URL.createObjectURL(file);
+    _currentBlobURL=blobURL;
+
+    /* Appliquer immédiatement sur la page */
+    _applyVideoLocale(blobURL, file.type);
+    toast('⏳ Vidéo appliquée — sauvegarde en cours…','info');
+
+    /* Sauvegarder le blob dans IDB en arrière-plan */
+    idbSaveBlob('heroBg', file).then(function(){
+      /* Mettre à jour DB_CONFIG.hero */
+      DB_CONFIG.hero=DB_CONFIG.hero||{};
+      DB_CONFIG.hero.type='video_local';
+      DB_CONFIG.hero.src='';         /* blob URL recréée depuis IDB au reload */
+      DB_CONFIG.hero.srcBlob=true;
+      DB_CONFIG.hero.idbKey='heroBg';
+      DB_CONFIG.hero.fileName=file.name;
+      DB_CONFIG.hero.fileType=file.type;
+      DB_CONFIG.hero.fileSizeMB=sizeMB;
+      /* Sauvegarder les métadonnées dans LS (pas le binaire) */
+      sauvegarderApparence();
+      toast('✓ Vidéo locale sauvegardée ('+sizeMB+' MB) — persistante entre sessions','success');
+      console.log('[video] Sauvegarde IDB + LS OK — key=heroBg type='+file.type);
+      /* Rafraîchir l'UI admin si ouverte */
+      if(typeof renderAdminAppearance==='function'&&document.getElementById('ap-opacity')){
+        _updateAppearanceVideoStatus(file.name, sizeMB, blobURL);
+      }
+    }).catch(function(err){
+      console.error('[video] Erreur IDB sauvegarde:',err);
+      toast('⚠️ Vidéo appliquée mais non persistée (erreur IDB). Elle sera perdue au rechargement.','error');
+      /* Fallback : garder juste la blob URL en session */
+      DB_CONFIG.hero.type='video_url';
+      DB_CONFIG.hero.src=blobURL;
+      DB_CONFIG.hero.srcBlob=true;
+    });
+
   } else {
+    /* ─── IMAGE → FileReader → base64 → LS ─── */
     var reader=new FileReader();
     reader.onload=function(e){
-      _accueilConfig.src=e.target.result;_accueilConfig.type='image';_accueilConfig.srcIsBlob=false;
-      applyAccueilConfig(_accueilConfig);renderAdminHero();
-      toast('Image importée — cliquez Enregistrer','info');
+      var b64=e.target.result;
+      DB_CONFIG.hero=DB_CONFIG.hero||{};
+      DB_CONFIG.hero.type='image';
+      DB_CONFIG.hero.src=b64;
+      DB_CONFIG.hero.srcBlob=false;
+      DB_CONFIG.hero.idbKey=null;
+      applyHeroConfig();
+      sauvegarderApparence();
+      toast('✓ Image de fond importée et sauvegardée','success');
+      console.log('[image] Image de fond chargée:', file.name, Math.round(file.size/1024)+'KB');
+      if(document.getElementById('ap-preview-bg')){
+        var bg=document.getElementById('ap-preview-bg');
+        bg.style.backgroundImage='url('+b64+')';
+        bg.style.backgroundSize='cover';
+      }
     };
+    reader.onerror=function(){toast('Erreur lecture image','error');};
     reader.readAsDataURL(file);
   }
-  input.value='';
+
+  input.value=''; /* Reset input pour permettre re-sélection du même fichier */
+}
+
+/* ── _applyVideoLocale : injecte la vidéo dans le fond de page ── */
+function _applyVideoLocale(blobURL, mimeType){
+  var vid=document.getElementById('heroVideo');
+  var ytW=document.getElementById('heroYtWrapper');
+  var op=(DB_CONFIG.hero&&typeof DB_CONFIG.hero.opacity==='number')?DB_CONFIG.hero.opacity:0.35;
+
+  if(ytW)ytW.style.display='none';
+
+  if(!vid){
+    /* Créer l'élément vidéo s'il n'existe pas */
+    vid=document.createElement('video');
+    vid.id='heroVideo';
+    vid.autoplay=true;
+    vid.muted=true;
+    vid.loop=true;
+    vid.setAttribute('playsinline','');
+    vid.style.cssText='position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);'
+      +'min-width:100%;min-height:100%;width:auto;height:auto;object-fit:cover;z-index:0;pointer-events:none;';
+    var heroSection=document.getElementById('heroSection');
+    if(heroSection)heroSection.insertBefore(vid,heroSection.firstChild);
+  }
+
+  vid.style.display='block';
+  vid.style.filter='brightness('+op+') saturate(0.70)';
+
+  /* Réassigner le src */
+  vid.innerHTML=''; /* vider les <source> existants */
+  var source=document.createElement('source');
+  source.src=blobURL;
+  source.type=mimeType||'video/mp4';
+  vid.appendChild(source);
+
+  vid.load();
+  vid.play().then(function(){
+    console.log('[video] Vidéo locale chargée avec succès', blobURL.slice(0,50));
+  }).catch(function(err){
+    console.warn('[video] Autoplay bloqué (normal sur mobile):', err.message);
+    /* Fallback : afficher poster ou couleur */
+  });
+
+  /* Mettre à jour la mini-preview dans l'UI admin */
+  var previewBg=document.getElementById('ap-preview-bg');
+  if(previewBg){
+    previewBg.style.backgroundImage='none';
+    previewBg.style.background='linear-gradient(135deg,#0a0a14,#1a1a2e)';
+    previewBg.innerHTML='<span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);'
+      +'font-family:Inter,sans-serif;font-size:.7rem;color:rgba(255,255,255,.5)">🎬 Vidéo locale active</span>';
+  }
+}
+
+/* ── _updateAppearanceVideoStatus : met à jour le statut vidéo dans l'UI ── */
+function _updateAppearanceVideoStatus(fileName, sizeMB, blobURL){
+  var heroSrcInp=document.getElementById('ap-hero-src');
+  if(heroSrcInp){
+    heroSrcInp.value='';
+    heroSrcInp.placeholder='📁 '+fileName+' ('+sizeMB+' MB) — stocké en IDB';
+    heroSrcInp.style.color='#22c55e';
+  }
+}
+
+/* ── restaurerVideoLocale : appelée au boot si hero.type==='video_local' ── */
+
+/* ── supprimerVideoLocale : efface l'IDB et remet le fond par défaut ── */
+function supprimerVideoLocale(){
+  if(!confirm('Supprimer la vidéo locale et revenir au fond par défaut ?'))return;
+  var key=(DB_CONFIG.hero&&DB_CONFIG.hero.idbKey)||'heroBg';
+  idbDeleteBlob(key);
+  _revokeOldBlobURL();
+  DB_CONFIG.hero=Object.assign(DB_CONFIG.hero||{},{
+    type:'video_url', src:'', ytId:'', srcBlob:false, idbKey:null,
+    fileName:null, fileType:null, fileSizeMB:null
+  });
+  sauvegarderApparence();
+  _showVideoFallback();
+  toast('Vidéo locale supprimée — fond réinitialisé','info');
+  console.log('[video] Vidéo locale supprimée');
+  /* Re-render l'UI si on est dans l'onglet apparence */
+  if(document.getElementById('ap-video-status')){
+    renderAdminAppearance&&renderAdminAppearance();
+  }
+}
+
+function restaurerVideoLocale(){
+  var hero=DB_CONFIG.hero||{};
+  if(hero.type!=='video_local'||!hero.idbKey){return;}
+  console.log('[video] Restauration vidéo locale depuis IDB key='+hero.idbKey);
+
+  idbGetBlobURL(hero.idbKey).then(function(blobURL){
+    if(!blobURL){
+      console.warn('[video] Blob introuvable en IDB — vidéo locale perdue');
+      _showVideoFallback();
+      return;
+    }
+    _revokeOldBlobURL();
+    _currentBlobURL=blobURL;
+    _applyVideoLocale(blobURL, hero.fileType||'video/mp4');
+    console.log('[video] ✓ Vidéo locale restaurée depuis IDB:', hero.fileName);
+  }).catch(function(err){
+    console.error('[video] Erreur restauration IDB:',err);
+    _showVideoFallback();
+  });
+}
+
+/* ── _showVideoFallback : fond de secours si vidéo indisponible ── */
+function _showVideoFallback(){
+  var ap=DB_CONFIG.appearance||{};
+  var bg=ap.bgColor||'#06060a';
+  var heroSection=document.getElementById('heroSection');
+  if(heroSection){
+    heroSection.style.background='linear-gradient(135deg,'+bg+' 0%,#0f0f1a 100%)';
+    console.log('[video] Fallback couleur de fond:', bg);
+  }
+  /* Cacher la vidéo cassée */
+  var vid=document.getElementById('heroVideo');
+  if(vid)vid.style.display='none';
 }
 
 
@@ -5461,6 +5800,17 @@ window.previewAccentColor             = previewAccentColor;
 window.appliquerFondPreview           = appliquerFondPreview;
 window._buildPdfLogoHTML              = _buildPdfLogoHTML;
 
+
+
+/* Exports video module */
+window.heroFileUpload       = heroFileUpload;
+window.restaurerVideoLocale = restaurerVideoLocale;
+window.supprimerVideoLocale = supprimerVideoLocale;
+window._applyVideoLocale    = _applyVideoLocale;
+window._showVideoFallback   = _showVideoFallback;
+window.idbSaveBlob          = idbSaveBlob;
+window.idbGetBlobURL        = idbGetBlobURL;
+window.idbDeleteBlob        = idbDeleteBlob;
 
 /* Exports chat module */
 window.sendChatMsg           = sendChatMsg;
