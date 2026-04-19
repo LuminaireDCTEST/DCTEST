@@ -5786,6 +5786,18 @@ function hideTabLoader(){
 
 /* ── Patch adminTab pour utiliser le loader ── */
 
+
+/* ── Exports manquants — connecte le HTML dynamique au scope global ── */
+window.saveOrderEdit        = saveOrderEdit;
+window.selectRole           = selectRole;
+window.setSubFilter         = setSubFilter;
+window.setTechFilter        = setTechFilter;
+window.toggleOrderAccordion = toggleOrderAccordion;
+window.clickAdminNotif      = clickAdminNotif;
+window.clickUserNotif       = clickUserNotif;
+window._applyVolTier        = _applyVolTier;
+console.log('✅ Système prêt — toutes les fonctions exportées vers window');
+
 document.addEventListener('DOMContentLoaded', async function(){
   console.log('=== De Cooman Racing Performance v46 — Auth SHA-256 ===');
   console.log('Système Admin : Initialisation...');
