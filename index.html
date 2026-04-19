@@ -471,7 +471,7 @@ textarea.fi{resize:vertical}
 <div class="toast-wrap" id="toastWrap"></div>
 <script>
 console.log("✅ JS chargé avec succès — De Cooman Racing Performance v36");
-const LS={PRODUITS:'dcorp_v29_products',USERS:'dcorp_v29_users',COMMANDES:'dcorp_v29_orders',CONFIG:'dcorp_v29_config',CHAT:'dcorp_v29_chat',STOCK_LOG:'dcorp_v29_stocklog',VISUEL:'dcorp_v29_visuel'};
+const LS={PRODUITS:'dcorp_v29_products',USERS:'dcorp_v29_users',COMMANDES:'dcorp_v29_orders',CONFIG:'dcorp_v29_config',CHAT:'dcorp_v29_chat',STOCK_LOG:'dcorp_v29_stocklog',VISUEL:'dcorp_v29_visuel',MAIL_TEMPLATES:'dcorp_v40_mail_templates'};
 const TVA=0.21,WF_AUTO_CONFIRM_DAYS=7;
 
 /* ── DEFAULTS ── */
@@ -632,6 +632,21 @@ function charger(){
   }catch(e){}
 
   console.log('[charger] ✓ terminé');
+  /* ── DB_MAIL_TEMPLATES ── */
+  try{
+    var mt=localStorage.getItem(LS.MAIL_TEMPLATES);
+    if(mt){
+      var saved=JSON.parse(mt);
+      /* Merge avec CONFIG_EMAILS (valeurs par défaut) */
+      Object.keys(saved).forEach(function(k){
+        if(CONFIG_EMAILS[k]){
+          CONFIG_EMAILS[k].sujet=saved[k].sujet||CONFIG_EMAILS[k].sujet;
+          CONFIG_EMAILS[k].corps=saved[k].corps||CONFIG_EMAILS[k].corps;
+        }
+      });
+      console.log('[mail] Templates chargés depuis LS');
+    }
+  }catch(e){console.warn('[mail] Erreur chargement templates:',e);}
 }
 
 function verifierBaseDeDonnees(){
@@ -2282,109 +2297,124 @@ function previewImage(url){
 
 
 function renderAdminModeles(){
-  console.log('DEBUG [renderAdminModeles] commandes='+DB_COMMANDES.length);
-  const ct=document.getElementById('adminContent');if(!ct)return;
-  const opts=DB_COMMANDES.length
-    ? DB_COMMANDES.map(o=>`<option value="${o.id}">${o.id} · ${o.userName} · ${fmt(oTTC(o))} TTC</option>`).join('')
-    : '<option value="">Aucune commande disponible</option>';
+  console.log('[docs] renderAdminModeles commandes='+DB_COMMANDES.length);
+  var ct=document.getElementById('adminContent');if(!ct)return;
+  var opts=DB_COMMANDES.length
+    ? DB_COMMANDES.map(function(o){return '<option value="'+o.id+'">'+o.id+' · '+o.userName+' · '+fmt(oTTC(o))+' TTC</option>';}).join('')
+    : '<option value="">Aucune commande</option>';
 
   ct.innerHTML=`
-<div class="flex items-center justify-between mb-5">
-  <div><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Documents</p>
-  <h2 class="font-display text-2xl font-bold text-white uppercase">PDF <span style="color:#00a8f3">Professionnel</span></h2>
-  <p class="text-white/35 text-sm mt-1">Devis · Facture · BL · Acompte · Avoir — 100% navigateur, zéro serveur</p></div>
+<div class="flex items-center justify-between mb-5 flex-wrap gap-3">
+  <div>
+    <p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Documents</p>
+    <h2 class="font-display text-2xl font-bold text-white uppercase">PDF <span style="color:#00a8f3">Professionnel</span></h2>
+    <p class="text-white/35 text-sm mt-1">Devis · BC · Facture · Acompte · Avoir · BL — 100% navigateur</p>
+  </div>
+  <button onclick="console.log('Configurer emails');adminTab('emailsettings')"
+    class="btn btn-ghost btn-sm" style="gap:.35rem">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+    Config. emails
+  </button>
 </div>
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.4rem">
 
-  <!-- Panneau gauche -->
+  <!-- Panneau gauche : générateur -->
   <div>
+    <!-- Type de document -->
     <div class="card p-5 mb-4">
       <p class="fl mb-3">Type de document</p>
       <div style="display:flex;flex-wrap:wrap;gap:.4rem">
-        ${[{id:'commande',label:'Bon de commande',color:'#0066cc'},
-           {id:'devis',label:'Devis',color:'#7c3aed'},
-           {id:'facture',label:'Facture',color:'#d97706'},
-           {id:'livraison',label:'Bon de livraison',color:'#059669'},
-           {id:'acompte',label:'Acompte',color:'#0891b2'},
-           {id:'avoir',label:'Avoir',color:'#dc2626'}
-          ].map(d=>`<button id="pdf-btn-${d.id}"
-            onclick="selectPdfType('${d.id}')"
-            style="padding:.42rem .9rem;border-radius:8px;border:1px solid rgba(255,255,255,.1);
-            background:rgba(255,255,255,.03);cursor:pointer;font-family:Inter,sans-serif;
-            font-size:.78rem;font-weight:600;color:rgba(255,255,255,.5);transition:all .2s"
-            onmouseover="this.style.background='rgba(0,168,243,.1)';this.style.color='#00a8f3';this.style.borderColor='rgba(0,168,243,.3)'"
-            onmouseout="if(window._pdfType!=='${d.id}'){this.style.background='rgba(255,255,255,.03)';this.style.color='rgba(255,255,255,.5)';this.style.borderColor='rgba(255,255,255,.1)'}"
-            >${d.label}</button>`).join('')}
+        ${DOC_TYPES.map(function(d){return `<button id="pdf-btn-${d.id}"
+          onclick="selectPdfType('${d.id}')"
+          style="padding:.42rem .9rem;border-radius:8px;border:1px solid rgba(255,255,255,.1);
+          background:rgba(255,255,255,.03);color:rgba(255,255,255,.55);cursor:pointer;
+          font-family:Inter,sans-serif;font-size:.75rem;font-weight:500;transition:all .2s">
+          ${d.label}</button>`;}).join('')}
       </div>
     </div>
 
+    <!-- Sélection commande -->
     <div class="card p-5 mb-4">
-      <label class="fl mb-2">Commande source</label>
-      <select id="pdf-order" class="fi" style="margin-bottom:.5rem">
+      <p class="fl mb-3">Commande à traiter</p>
+      <select id="pdf-order" class="fi mb-3"
+        onchange="var t=window._pdfType||'commande';afficherApercuMail(t,this.value)">
         <option value="">— Sélectionner une commande —</option>
         ${opts}
       </select>
-      <div id="pdf-acompte-row" style="display:none;margin-top:.5rem">
-        <label class="fl mb-1">% d'acompte</label>
-        <input type="number" id="pdf-pct" class="fi" value="30" min="1" max="99" step="1" style="width:110px"/>
+      <div id="pdf-acompte-field" style="display:none;margin-bottom:.75rem">
+        <label class="fl">Pourcentage d'acompte</label>
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <input type="number" id="pdf-pct" class="fi" value="30" min="1" max="100" style="width:90px"/>
+          <span style="color:rgba(255,255,255,.4);font-size:.82rem">% du TTC</span>
+        </div>
       </div>
-    </div>
-
-    <div style="display:flex;flex-direction:column;gap:.45rem">
-      <button onclick="console.log('DEBUG [btn] Télécharger PDF');genererDocument()"
-        class="btn btn-primary gp" style="justify-content:center">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-        Télécharger PDF
-      </button>
-      <button onclick="console.log('DEBUG [btn] Aperçu PDF');aperçuDocument()"
-        class="btn btn-outline" style="justify-content:center">👁 Aperçu dans onglet</button>
-      <button onclick="console.log('DEBUG [btn] Gmail');genererEtEnvoyerDoc('gmail')"
-        class="btn btn-ghost" style="justify-content:center;color:#ea4335;border-color:rgba(234,67,53,.2)">
-        ✉ Générer + Gmail</button>
-      <button onclick="console.log('DEBUG [btn] Mailto');genererEtEnvoyerDoc('mailto')"
-        class="btn btn-ghost" style="justify-content:center">✉ Générer + client mail</button>
+      <!-- Actions -->
+      <div style="display:flex;flex-direction:column;gap:.5rem">
+        <button onclick="console.log('[btn] Aperçu PDF');aperçuDocument()"
+          class="btn btn-outline" style="justify-content:center">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+          Aperçu & Télécharger PDF
+        </button>
+        <button onclick="console.log('[btn] Gmail');genererEtEnvoyerDoc('gmail')"
+          class="btn btn-primary gp" style="justify-content:center">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          Générer + Envoyer Gmail
+        </button>
+        <button onclick="console.log('[btn] Mailto');genererEtEnvoyerDoc('mailto')"
+          class="btn btn-ghost btn-sm" style="justify-content:center">✉ Via client mail par défaut</button>
+      </div>
     </div>
   </div>
 
-  <!-- Panneau droit : tableau rapide -->
-  <div class="card p-4" style="max-height:540px;overflow-y:auto">
-    <p class="fl mb-3">Génération rapide par commande</p>
-    ${!DB_COMMANDES.length
-      ? '<p class="text-white/30 text-sm">Aucune commande.</p>'
-      : `<div style="display:flex;flex-direction:column;gap:.5rem">
-        ${DB_COMMANDES.map(o=>`
-        <div style="padding:.6rem .75rem;border:1px solid rgba(255,255,255,.07);border-radius:10px;background:rgba(255,255,255,.02)">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.4rem">
-            <div>
-              <p style="font-family:'Bebas Neue',sans-serif;font-size:.85rem;letter-spacing:.06em;color:#00a8f3">${o.id}</p>
-              <p style="font-size:.68rem;color:rgba(255,255,255,.4);font-family:Inter,sans-serif">${o.userName} · ${fmt(oTTC(o))}</p>
+  <!-- Panneau droit : aperçu mail -->
+  <div>
+    <div class="card p-5 mb-4">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+        <p class="fl" style="margin:0">Aperçu du mail</p>
+        <button onclick="adminTab('emailsettings')"
+          style="font-family:Inter,sans-serif;font-size:.65rem;font-weight:700;padding:2px 9px;
+          border-radius:6px;border:1px solid rgba(0,168,243,.25);background:rgba(0,168,243,.08);
+          color:#00a8f3;cursor:pointer">✏️ Modifier template</button>
+      </div>
+      <div id="mail-preview-zone" style="min-height:80px">
+        <p style="color:rgba(255,255,255,.3);font-family:Inter,sans-serif;font-size:.78rem">
+          Sélectionnez une commande pour voir l'aperçu du mail personnalisé.
+        </p>
+      </div>
+    </div>
+
+    <!-- Historique rapide -->
+    <div class="card p-5">
+      <p class="fl mb-3">Actions rapides par commande</p>
+      <div style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:.4rem">
+        ${DB_COMMANDES.length===0
+          ?'<p style="color:rgba(255,255,255,.3);font-family:Inter,sans-serif;font-size:.78rem">Aucune commande.</p>'
+          :DB_COMMANDES.slice(0,12).map(function(o){return `
+          <div style="padding:.6rem .8rem;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:10px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:.35rem">
+              <code style="font-size:.7rem;color:#00a8f3">${o.id}</code>
+              <span style="font-size:.65rem;color:rgba(255,255,255,.3)">${o.date||''}</span>
             </div>
-            <span style="font-size:.62rem;color:rgba(255,255,255,.25);font-family:Inter,sans-serif">${o.date||''}</span>
-          </div>
-          <div style="display:flex;gap:.3rem;flex-wrap:wrap">
-            ${['commande','devis','facture','livraison'].map(t=>`
-            <button onclick="console.log('DEBUG [btn] PDF rapide ${t} ${o.id}');genererDocument('${t}','${o.id}')"
-              style="font-size:.62rem;font-weight:700;padding:2px 8px;border-radius:5px;
-              border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);
-              color:rgba(255,255,255,.55);cursor:pointer;font-family:Inter,sans-serif;transition:all .15s"
-              onmouseover="this.style.background='rgba(0,168,243,.12)';this.style.borderColor='rgba(0,168,243,.3)';this.style.color='#00a8f3'"
-              onmouseout="this.style.background='rgba(255,255,255,.04)';this.style.borderColor='rgba(255,255,255,.1)';this.style.color='rgba(255,255,255,.55)'">
-              📄 ${t.charAt(0).toUpperCase()+t.slice(1)}</button>`).join('')}
-          </div>
-        </div>`).join('')}
-        </div>`}
+            <p style="font-size:.75rem;color:rgba(255,255,255,.6);margin-bottom:.4rem">${o.userName} · ${fmt(oTTC(o))}</p>
+            <div style="display:flex;gap:.25rem;flex-wrap:wrap">
+              ${['commande','devis','facture','livraison'].map(function(t){return `
+              <button onclick="selectPdfType('${t}');document.getElementById('pdf-order').value='${o.id}';afficherApercuMail('${t}','${o.id}')"
+                style="font-size:.58rem;font-weight:700;padding:1px 7px;border-radius:5px;cursor:pointer;font-family:Inter,sans-serif;
+                border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:rgba(255,255,255,.5);transition:all .15s"
+                onmouseover="this.style.background='rgba(0,168,243,.1)';this.style.color='#00a8f3'"
+                onmouseout="this.style.background='rgba(255,255,255,.04)';this.style.color='rgba(255,255,255,.5)'"
+                >📄 ${t.charAt(0).toUpperCase()+t.slice(1)}</button>`;}).join('')}
+            </div>
+          </div>`;}).join('')}
+      </div>
+    </div>
   </div>
 </div>`;
 
   /* Activer type par défaut */
   if(!window._pdfType)window._pdfType='commande';
   selectPdfType(window._pdfType);
-
-  /* Afficher/masquer champ acompte selon le type */
-  document.getElementById('pdf-order').addEventListener('change',function(){
-    document.getElementById('pdf-acompte-row').style.display=window._pdfType==='acompte'?'block':'none';
-  });
 }
 
 /* ══ genererDocument — Point d'entrée unique PDF ══
@@ -2458,36 +2488,75 @@ var CONFIG_EMAILS = {
           + 'Cordialement,\nL\'équipe De Cooman Racing Performance\n{lien_site}'
   }
 };
+/* Snapshot immuable des defaults — utilisé par reinitialiserTemplate */
+window.DEFAUT_EMAILS=JSON.parse(JSON.stringify(CONFIG_EMAILS));
 
 /* ── resoudreVarsEmail : remplace {var} par les valeurs réelles ── */
+/* ══ resoudreVarsEmail — résolution de toutes les balises ══
+   Balises supportées :
+   {nom_client} {prenom_client} {societe} {numero_doc} {date}
+   {total_ttc} {total_ht} {total_tva} {lignes_articles}
+   {client_email} {client_tel} {client_adresse} {client_nom} {client_prenom}
+   {lien_paiement} {lien_site} {societe_email} {societe_tel}
+*/
 function resoudreVarsEmail(tpl, o, user, docNum){
   var ci=DB_CONFIG.contact||{};
   var lignes=(o.items||[]).map(function(it){
     return '  • '+it.name+' × '+it.qty+' u. = '+(it.unitPrice*it.qty).toFixed(2)+' € HT';
   }).join('\n');
+  var clientNom =(user.last||'').trim();
+  var clientPren=(user.first||o.userName||'Client').trim();
+  var lienPaiem =ci.website?ci.website+'/paiement?doc='+docNum:'https://decooman-racing.be/paiement';
   var vars={
-    '{client_prenom}': user.first||o.userName||'Client',
-    '{client_nom}':    user.last||'',
-    '{client_email}':  user.email||o.userEmail||'',
-    '{client_tel}':    user.tel||'Non renseigné',
-    '{client_adresse}':user.addr||o.addr||'Adresse non renseignée',
-    '{client_societe}':user.company||'Non renseignée',
-    '{numero_doc}':    docNum,
-    '{date}':          new Date(o.date||Date.now()).toLocaleDateString('fr-BE',{day:'2-digit',month:'long',year:'numeric'}),
-    '{total_ht}':      oHT(o).toFixed(2)+' €',
-    '{total_tva}':     oTVA(o).toFixed(2)+' €',
-    '{total_ttc}':     fmt(oTTC(o)),
+    '{nom_client}':     clientNom,
+    '{prenom_client}':  clientPren,
+    '{client_prenom}':  clientPren,
+    '{client_nom}':     clientNom,
+    '{societe}':        ci.companyName||'De Cooman Racing Performance',
+    '{client_societe}': user.company||'Non renseignée',
+    '{numero_doc}':     docNum,
+    '{date}':           new Date(o.date||Date.now()).toLocaleDateString('fr-BE',{day:'2-digit',month:'long',year:'numeric'}),
+    '{total_ttc}':      fmt(oTTC(o)),
+    '{total_ht}':       oHT(o).toFixed(2)+' €',
+    '{total_tva}':      oTVA(o).toFixed(2)+' €',
     '{lignes_articles}':lignes,
-    '{lien_site}':     ci.website||'https://decooman-racing.be',
-    '{societe}':       ci.companyName||'De Cooman Racing Performance',
-    '{societe_email}': ci.email||'DCRkoru@gmail.com',
-    '{societe_tel}':   ci.phone||ci.tel||''
+    '{client_email}':   user.email||o.userEmail||'',
+    '{client_tel}':     user.tel||'Non renseigné',
+    '{client_adresse}': user.addr||o.addr||'Adresse non renseignée',
+    '{lien_paiement}':  lienPaiem,
+    '{lien_site}':      ci.website||'https://decooman-racing.be',
+    '{societe_email}':  ci.email||'DCRkoru@gmail.com',
+    '{societe_tel}':    ci.phone||ci.tel||''
   };
   var result=tpl;
-  Object.keys(vars).forEach(function(k){
-    result=result.split(k).join(vars[k]);
-  });
+  Object.keys(vars).forEach(function(k){result=result.split(k).join(vars[k]);});
   return result;
+}
+
+/* ══ preparerMail(type, orderId) — fonction unifiée ══
+   Lit CONFIG_EMAILS[type] (persisté en LS via renderAdminEmailSettings)
+   Retourne {sujet, corps, emailTo, docNum} prêts à l'emploi
+*/
+function preparerMail(type, orderId){
+  var o=DB_COMMANDES.find(function(x){return x.id===orderId;});
+  if(!o){return null;}
+  var userRaw=DB_USERS.find(function(u){return u.id===o.userId;})||{};
+  var user={
+    first:  userRaw.first||o.userName||'Client',
+    last:   userRaw.last||'',
+    email:  userRaw.email||o.userEmail||'',
+    tel:    userRaw.tel||'',
+    company:userRaw.company||'',
+    addr:   userRaw.addr||o.addr||''
+  };
+  var pfx={commande:'BC',devis:'DEV',facture:'FAC',livraison:'BL',acompte:'ACP',avoir:'AVO'};
+  var docNum=(pfx[type]||type.slice(0,3).toUpperCase())+'-'+orderId+'-'+new Date().getFullYear();
+  /* Utiliser CONFIG_EMAILS (modifiable depuis l'UI admin) */
+  var tpl=CONFIG_EMAILS[type]||CONFIG_EMAILS.commande;
+  var sujet=resoudreVarsEmail(tpl.sujet, o, user, docNum);
+  var corps=resoudreVarsEmail(tpl.corps, o, user, docNum);
+  console.log('[mail] preparerMail type='+type+' docNum='+docNum+' to='+user.email);
+  return {sujet:sujet, corps:corps, emailTo:user.email, docNum:docNum, user:user, commande:o};
 }
 
 /* ── PDF_CSS : feuille de styles professionnelle pour les documents PDF ── */
@@ -2820,55 +2889,73 @@ function aperçuDocument(typeArg, orderIdArg){
 }
 
 /* ── genererEtEnvoyerDoc : PDF + Gmail ou mailto ── */
+
+/* ══ afficherApercuMail — met à jour l'encadré aperçu mail dans l'UI docs ══ */
+function afficherApercuMail(type, orderId){
+  var zone=document.getElementById('mail-preview-zone');
+  if(!zone)return;
+  if(!orderId){
+    zone.innerHTML='<p style="color:rgba(255,255,255,.3);font-family:Inter,sans-serif;font-size:.78rem">Sélectionnez une commande pour voir l\'aperçu.</p>';
+    return;
+  }
+  var mail=preparerMail(type, orderId);
+  if(!mail){zone.innerHTML='<p style="color:#ef4444;font-size:.75rem">Commande introuvable.</p>';return;}
+  zone.innerHTML=`
+<div style="margin-bottom:.6rem">
+  <span style="font-family:Inter,sans-serif;font-size:.62rem;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.35)">Destinataire</span>
+  <p style="font-family:Inter,sans-serif;font-size:.82rem;color:#00a8f3;margin-top:1px">${mail.emailTo||'—'}</p>
+</div>
+<div style="margin-bottom:.6rem">
+  <span style="font-family:Inter,sans-serif;font-size:.62rem;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.35)">Objet</span>
+  <p style="font-family:Inter,sans-serif;font-size:.82rem;color:white;margin-top:1px;font-weight:500">${mail.sujet}</p>
+</div>
+<div>
+  <span style="font-family:Inter,sans-serif;font-size:.62rem;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.35)">Corps</span>
+  <pre style="font-family:Inter,sans-serif;font-size:.75rem;color:rgba(255,255,255,.65);margin-top:.35rem;
+    white-space:pre-wrap;word-break:break-word;line-height:1.55;
+    background:rgba(0,0,0,.3);border-radius:8px;padding:.7rem .85rem;
+    border:1px solid rgba(255,255,255,.06);max-height:180px;overflow-y:auto">${mail.corps}</pre>
+</div>`;
+  console.log('[mail] Aperçu mis à jour — type='+type+' docNum='+mail.docNum);
+}
+
 function genererEtEnvoyerDoc(methode){
   var type    = window._pdfType || 'commande';
   var orderId = (document.getElementById('pdf-order')&&document.getElementById('pdf-order').value)||'';
   if(!orderId){toast('Sélectionnez une commande','error');return;}
 
-  var o=DB_COMMANDES.find(function(x){return x.id===orderId;});if(!o)return;
-  var userRaw=DB_USERS.find(function(u){return u.id===o.userId;})||{};
-  var user={
-    first:(userRaw.first||o.userName||'Client'),
-    last:(userRaw.last||''),
-    email:(userRaw.email||o.userEmail||'')
-  };
-  var ci=DB_CONFIG.contact||{};
-  var pfx={commande:'BC',devis:'DEV',facture:'FAC',livraison:'BL',acompte:'ACP',avoir:'AVO'};
-  var docNum=(pfx[type]||type.slice(0,3).toUpperCase())+'-'+orderId+'-'+new Date().getFullYear();
+  /* Préparer le mail via preparerMail() */
+  var mail=preparerMail(type, orderId);
+  if(!mail){toast('Commande introuvable','error');return;}
 
-  /* Récupérer template email */
-  var tpl=CONFIG_EMAILS[type]||CONFIG_EMAILS.commande;
-  var sujet=resoudreVarsEmail(tpl.sujet, o, user, docNum);
-  var corps=resoudreVarsEmail(tpl.corps, o, user, docNum);
-  var emailTo=user.email;
-
-  console.log('PDF: Envoi '+methode+' pour', type, 'to='+emailTo);
+  console.log('[mail] Envoi '+methode+' type='+type+' to='+mail.emailTo);
 
   /* Générer le PDF d'abord */
   genererDocument(type, orderId);
 
-  /* Ouvrir email après 2s (laisser le PDF se générer) */
+  /* Ouvrir Gmail/mailto après 2s */
   setTimeout(function(){
     if(methode==='gmail'){
-      /* Encode avec gestion des sauts de ligne %0D%0A */
-      var bodyEncoded=encodeURIComponent(corps).replace(/%0A/g,'%0D%0A');
+      /* %0D%0A pour les sauts de ligne dans Gmail */
+      var bodyEncoded=encodeURIComponent(mail.corps).replace(/%0A/g,'%0D%0A');
       var gmailUrl='https://mail.google.com/mail/?view=cm&fs=1'
-        +'&to='+encodeURIComponent(emailTo)
-        +'&su='+encodeURIComponent(sujet)
+        +'&to='+encodeURIComponent(mail.emailTo)
+        +'&su='+encodeURIComponent(mail.sujet)
         +'&body='+bodyEncoded;
-      console.log('PDF: Gmail URL créée — to='+emailTo);
+      console.log('[mail] Gmail URL — to='+mail.emailTo+' sujet='+mail.sujet.slice(0,40));
       window.open(gmailUrl,'_blank','noopener,noreferrer');
     } else {
-      /* mailto: */
-      var mailtoUrl='mailto:'+encodeURIComponent(emailTo)
-        +'?subject='+encodeURIComponent(sujet)
-        +'&body='+encodeURIComponent(corps);
+      var mailtoUrl='mailto:'+encodeURIComponent(mail.emailTo)
+        +'?subject='+encodeURIComponent(mail.sujet)
+        +'&body='+encodeURIComponent(mail.corps);
       var a=document.createElement('a');
       a.href=mailtoUrl;
       document.body.appendChild(a);a.click();
       setTimeout(function(){a.remove();},500);
     }
-    toast('✓ Email préparé pour '+emailTo,'info');
+    toast('✓ Email préparé pour '+mail.emailTo,'info');
+    /* Mettre à jour l'aperçu mail dans l'UI */
+    afficherApercuMail(type, orderId);
   },2000);
 }
 
@@ -3277,17 +3364,22 @@ function selectPdfType(type){
     var btn=document.getElementById('pdf-btn-'+d.id);
     if(!btn)return;
     if(d.id===type){
-      btn.style.background='rgba('+(d.color==='#0066cc'?'0,102,204':d.color==='#059669'?'5,150,105':d.color==='#d97706'?'217,119,6':d.color==='#7c3aed'?'124,58,237':d.color==='#0891b2'?'8,145,178':'220,38,38')+', .12)';
+      btn.style.background='rgba(0,168,243,.12)';
       btn.style.borderColor=d.color+'88';
       btn.style.color=d.color;
-    } else {
+      btn.style.fontWeight='700';
+    }else{
       btn.style.background='rgba(255,255,255,.03)';
       btn.style.borderColor='rgba(255,255,255,.08)';
       btn.style.color='rgba(255,255,255,.55)';
+      btn.style.fontWeight='500';
     }
   });
   var af=document.getElementById('pdf-acompte-field');
   if(af)af.style.display=type==='acompte'?'block':'none';
+  /* Rafraîchir l'aperçu mail */
+  var orderId=(document.getElementById('pdf-order')&&document.getElementById('pdf-order').value)||'';
+  afficherApercuMail(type, orderId);
 }
 
 
@@ -4241,26 +4333,212 @@ function renderAdminOrders(){
 }
 
 function renderAdminEmailSettings(){
-  console.log('DEBUG [renderAdminEmailSettings]');
-  const ct=document.getElementById('adminContent');if(!ct)return;
-  const em=DB_CONFIG.email||{};
-  ct.innerHTML=`<div class="mb-5"><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Configuration</p>
-<h2 class="font-display text-2xl font-bold text-white uppercase">Paramètres <span style="color:#00a8f3">Email</span></h2></div>
-<div class="card p-5">
-  <div class="space-y-4">
-    <div><label class="fl">Email expéditeur</label><input type="email" id="em-sender" class="fi" value="${em.senderEmail||''}" placeholder="admin@decooman.be"/></div>
-    <div><label class="fl">Nom expéditeur</label><input type="text" id="em-name" class="fi" value="${em.senderName||'De Cooman Racing Performance'}"/></div>
-    <div><label class="fl">Email notifications commandes</label><input type="email" id="em-orders" class="fi" value="${em.orderNotif||''}"/></div>
-    <button class="btn btn-primary" onclick="
-      DB_CONFIG.email=DB_CONFIG.email||{};
-      DB_CONFIG.email.senderEmail=document.getElementById('em-sender').value;
-      DB_CONFIG.email.senderName=document.getElementById('em-name').value;
-      DB_CONFIG.email.orderNotif=document.getElementById('em-orders').value;
-      sauvegarder();toast('Paramètres email sauvegardés','success');
-      console.log('DEBUG [btn] Email settings saved');
-    ">Enregistrer</button>
+  console.log('[emailsettings] renderAdminEmailSettings');
+  var ct=document.getElementById('adminContent');if(!ct)return;
+  var em=DB_CONFIG.email||{};
+
+  var TAGS=[
+    {tag:'{nom_client}',       desc:'Nom de famille du client'},
+    {tag:'{prenom_client}',    desc:'Prénom du client'},
+    {tag:'{societe}',          desc:'Nom de votre société'},
+    {tag:'{client_societe}',   desc:'Société du client'},
+    {tag:'{numero_doc}',       desc:'Numéro du document (ex: BC-CMD-001-2025)'},
+    {tag:'{date}',             desc:'Date du document'},
+    {tag:'{total_ttc}',        desc:'Total TTC de la commande'},
+    {tag:'{total_ht}',         desc:'Total HT'},
+    {tag:'{total_tva}',        desc:'Montant TVA'},
+    {tag:'{lignes_articles}',  desc:'Liste détaillée des articles commandés'},
+    {tag:'{client_email}',     desc:'Email du client'},
+    {tag:'{client_tel}',       desc:'Téléphone du client'},
+    {tag:'{client_adresse}',   desc:'Adresse de livraison du client'},
+    {tag:'{lien_paiement}',    desc:'Lien vers la page de paiement'},
+    {tag:'{lien_site}',        desc:'URL de votre site web'},
+    {tag:'{societe_email}',    desc:'Votre email de contact'},
+    {tag:'{societe_tel}',      desc:'Votre numéro de téléphone'}
+  ];
+
+  ct.innerHTML=`
+<div class="flex items-center justify-between mb-5 flex-wrap gap-3">
+  <div>
+    <p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Configuration</p>
+    <h2 class="font-display text-2xl font-bold text-white uppercase">Templates <span style="color:#00a8f3">Emails</span></h2>
+    <p class="text-white/35 text-sm mt-1">Personnalisez l'objet et le corps du mail envoyé pour chaque type de document</p>
+  </div>
+  <button onclick="adminTab('docs')" class="btn btn-ghost btn-sm">← Retour Documents</button>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1.6fr;gap:1.4rem">
+
+  <!-- Colonne gauche : balises + config expéditeur -->
+  <div>
+    <!-- Balises disponibles -->
+    <div class="card p-5 mb-4">
+      <p class="fl mb-3">Balises disponibles</p>
+      <p style="font-family:Inter,sans-serif;font-size:.7rem;color:rgba(255,255,255,.4);margin-bottom:.75rem">
+        Cliquez pour copier · Collez dans l'objet ou le corps
+      </p>
+      <div style="display:flex;flex-direction:column;gap:.3rem">
+        ${TAGS.map(function(t){return `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.3rem .5rem;
+          border-radius:7px;border:1px solid rgba(255,255,255,.05);background:rgba(255,255,255,.02);
+          cursor:pointer;transition:all .15s"
+          onclick="copierBalise('${t.tag}')"
+          onmouseover="this.style.background='rgba(0,168,243,.06)';this.style.borderColor='rgba(0,168,243,.2)'"
+          onmouseout="this.style.background='rgba(255,255,255,.02)';this.style.borderColor='rgba(255,255,255,.05)'">
+          <code style="font-family:monospace;font-size:.72rem;color:#00a8f3;font-weight:700">${t.tag}</code>
+          <span style="font-family:Inter,sans-serif;font-size:.62rem;color:rgba(255,255,255,.35);text-align:right;max-width:55%;line-height:1.3">${t.desc}</span>
+        </div>`;}).join('')}
+      </div>
+    </div>
+
+    <!-- Config expéditeur -->
+    <div class="card p-5">
+      <p class="fl mb-3">Expéditeur</p>
+      <div style="display:flex;flex-direction:column;gap:.65rem">
+        <div><label class="fl">Email expéditeur</label>
+          <input type="email" id="em-sender" class="fi" value="${em.senderEmail||''}" placeholder="admin@decooman.be"/></div>
+        <div><label class="fl">Nom affiché</label>
+          <input type="text" id="em-name" class="fi" value="${em.senderName||'De Cooman Racing Performance'}"/></div>
+        <div><label class="fl">Notif. commandes</label>
+          <input type="email" id="em-orders" class="fi" value="${em.orderNotif||''}"/></div>
+        <button onclick="
+          DB_CONFIG.email=DB_CONFIG.email||{};
+          DB_CONFIG.email.senderEmail=document.getElementById('em-sender').value;
+          DB_CONFIG.email.senderName=document.getElementById('em-name').value;
+          DB_CONFIG.email.orderNotif=document.getElementById('em-orders').value;
+          sauvegarder();toast('Paramètres expéditeur sauvegardés ✓','success');
+        " class="btn btn-ghost btn-sm">Enregistrer expéditeur</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Colonne droite : éditeur de template -->
+  <div class="card p-5">
+    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem">
+      <p class="fl" style="margin:0">Template pour :</p>
+      <select id="email-type-sel" class="fi" style="max-width:200px;margin:0"
+        onchange="chargerTemplateEmail(this.value)">
+        <option value="commande">Bon de commande</option>
+        <option value="devis">Devis</option>
+        <option value="facture">Facture</option>
+        <option value="acompte">Acompte</option>
+        <option value="avoir">Avoir</option>
+        <option value="livraison">Bon de livraison</option>
+      </select>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:.75rem">
+      <div>
+        <label class="fl" style="margin-bottom:.35rem">Objet du mail</label>
+        <input type="text" id="email-sujet" class="fi"
+          placeholder="Objet du mail…" style="font-size:.82rem"/>
+      </div>
+      <div>
+        <label class="fl" style="margin-bottom:.35rem">Corps du mail</label>
+        <textarea id="email-corps" class="fi" rows="12"
+          style="font-family:Inter,sans-serif;font-size:.78rem;line-height:1.6;resize:vertical;min-height:220px"
+          placeholder="Corps du mail… Utilisez les balises de gauche."></textarea>
+      </div>
+
+      <div style="display:flex;gap:.5rem;justify-content:flex-end">
+        <button onclick="reinitialiserTemplate(document.getElementById('email-type-sel').value)"
+          class="btn btn-ghost btn-sm">↺ Réinitialiser par défaut</button>
+        <button onclick="sauvegarderTemplate(document.getElementById('email-type-sel').value)"
+          class="btn btn-primary btn-sm gp">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          Sauvegarder ce template
+        </button>
+      </div>
+
+      <!-- Aperçu texte -->
+      <div style="margin-top:.5rem;padding:.75rem;background:rgba(0,0,0,.25);border-radius:10px;border:1px solid rgba(255,255,255,.07)">
+        <p style="font-family:Inter,sans-serif;font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.3);margin-bottom:.4rem">Aperçu en direct (balises non résolues)</p>
+        <pre id="email-preview-raw" style="font-family:Inter,sans-serif;font-size:.72rem;color:rgba(255,255,255,.55);
+          white-space:pre-wrap;word-break:break-word;line-height:1.5;max-height:120px;overflow-y:auto;margin:0"></pre>
+      </div>
+    </div>
   </div>
 </div>`;
+
+  /* Charger le premier template */
+  chargerTemplateEmail('commande');
+
+  /* Live preview pendant la frappe */
+  setTimeout(function(){
+    var corps=document.getElementById('email-corps');
+    var prev =document.getElementById('email-preview-raw');
+    if(corps&&prev){
+      corps.oninput=function(){prev.textContent=this.value;};
+    }
+    var sujet=document.getElementById('email-sujet');
+    if(sujet){sujet.oninput=function(){
+      prev&&(prev.textContent='Objet: '+this.value+'\n\n'+(document.getElementById('email-corps')?document.getElementById('email-corps').value:''));
+    };}
+  },50);
+}
+
+/* ── chargerTemplateEmail : peuple les champs depuis CONFIG_EMAILS ── */
+function chargerTemplateEmail(type){
+  var tpl=CONFIG_EMAILS[type]||CONFIG_EMAILS.commande;
+  var suj=document.getElementById('email-sujet');
+  var cor=document.getElementById('email-corps');
+  var prv=document.getElementById('email-preview-raw');
+  if(suj)suj.value=tpl.sujet||'';
+  if(cor)cor.value=tpl.corps||'';
+  if(prv)prv.textContent='Objet: '+(tpl.sujet||'')+'\n\n'+(tpl.corps||'');
+  console.log('[emailsettings] Template chargé: '+type);
+}
+
+/* ── sauvegarderTemplate : persiste dans LS + CONFIG_EMAILS ── */
+function sauvegarderTemplate(type){
+  var suj=document.getElementById('email-sujet');
+  var cor=document.getElementById('email-corps');
+  var newSujet=suj?suj.value.trim():'';
+  var newCorps=cor?cor.value:'';
+  if(!newSujet){toast('L\'objet ne peut pas être vide','error');return;}
+  /* Mettre à jour CONFIG_EMAILS en mémoire */
+  if(!CONFIG_EMAILS[type])CONFIG_EMAILS[type]={};
+  CONFIG_EMAILS[type].sujet=newSujet;
+  CONFIG_EMAILS[type].corps=newCorps;
+  /* Persister dans LS (clé séparée pour ne pas mélanger avec DB_CONFIG) */
+  try{
+    var saved={};
+    Object.keys(CONFIG_EMAILS).forEach(function(k){
+      saved[k]={sujet:CONFIG_EMAILS[k].sujet, corps:CONFIG_EMAILS[k].corps};
+    });
+    localStorage.setItem(LS.MAIL_TEMPLATES, JSON.stringify(saved));
+    console.log('[emailsettings] Templates sauvegardés dans LS.MAIL_TEMPLATES');
+  }catch(e){console.error('[emailsettings] Erreur sauvegarde LS:',e);}
+  toast('Template "'+type+'" sauvegardé ✓ — Il sera utilisé dès le prochain envoi Gmail','success');
+}
+
+/* ── reinitialiserTemplate : remet le texte par défaut ── */
+function reinitialiserTemplate(type){
+  if(!confirm('Réinitialiser le template "'+type+'" aux valeurs par défaut ?'))return;
+  /* Les defaults sont dans DEFAUT_EMAILS (copie immuable) */
+  if(window.DEFAUT_EMAILS&&window.DEFAUT_EMAILS[type]){
+    CONFIG_EMAILS[type].sujet=window.DEFAUT_EMAILS[type].sujet;
+    CONFIG_EMAILS[type].corps=window.DEFAUT_EMAILS[type].corps;
+    chargerTemplateEmail(type);
+    sauvegarderTemplate(type);
+    toast('Template "'+type+'" réinitialisé','info');
+  }
+}
+
+/* ── copierBalise : copier {balise} dans le clipboard ── */
+function copierBalise(tag){
+  try{
+    navigator.clipboard.writeText(tag).then(function(){
+      toast('Copié : '+tag,'info');
+    });
+  }catch(e){
+    /* Fallback IE/non-secure */
+    var t=document.createElement('textarea');
+    t.value=tag;
+    document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();
+    toast('Copié : '+tag,'info');
+  }
+  console.log('[emailsettings] Balise copiée:',tag);
 }
 
 function renderAdminShipping(){
@@ -4619,6 +4897,15 @@ window.deleteThisCatalog   = deleteThisCatalog;
 window.deleteCatalog       = deleteCatalog;
 window.toggleClientCatalog = toggleClientCatalog;
 window.verifierCatalogues  = verifierCatalogues;
+
+
+/* Exports email module */
+window.preparerMail          = preparerMail;
+window.afficherApercuMail    = afficherApercuMail;
+window.chargerTemplateEmail  = chargerTemplateEmail;
+window.sauvegarderTemplate   = sauvegarderTemplate;
+window.reinitialiserTemplate = reinitialiserTemplate;
+window.copierBalise          = copierBalise;
 
 document.addEventListener('DOMContentLoaded',function(){
   console.log('=== De Cooman Racing Performance v38 ===');
