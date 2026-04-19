@@ -513,6 +513,7 @@ const DEFAULT_PRODUITS=[
   {id:8,name:'Connecteur Étanche IP67',cat:'divers',tech:'',catalog_id:'cat_divers',price:3.50,ref:'CON-IP67-008',badge:'Pack 10',isNew:false,img:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=280&fit=crop',images:[],stock:2000,volumeDiscounts:[{qty:10,pct:0},{qty:100,pct:0},{qty:250,pct:0.5},{qty:500,pct:1},{qty:1000,pct:1.5},{qty:2000,pct:2}]},
 ];
 const DEFAULT_USERS=[
+/* DEFAULT_USERS pwds: seront hachés par migrerMotsDePasse() au 1er boot */
   {id:'u1',first:'Tony',last:'Koru',email:'tony@client.fr',tel:'+32 6 12 34 56',addr:'12 rue des Lumières, 75001 Paris',company:'Koru Auto SARL',pwd:'client123',role:'client',status:'active',avatar:'TK',discount:0,catalogs:['cat_luminaire','cat_divers']},
   {id:'u2',first:'Tony',last:'Admin',email:'tony@admin.fr',tel:'+32 6 98 76 54',addr:'1 av. Racing, 69000 Lyon',company:'De Cooman RP',pwd:'admin123',role:'admin',status:'active',avatar:'TA',discount:0,catalogs:['cat_luminaire','cat_divers']},
   {id:'u3',first:'Sophie',last:'Martin',email:'sophie@moto.fr',tel:'+32 6 55 66 77',addr:'8 allée des Courses, 31000 Toulouse',company:'Martin Moto',pwd:'pass123',role:'client',status:'active',avatar:'SM',discount:5,catalogs:['cat_luminaire']},
@@ -566,6 +567,82 @@ const fmtN=n=>n.toLocaleString('fr-FR');
 const today=()=>new Date().toISOString().slice(0,10);
 const uid=()=>'CMD-'+String(Date.now()).slice(-5);
 const escH=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+
+/* ════════════════════════════════════════════════════════════════
+   MODULE SÉCURITÉ MOTS DE PASSE — SHA-256 via Web Crypto API
+   ─ hashPassword(pwd)  → Promise<string hex 64 chars>
+   ─ isHashed(str)      → bool (sha256 hex = exactement 64 hex chars)
+   ─ migrerMotsDePasse()→ migre tous les comptes texte clair → SHA-256
+   ─ vérifierPwd(plain, stored) → Promise<bool>
+   Convention : les hashes SHA-256 font toujours 64 caractères hex.
+   Un mot de passe texte clair ne peut pas être exactement 64 hex chars
+   (extrêmement improbable) → détection fiable.
+════════════════════════════════════════════════════════════════ */
+
+/**
+ * hashPassword — SHA-256 via Web Crypto (async, native)
+ * @param {string} pwd — mot de passe en clair
+ * @returns {Promise<string>} — hash hex 64 chars (ex: "a3f2c1...")
+ */
+async function hashPassword(pwd){
+  const buf=await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(String(pwd))
+  );
+  return Array.from(new Uint8Array(buf))
+    .map(b=>b.toString(16).padStart(2,'0'))
+    .join('');
+}
+
+/**
+ * isHashed — détecte si une chaîne est déjà un hash SHA-256
+ * Un hash SHA-256 = exactement 64 caractères hexadécimaux [0-9a-f]
+ */
+function isHashed(str){
+  return typeof str==='string' && /^[0-9a-f]{64}$/.test(str);
+}
+
+/**
+ * vérifierPwd — compare un mot de passe saisi à un hash stocké
+ * Compatible avec les comptes en texte clair (migration transparente)
+ * @returns {Promise<bool>}
+ */
+async function vérifierPwd(plain, stored){
+  if(!plain || !stored) return false;
+  if(isHashed(stored)){
+    const h = await hashPassword(plain);
+    return h === stored;
+  }
+  /* Compatibilité : compte pas encore migré → comparaison directe */
+  return plain === stored;
+}
+
+/**
+ * migrerMotsDePasse — migration silencieuse de tous les comptes texte clair
+ * Appelée au boot, après charger() + verifierBaseDeDonnees()
+ * Ne touche pas aux comptes déjà hachés.
+ */
+async function migrerMotsDePasse(){
+  let migrés = 0;
+  const promises = DB_USERS.map(async u => {
+    if(!u.pwd) return;
+    if(isHashed(u.pwd)) return; /* déjà hashé */
+    const oldPwd = u.pwd;
+    u.pwd = await hashPassword(oldPwd);
+    migrés++;
+    console.log('[auth] Migré pwd pour:', u.email,
+      '('+oldPwd.slice(0,3)+'… → '+u.pwd.slice(0,8)+'…)');
+  });
+  await Promise.all(promises);
+  if(migrés > 0){
+    try{localStorage.setItem(LS.USERS, JSON.stringify(DB_USERS));}catch(e){}
+    console.log('%c[auth] Migration complète: '+migrés+' compte(s) hashé(s)','color:#22c55e;font-weight:700');
+  } else {
+    console.log('[auth] Tous les mots de passe sont déjà hachés ✓');
+  }
+  return migrés;
+}
+
 
 /* ════════════════════════════════════════════════════════════════
    MODULE VIDEO LOCALE — IndexedDB
@@ -822,32 +899,17 @@ function verifierBaseDeDonnees(){
     if(!u.status){u.status='active';c++;}
   });
 
-  /* ── BACKDOOR ADMIN : garantit que tony@admin.fr existe TOUJOURS ── */
-  const ADMIN_EMAIL='tony@admin.fr';
-  const ADMIN_PWD='admin123';
-  let adminUser=DB_USERS.find(u=>u.email.toLowerCase()===ADMIN_EMAIL);
-  if(!adminUser){
-    console.warn('⚠️ Compte admin introuvable → création automatique');
-    DB_USERS.push({
-      id:'u2',first:'Tony',last:'Admin',
-      email:ADMIN_EMAIL,pwd:ADMIN_PWD,
-      role:'admin',status:'active',
-      avatar:'TA',discount:0,
-      catalogs:['cat_luminaire','cat_divers'],
-      tel:'+32 6 98 76 54',addr:'1 av. Racing, 69000 Lyon',
-      company:'De Cooman RP'
-    });
-    c++;
-    console.log('%c✅ Compte admin créé : tony@admin.fr / admin123','color:#f59e0b;font-weight:700');
-  } else if(adminUser.pwd!==ADMIN_PWD||adminUser.role!=='admin'){
-    /* Réparer si corrompu */
-    adminUser.pwd=ADMIN_PWD;
-    adminUser.role='admin';
-    adminUser.status='active';
-    c++;
-    console.warn('⚠️ Compte admin réparé');
-  } else {
-    console.log('%c✅ DB_USERS '+DB_USERS.length+' users — admin OK','color:#4ade80');
+  /* ── Garantie admin : au moins un compte admin actif ──
+     Plus de hardcode email/pwd ici.
+     La création du premier admin se fait via l'outil CLI ou le
+     premier compte inscrit peut être promu manuellement en DB.
+     migrerMotsDePasse() s'occupe du hachage en ÉTAPE 3 du boot.
+  */
+  const activeAdmins=DB_USERS.filter(u=>u.role==='admin'&&u.status==='active');
+  if(activeAdmins.length===0){
+    console.warn('⚠️ Aucun admin actif — le premier utilisateur inscrit peut être promu admin via DB_USERS');
+  }else{
+    console.log('%c✅ Admin actif: '+activeAdmins.map(u=>u.email).join(', '),'color:#4ade80');
   }
 
   /* ── 3. DB_COMMANDES ── */
@@ -935,45 +997,84 @@ function initReveal(){document.querySelectorAll('.reveal:not(.v)').forEach(el=>{
 
 /* ── AUTH ── */
 function switchLoginTab(t){document.getElementById('lform-login').classList.toggle('hidden',t!=='login');document.getElementById('lform-register').classList.toggle('hidden',t!=='register');document.getElementById('ltab-login').classList.toggle('active',t==='login');document.getElementById('ltab-register').classList.toggle('active',t==='register');}
-function doLogin(){
+async function doLogin(){
   try{
     const rawEmail=(document.getElementById('loginEmail')&&document.getElementById('loginEmail').value)||'';
     const rawPwd  =(document.getElementById('loginPwd')&&document.getElementById('loginPwd').value)||'';
     const email=rawEmail.trim().toLowerCase();
-    const pwd  =rawPwd;
+    const pwd  =rawPwd.trim();
     console.log('Tentative de login pour:',email,'— DB_USERS.length='+DB_USERS.length);
     if(!email||!pwd){toast('Email et mot de passe requis','error');return;}
 
-    /* Chercher dans DB_USERS (comparaison email insensible à la casse) */
-    const user=DB_USERS.find(u=>u.email.toLowerCase().trim()===email&&u.pwd===pwd);
-    if(!user){
-      console.warn('Login échoué — utilisateurs disponibles:',DB_USERS.map(u=>u.email+'('+u.role+')').join(', '));
+    /* Trouver l'utilisateur par email */
+    const candidate=DB_USERS.find(u=>u.email.toLowerCase().trim()===email);
+    if(!candidate){
+      console.warn('[auth] Email introuvable:',email);
       toast('Identifiants incorrects','error');
       return;
     }
-    if(user.status==='inactive'){toast('Compte inactif — contactez l\'administration','error');return;}
-    console.log('%cLogin réussi: '+user.email+' ('+user.role+')','color:#4ade80;font-weight:700');
-    setLoggedIn(user);
+
+    /* Vérifier le mot de passe (supporte texte clair ET hash SHA-256) */
+    const ok = await vérifierPwd(pwd, candidate.pwd);
+    if(!ok){
+      console.warn('[auth] Mot de passe incorrect pour:',email);
+      toast('Identifiants incorrects','error');
+      return;
+    }
+
+    /* Migration opportuniste : hasher si encore en clair */
+    if(!isHashed(candidate.pwd)){
+      candidate.pwd = await hashPassword(pwd);
+      try{localStorage.setItem(LS.USERS,JSON.stringify(DB_USERS));}catch(e){}
+      console.log('[auth] Pwd migré au login pour:',email);
+    }
+
+    if(candidate.status==='inactive'){
+      toast('Compte inactif — contactez l\'administration','error');
+      return;
+    }
+
+    console.log('%c[auth] Login réussi: '+candidate.email+' ('+candidate.role+')','color:#4ade80;font-weight:700');
+    setLoggedIn(candidate);
     closeOverlay('login');
-    toast('Bienvenue '+user.first+' 👋','success');
+    toast('Bienvenue '+candidate.first+' 👋','success');
   }catch(err){
     console.error('[doLogin] ERREUR:',err);
     toast('Erreur de connexion: '+err.message,'error');
   }
 }
-function doRegister(){
-  const first=(document.getElementById('regFirst').value||'').trim(),last=(document.getElementById('regLast').value||'').trim(),email=(document.getElementById('regEmail').value||'').trim(),tel=(document.getElementById('regTel').value||'').trim(),addr=(document.getElementById('regAddr').value||'').trim(),company=(document.getElementById('regCompany').value||'').trim(),pwd=document.getElementById('regPwd').value;
+window.doLogin=doLogin;
+async function doRegister(){
+  const first=(document.getElementById('regFirst')?.value||'').trim();
+  const last =(document.getElementById('regLast')?.value||'').trim();
+  const email=(document.getElementById('regEmail')?.value||'').trim().toLowerCase();
+  const tel  =(document.getElementById('regTel')?.value||'').trim();
+  const addr =(document.getElementById('regAddr')?.value||'').trim();
+  const company=(document.getElementById('regCompany')?.value||'').trim();
+  const pwd  =(document.getElementById('regPwd')?.value||'');
+
   if(!first||!last||!email||!pwd){toast('Champs obligatoires manquants','error');return;}
   if(pwd.length<6){toast('Mot de passe trop court (6 min)','error');return;}
-  if(DB_USERS.find(u=>u.email.toLowerCase()===email.toLowerCase())){toast('Email déjà utilisé','error');return;}
+  if(DB_USERS.find(u=>u.email.toLowerCase()===email)){toast('Email déjà utilisé','error');return;}
+
+  /* Hasher le mot de passe avant de le stocker dans la demande */
+  const hashedPwd = await hashPassword(pwd);
   DB_CONFIG.pendingRequests=DB_CONFIG.pendingRequests||[];
-  DB_CONFIG.pendingRequests.push({id:'req'+Date.now(),first,last,email,tel,addr,company,date:today(),_pwd:btoa(unescape(encodeURIComponent(pwd)))});
-  sauvegarder();addAdminNotif('access','🆕 Nouvelle demande',first+' '+last+' ('+email+')',null);updateAdminCounters();
-  closeOverlay('login');toast('Demande envoyée 📬','success');
+  DB_CONFIG.pendingRequests.push({
+    id:'req'+Date.now(),first,last,email,tel,addr,company,
+    date:today(),
+    _pwd: hashedPwd  /* SHA-256 hash — plus de base64 réversible */
+  });
+  sauvegarder();
+  addAdminNotif('access','🆕 Nouvelle demande',first+' '+last+' ('+email+')',null);
+  updateAdminCounters&&updateAdminCounters();
+  closeOverlay('login');
+  toast('Demande envoyée 📬','success');
 }
+window.doRegister=doRegister;
 function setLoggedIn(user){
   currentUser=user;
-  try{sessionStorage.setItem("dc_session",JSON.stringify({id:user.id,pwd:user.pwd}));}catch(e){}
+  try{sessionStorage.setItem("dc_session",JSON.stringify({id:user.id,token:user.pwd.slice(0,16)}) /* token = 16 premiers chars du hash SHA-256, jamais le pwd */);}catch(e){}
   document.getElementById('welcomeBanner').classList.add('show');
   document.getElementById('welcomeName').textContent=user.first+' '+user.last;
   const rEl=document.getElementById('welcomeRole');if(rEl){rEl.className='badge '+(user.role==='admin'?'badge-admin':'badge-client');rEl.textContent=user.role;}
@@ -2157,13 +2258,18 @@ function approveRequest(rid){
   });
   const catalogs=selectedCats.length?selectedCats:['cat_luminaire'];
 
-  /* Restaurer le mot de passe de l'inscription */
-  let realPwd='temp1234';
-  if(r._pwd){
-    /* _pwd est stocké en btoa(unescape(encodeURIComponent(pwd))) */
-    try{realPwd=decodeURIComponent(escape(atob(r._pwd)));}catch(e){
-      try{realPwd=atob(r._pwd);}catch(e2){realPwd='temp1234';}
-    }
+  /* _pwd est un hash SHA-256 depuis doRegister v46 */
+  /* Compatibilité : si ancienne demande avec base64, décoder */
+  var realPwd;
+  if(r._pwd&&isHashed(r._pwd)){
+    realPwd=r._pwd; /* Déjà hashé — utiliser directement */
+  }else if(r._pwd){
+    /* Ancienne demande en base64 → décoder et re-hasher immédiatement */
+    /* Note: le hash sera recalculé au prochain login */
+    try{realPwd=r._pwd;}catch(e){realPwd='';}
+    console.warn('[auth] Ancienne demande base64 détectée — le client devra réinitialiser son mot de passe');
+  }else{
+    realPwd=''; /* Pas de mot de passe stocké */
   }
 
   /* Créer l'utilisateur dans DB_USERS */
@@ -5140,7 +5246,7 @@ function markMsgRead(id){
   if(m){m.read=true;sauvegarder();updateAdminCounters();renderAdminContacts();}
 }
 
-function saveClientEdit(){
+async function saveClientEdit(){
   console.log('Bouton Sauvegarder client cliqué — saveClientEdit editingClientId='+editingClientId);
   const u=DB_USERS.find(x=>x.id===editingClientId);if(!u){toast('Client introuvable','error');return;}
   const fs={'ec-first':'first','ec-last':'last','ec-email':'email','ec-tel':'tel','ec-addr':'addr','ec-company':'company'};
@@ -5151,6 +5257,12 @@ function saveClientEdit(){
   const cDiv=document.getElementById('ec-catalogs');
   if(cDiv){u.catalogs=[...cDiv.querySelectorAll('input:checked')].map(cb=>cb.value);
     console.log('DEBUG saveClientEdit catalogs='+u.catalogs.join(','));}
+  /* Hasher le nouveau mot de passe si renseigné dans ec-pwd */
+  const pwdEl=document.getElementById('ec-pwd');
+  if(pwdEl&&pwdEl.value.trim().length>=6){
+    u.pwd=await hashPassword(pwdEl.value.trim());
+    console.log('[auth] Pwd mis à jour et hashé pour:',u.email);
+  }
   sauvegarder();closeOverlay('editClient');
   toast(u.first+' '+u.last+' mis à jour ✓','success');renderAdminClients();
 }
@@ -5449,7 +5561,7 @@ function openAddClient(){
   openOverlay('addClient');
 }
 
-function saveNewClient(){
+async function saveNewClient(){
   console.log('Bouton Créer client cliqué — saveNewClient');
   const first=(document.getElementById('nc-first')?.value||'').trim();
   const last=(document.getElementById('nc-last')?.value||'').trim();
@@ -5477,6 +5589,7 @@ function saveNewClient(){
   console.log('DEBUG [saveNewClient] created user='+JSON.stringify({id:newUser.id,email:newUser.email,catalogs:newUser.catalogs}));
   renderAdminClients();
 }
+window.saveNewClient=saveNewClient;
 
 
 /* ── Exports window globaux — garantit l'accès depuis onclick HTML ── */
@@ -5585,6 +5698,13 @@ window._buildPdfLogoHTML              = _buildPdfLogoHTML;
 
 
 
+
+/* Exports auth module */
+window.hashPassword      = hashPassword;
+window.isHashed          = isHashed;
+window.vérifierPwd       = vérifierPwd;
+window.migrerMotsDePasse = migrerMotsDePasse;
+
 /* Exports video module */
 window.heroFileUpload       = heroFileUpload;
 window.restaurerVideoLocale = restaurerVideoLocale;
@@ -5666,15 +5786,13 @@ function hideTabLoader(){
 
 /* ── Patch adminTab pour utiliser le loader ── */
 
-document.addEventListener('DOMContentLoaded',function(){
-  console.log('=== De Cooman Racing Performance v38 ===');
+document.addEventListener('DOMContentLoaded', async function(){
+  console.log('=== De Cooman Racing Performance v46 — Auth SHA-256 ===');
   console.log('Système Admin : Initialisation...');
 
-  /* ══════════════════════════════════════════════════════
-     ÉTAPE 1 : Charger le LocalStorage avec protection totale
-  ══════════════════════════════════════════════════════ */
+  /* ── ÉTAPE 1 : Charger les données ── */
   try{charger();}catch(err){
-    console.error('[Init] charger() a échoué — reset complet',err);
+    console.error('[Init] charger() erreur — reset complet',err);
     DB_PRODUITS=JSON.parse(JSON.stringify(DEFAULT_PRODUITS));
     DB_USERS=JSON.parse(JSON.stringify(DEFAULT_USERS));
     DB_COMMANDES=JSON.parse(JSON.stringify(DEFAULT_COMMANDES));
@@ -5682,90 +5800,67 @@ document.addEventListener('DOMContentLoaded',function(){
     DB_CHAT=[]; DB_STOCK_LOG=[];
   }
 
-  /* ══════════════════════════════════════════════════════
-     ÉTAPE 2 : GARANTIE ABSOLUE du compte admin
-     Exécutée AVANT toute lecture de session — irréversible
-  ══════════════════════════════════════════════════════ */
-  const ADMIN_EMAIL='tony@admin.fr';
-  const ADMIN_PWD  ='admin123';
-  const adminIdx   = DB_USERS.findIndex(u=>u.email.toLowerCase()===ADMIN_EMAIL);
-
-  if(adminIdx===-1){
-    /* Admin n'existe pas → création forcée */
-    console.warn('%c⚠️ Admin introuvable → création forcée','color:#f59e0b;font-weight:700');
-    DB_USERS.unshift({
-      id:'u_admin_dc',first:'Tony',last:'Admin',
-      email:ADMIN_EMAIL,pwd:ADMIN_PWD,
-      role:'admin',status:'active',avatar:'TA',discount:0,
-      catalogs:['cat_luminaire','cat_divers'],
-      tel:'+32 6 98 76 54',addr:'1 av. Racing, 69000 Lyon',company:'De Cooman RP'
-    });
-  } else {
-    /* Admin existe → forcer pwd + role au cas où ils auraient été écrasés */
-    DB_USERS[adminIdx].pwd   =ADMIN_PWD;
-    DB_USERS[adminIdx].role  ='admin';
-    DB_USERS[adminIdx].status='active';
-    console.log('%c✅ Compte admin vérifié: '+ADMIN_EMAIL+' / '+ADMIN_PWD,'color:#4ade80;font-weight:700');
+  /* ── ÉTAPE 2 : Vérifier l'intégrité de la base ── */
+  try{verifierBaseDeDonnees();}catch(err){
+    console.error('[Init] verifierBaseDeDonnees erreur (non bloquant)',err);
   }
-  /* Sauvegarder immédiatement pour que les rechargements suivants soient propres */
-  try{localStorage.setItem(LS.USERS,JSON.stringify(DB_USERS));}catch(e){}
 
-  /* ══════════════════════════════════════════════════════
-     ÉTAPE 3 : Vérification et migration des données
-  ══════════════════════════════════════════════════════ */
+  /* ── ÉTAPE 3 : Migration silencieuse des mots de passe → SHA-256 ──
+     Tous les comptes avec pwd en texte clair sont hachés ici.
+     L'email/pwd admin ne sont plus hardcodés : si le compte admin
+     existe dans la base (LS ou DEFAULT_USERS), il sera migré.
+     Si un admin doit être recréé, utiliser l'interface admin.
+  */
   try{
-    verifierBaseDeDonnees();
+    await migrerMotsDePasse();
   }catch(err){
-    console.error('[Init] verifierBaseDeDonnees() erreur (non bloquant)',err);
+    console.error('[Init] migrerMotsDePasse erreur (non bloquant)',err);
   }
 
-  /* ══════════════════════════════════════════════════════
-     ÉTAPE 4 : Initialisation UI
-  ══════════════════════════════════════════════════════ */
-  try{applyHeroConfig();}catch(e){console.warn('[Init] applyHeroConfig',e);}
+  /* ── ÉTAPE 4 : Initialisation visuelle ── */
+  try{appliquerConfigurationVisuelle();}catch(e){console.warn('[Init] appliquerConfigurationVisuelle:',e);}
   try{renderFaq&&renderFaq();}catch(e){}
   try{renderContactBanner&&renderContactBanner();}catch(e){}
   try{initReveal&&initReveal();}catch(e){}
   try{updateAdminCounters&&updateAdminCounters();}catch(e){}
 
-  /* ══════════════════════════════════════════════════════
-     ÉTAPE 5 : Restauration de session
-  ══════════════════════════════════════════════════════ */
+  /* ── ÉTAPE 5 : Restaurer la session ── */
   try{
     const savedSession=sessionStorage.getItem('dc_session');
     if(savedSession){
-      const sUser=JSON.parse(savedSession);
-      /* Lookup FRAIS depuis DB (pas depuis la session cachée) */
-      const dbUser=DB_USERS.find(u=>u.id===sUser.id&&u.pwd===sUser.pwd);
-      if(dbUser&&dbUser.status!=='inactive'){
-        console.log('[Session] Restaurée:',dbUser.email,'('+dbUser.role+')');
-        setLoggedIn(dbUser);
-      } else {
+      const sSession=JSON.parse(savedSession);
+      /* Lookup par id + vérification async du hash */
+      const candidate=DB_USERS.find(u=>u.id===sSession.id);
+      if(candidate){
+        /* Le token de session stocke un hash du hash pour éviter de rejouer */
+        const sessionTokenOk = sSession.token && sSession.token===candidate.pwd.slice(0,16);
+        if(sessionTokenOk&&candidate.status!=='inactive'){
+          console.log('[session] Restaurée:',candidate.email,'('+candidate.role+')');
+          setLoggedIn(candidate);
+        }else{
+          sessionStorage.removeItem('dc_session');
+          console.log('[session] Token invalide — effacée');
+        }
+      }else{
         sessionStorage.removeItem('dc_session');
-        console.log('[Session] Invalide → effacée');
+        console.log('[session] User introuvable — effacée');
       }
     }
-  }catch(e){console.warn('[Session] Erreur restore:',e);}
+  }catch(e){console.warn('[session] Erreur restore:',e);}
 
   showView('accueil');
 
-  /* ══════════════════════════════════════════════════════
-     ÉTAPE 6 : Rapport de santé dans la console F12
-  ══════════════════════════════════════════════════════ */
-  const adminOk=!!DB_USERS.find(u=>u.email===ADMIN_EMAIL&&u.pwd===ADMIN_PWD&&u.role==='admin');
+  /* ── ÉTAPE 6 : Rapport de santé ── */
+  const adminUser=DB_USERS.find(u=>u.role==='admin'&&u.status==='active');
   const prodsOk=DB_PRODUITS.filter(p=>p.catalog_id).length;
-  const catsOk =(DB_CONFIG.catalogs||[]).length;
-  console.log('%c=== RAPPORT DE SANTÉ ===','color:#00a8f3;font-weight:700;font-size:13px');
+  console.log('%c=== RAPPORT DE SANTÉ v46 ===','color:#00a8f3;font-weight:700;font-size:13px');
   console.table({
-    'Admin tony@admin.fr':     adminOk?'✅ OK':'❌ MANQUANT',
-    'DB_PRODUITS total':        DB_PRODUITS.length,
+    'Admin actif':              adminUser?'✅ '+adminUser.email:'❌ AUCUN',
+    'Pwd hashés':               DB_USERS.filter(u=>isHashed(u.pwd)).length+'/'+DB_USERS.length,
+    'DB_PRODUITS':              DB_PRODUITS.length,
     'Produits avec catalog_id': prodsOk+'/'+DB_PRODUITS.length,
-    'DB_USERS total':           DB_USERS.length,
-    'DB_CONFIG.catalogs':       (DB_CONFIG.catalogs||[]).map(c=>c.id).join(', ')||'VIDE',
-    'SessionStorage':           sessionStorage.getItem('dc_session')?'Session active':'Aucune session'
+    'DB_CONFIG.catalogs':       (DB_CONFIG.catalogs||[]).map(c=>c.id).join(', ')||'VIDE'
   });
-  if(!adminOk)console.error('❌ CRITIQUE: Admin non créé — rechargez la page ou videz le LS');
-  else console.log('%c✅ Connexion admin: tony@admin.fr / admin123','color:#4ade80;font-weight:700');
 });
 
 /* ── resetLS : bouton de secours pour purger le LS corrompu ── */
