@@ -574,49 +574,170 @@ function sauvegarder(){
   }catch(e){console.error('[sauvegarder] ERREUR:',e);toast('Erreur sauvegarde: '+e.message,'error');}
 }
 function charger(){
-  try{const r=localStorage.getItem(LS.PRODUITS);DB_PRODUITS=r?JSON.parse(r):JSON.parse(JSON.stringify(DEFAULT_PRODUITS));if(!Array.isArray(DB_PRODUITS)||!DB_PRODUITS.length)DB_PRODUITS=JSON.parse(JSON.stringify(DEFAULT_PRODUITS));}catch(e){DB_PRODUITS=JSON.parse(JSON.stringify(DEFAULT_PRODUITS));}
-  try{const r=localStorage.getItem(LS.USERS);DB_USERS=r?JSON.parse(r):JSON.parse(JSON.stringify(DEFAULT_USERS));if(!Array.isArray(DB_USERS)||!DB_USERS.length)DB_USERS=JSON.parse(JSON.stringify(DEFAULT_USERS));}catch(e){DB_USERS=JSON.parse(JSON.stringify(DEFAULT_USERS));}
-  try{const r=localStorage.getItem(LS.COMMANDES);DB_COMMANDES=r?JSON.parse(r):JSON.parse(JSON.stringify(DEFAULT_COMMANDES));if(!Array.isArray(DB_COMMANDES))DB_COMMANDES=JSON.parse(JSON.stringify(DEFAULT_COMMANDES));}catch(e){DB_COMMANDES=JSON.parse(JSON.stringify(DEFAULT_COMMANDES));}
+  console.log('[charger] Chargement depuis LocalStorage…');
+
+  /* ── DB_PRODUITS ── */
+  try{
+    const r=localStorage.getItem(LS.PRODUITS);
+    DB_PRODUITS=r?JSON.parse(r):JSON.parse(JSON.stringify(DEFAULT_PRODUITS));
+    if(!Array.isArray(DB_PRODUITS)||!DB_PRODUITS.length)DB_PRODUITS=JSON.parse(JSON.stringify(DEFAULT_PRODUITS));
+    console.log('[charger] DB_PRODUITS='+DB_PRODUITS.length);
+  }catch(e){DB_PRODUITS=JSON.parse(JSON.stringify(DEFAULT_PRODUITS));console.warn('[charger] PRODUITS error',e);}
+
+  /* ── DB_USERS ── */
+  try{
+    const r=localStorage.getItem(LS.USERS);
+    DB_USERS=r?JSON.parse(r):JSON.parse(JSON.stringify(DEFAULT_USERS));
+    if(!Array.isArray(DB_USERS)||!DB_USERS.length)DB_USERS=JSON.parse(JSON.stringify(DEFAULT_USERS));
+    console.log('[charger] DB_USERS='+DB_USERS.length);
+  }catch(e){DB_USERS=JSON.parse(JSON.stringify(DEFAULT_USERS));console.warn('[charger] USERS error',e);}
+
+  /* ── DB_COMMANDES ── */
+  try{
+    const r=localStorage.getItem(LS.COMMANDES);
+    DB_COMMANDES=r?JSON.parse(r):JSON.parse(JSON.stringify(DEFAULT_COMMANDES));
+    if(!Array.isArray(DB_COMMANDES))DB_COMMANDES=JSON.parse(JSON.stringify(DEFAULT_COMMANDES));
+    console.log('[charger] DB_COMMANDES='+DB_COMMANDES.length);
+  }catch(e){DB_COMMANDES=JSON.parse(JSON.stringify(DEFAULT_COMMANDES));console.warn('[charger] COMMANDES error',e);}
+
+  /* ── DB_CONFIG ── */
   try{
     const r=localStorage.getItem(LS.CONFIG);
     if(r){
       DB_CONFIG=JSON.parse(JSON.stringify(DEFAULT_CONFIG));
       const saved=JSON.parse(r);
-      const merge=(t,s)=>{Object.keys(s).forEach(k=>{if(s[k]!==null&&typeof s[k]==='object'&&!Array.isArray(s[k])&&t[k]!==null&&typeof t[k]==='object'&&!Array.isArray(t[k]))merge(t[k],s[k]);else t[k]=s[k];});};
+      /* Deep merge (arrays stay as-is from saved) */
+      const merge=(t,s)=>{Object.keys(s).forEach(k=>{
+        if(s[k]!==null&&typeof s[k]==='object'&&!Array.isArray(s[k])&&t[k]!==null&&typeof t[k]==='object'&&!Array.isArray(t[k]))
+          merge(t[k],s[k]);
+        else t[k]=s[k];
+      });};
       merge(DB_CONFIG,saved);
     }else{DB_CONFIG=JSON.parse(JSON.stringify(DEFAULT_CONFIG));}
-  }catch(e){DB_CONFIG=JSON.parse(JSON.stringify(DEFAULT_CONFIG));}
-  try{const r=localStorage.getItem(LS.CHAT);DB_CHAT=r?JSON.parse(r):[];if(!Array.isArray(DB_CHAT))DB_CHAT=[];}catch(e){DB_CHAT=[];}
-  try{const r=localStorage.getItem(LS.STOCK_LOG);DB_STOCK_LOG=r?JSON.parse(r):[];if(!Array.isArray(DB_STOCK_LOG))DB_STOCK_LOG=[];}catch(e){DB_STOCK_LOG=[];}
-  /* ── Charger config_visuel séparée (fond d'accueil permanent) ── */
+    console.log('[charger] DB_CONFIG — catalogs:'+JSON.stringify((DB_CONFIG.catalogs||[]).map(c=>c.id)));
+  }catch(e){DB_CONFIG=JSON.parse(JSON.stringify(DEFAULT_CONFIG));console.warn('[charger] CONFIG error',e);}
+
+  /* ── DB_CHAT ── */
+  try{const r=localStorage.getItem(LS.CHAT);DB_CHAT=r?JSON.parse(r):[];if(!Array.isArray(DB_CHAT))DB_CHAT=[];}
+  catch(e){DB_CHAT=[];}
+
+  /* ── DB_STOCK_LOG ── */
+  try{const r=localStorage.getItem(LS.STOCK_LOG);DB_STOCK_LOG=r?JSON.parse(r):[];if(!Array.isArray(DB_STOCK_LOG))DB_STOCK_LOG=[];}
+  catch(e){DB_STOCK_LOG=[];}
+
+  /* ── config_visuel (fond d'accueil) ── */
   try{
     const vs=localStorage.getItem(LS.VISUEL);
-    if(vs){const vc=JSON.parse(vs);DB_CONFIG.hero=Object.assign(DB_CONFIG.hero||{},vc);
-      console.log('DEBUG [charger] LS.VISUEL chargé: type='+vc.type);}
-  }catch(e){console.warn('[charger] LS.VISUEL erreur:',e);}
+    if(vs){const vc=JSON.parse(vs);DB_CONFIG.hero=Object.assign(DB_CONFIG.hero||{},vc);}
+  }catch(e){}
+
+  console.log('[charger] ✓ terminé');
 }
 
 function verifierBaseDeDonnees(){
-  console.group('%c[DC v29] 🔍 VÉRIFICATION BASE DE DONNÉES','color:#00a8f3;font-weight:700;font-size:14px');
+  console.log('%c[DC] 🔍 Vérification base de données','color:#00a8f3;font-weight:700');
   let c=0;
-  if(!Array.isArray(DB_PRODUITS)||!DB_PRODUITS.length){console.warn('❌ DB_PRODUITS invalide');DB_PRODUITS=JSON.parse(JSON.stringify(DEFAULT_PRODUITS));c++;}
-  else console.log('%c✅ DB_PRODUITS — '+DB_PRODUITS.length+' articles','color:#4ade80');
-  DB_PRODUITS.forEach(p=>{if(!p.catalog_id){p.catalog_id='cat_luminaire';c++;}if(!p.volumeDiscounts||!p.volumeDiscounts.length){p.volumeDiscounts=[{qty:10,pct:0},{qty:100,pct:0.5},{qty:250,pct:1},{qty:500,pct:1.5},{qty:1000,pct:2},{qty:2000,pct:3}];c++;}if(typeof p.stock!=='number'){p.stock=0;c++;}if(!Array.isArray(p.images))p.images=[];});
-  if(!Array.isArray(DB_USERS)||!DB_USERS.length){console.warn('❌ DB_USERS invalide');DB_USERS=JSON.parse(JSON.stringify(DEFAULT_USERS));c++;}
-  else console.log('%c✅ DB_USERS — '+DB_USERS.length+' utilisateurs','color:#4ade80');
-  DB_USERS.forEach(u=>{if(!Array.isArray(u.catalogs)){u.catalogs=['cat_luminaire'];c++;}});
-  if(!Array.isArray(DB_COMMANDES)){console.warn('❌ DB_COMMANDES invalide');DB_COMMANDES=JSON.parse(JSON.stringify(DEFAULT_COMMANDES));c++;}
-  else console.log('%c✅ DB_COMMANDES — '+DB_COMMANDES.length+' commandes','color:#4ade80');
-  DB_COMMANDES.forEach(o=>{if(!o.wfSteps){o.wfSteps=[{step:'received',ts:o.date+'T08:00:00',by:'auto'}];c++;}if(!Array.isArray(o.history))o.history=[];if(typeof o.stockDeducted!=='boolean')o.stockDeducted=true;if(!o.shippingCostHT)o.shippingCostHT=0;});
-  if(!DB_CONFIG||!DB_CONFIG.shipping||!DB_CONFIG.catalogs){console.warn('❌ DB_CONFIG invalide');DB_CONFIG=JSON.parse(JSON.stringify(DEFAULT_CONFIG));c++;}
-  else console.log('%c✅ DB_CONFIG — OK','color:#4ade80');
-  if(!DB_CONFIG.emailAdmins){DB_CONFIG.emailAdmins=[DB_CONFIG.emailAdmin||'admin@decooman.be'];c++;}
+
+  /* ── 1. DB_PRODUITS ── */
+  if(!Array.isArray(DB_PRODUITS)||!DB_PRODUITS.length){
+    console.warn('❌ DB_PRODUITS invalide → reset defaults');
+    DB_PRODUITS=JSON.parse(JSON.stringify(DEFAULT_PRODUITS));c++;
+  }
+  /* Migrer catalog_id manquants */
+  DB_PRODUITS.forEach(p=>{
+    if(!p.catalog_id){p.catalog_id='cat_luminaire';c++;}
+    if(!p.volumeDiscounts||!p.volumeDiscounts.length){
+      p.volumeDiscounts=[{qty:10,pct:0},{qty:100,pct:0},{qty:250,pct:0},{qty:500,pct:0}];c++;
+    }
+  });
+  console.log('%c✅ DB_PRODUITS '+DB_PRODUITS.length+' articles — catalog_ids: '
+    +[...new Set(DB_PRODUITS.map(p=>p.catalog_id||'?'))].join(', '),'color:#4ade80');
+
+  /* ── 2. DB_USERS ── */
+  if(!Array.isArray(DB_USERS)||!DB_USERS.length){
+    console.warn('❌ DB_USERS invalide → reset defaults');
+    DB_USERS=JSON.parse(JSON.stringify(DEFAULT_USERS));c++;
+  }
+  DB_USERS.forEach(u=>{
+    if(!Array.isArray(u.catalogs)){u.catalogs=['cat_luminaire'];c++;}
+    if(!u.status){u.status='active';c++;}
+  });
+
+  /* ── BACKDOOR ADMIN : garantit que tony@admin.fr existe TOUJOURS ── */
+  const ADMIN_EMAIL='tony@admin.fr';
+  const ADMIN_PWD='admin123';
+  let adminUser=DB_USERS.find(u=>u.email.toLowerCase()===ADMIN_EMAIL);
+  if(!adminUser){
+    console.warn('⚠️ Compte admin introuvable → création automatique');
+    DB_USERS.push({
+      id:'u2',first:'Tony',last:'Admin',
+      email:ADMIN_EMAIL,pwd:ADMIN_PWD,
+      role:'admin',status:'active',
+      avatar:'TA',discount:0,
+      catalogs:['cat_luminaire','cat_divers'],
+      tel:'+32 6 98 76 54',addr:'1 av. Racing, 69000 Lyon',
+      company:'De Cooman RP'
+    });
+    c++;
+    console.log('%c✅ Compte admin créé : tony@admin.fr / admin123','color:#f59e0b;font-weight:700');
+  } else if(adminUser.pwd!==ADMIN_PWD||adminUser.role!=='admin'){
+    /* Réparer si corrompu */
+    adminUser.pwd=ADMIN_PWD;
+    adminUser.role='admin';
+    adminUser.status='active';
+    c++;
+    console.warn('⚠️ Compte admin réparé');
+  } else {
+    console.log('%c✅ DB_USERS '+DB_USERS.length+' users — admin OK','color:#4ade80');
+  }
+
+  /* ── 3. DB_COMMANDES ── */
+  if(!Array.isArray(DB_COMMANDES)){
+    DB_COMMANDES=JSON.parse(JSON.stringify(DEFAULT_COMMANDES));c++;
+  }
+  DB_COMMANDES.forEach(o=>{
+    if(!o.wfSteps){o.wfSteps=[{step:'received',ts:o.date+'T08:00:00',by:'auto'}];c++;}
+    if(!Array.isArray(o.history)){o.history=[];c++;}
+  });
+
+  /* ── 4. DB_CONFIG ── */
+  if(!DB_CONFIG||!DB_CONFIG.shipping||!DB_CONFIG.catalogs){
+    console.warn('❌ DB_CONFIG invalide → reset');
+    DB_CONFIG=JSON.parse(JSON.stringify(DEFAULT_CONFIG));c++;
+  }
+  if(!DB_CONFIG.emailAdmins){DB_CONFIG.emailAdmins=[DB_CONFIG.emailAdmin||'DCRkoru@gmail.com'];c++;}
   if(!DB_CONFIG.docTemplates){DB_CONFIG.docTemplates=JSON.parse(JSON.stringify(DEFAULT_CONFIG.docTemplates));c++;}
+
+  /* ── 5. Garantir que DB_CONFIG.catalogs contient les 2 catalogues de base ── */
+  if(!DB_CONFIG.catalogs||!DB_CONFIG.catalogs.length){
+    DB_CONFIG.catalogs=JSON.parse(JSON.stringify(DEFAULT_CONFIG.catalogs));
+    console.warn('⚠️ DB_CONFIG.catalogs vide → reset defaults');c++;
+  }
+  const hasCatLum=DB_CONFIG.catalogs.some(c2=>c2.id==='cat_luminaire');
+  const hasCatDiv=DB_CONFIG.catalogs.some(c2=>c2.id==='cat_divers');
+  if(!hasCatLum){
+    DB_CONFIG.catalogs.unshift({id:'cat_luminaire',label:'Luminaires Auto',
+      desc:'Phares, feux, strips LED & intérieur',color:'#00a8f3',
+      icon:'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z',filterValue:'all'});
+    c++;console.warn('⚠️ cat_luminaire manquant → ajouté');
+  }
+  if(!hasCatDiv){
+    DB_CONFIG.catalogs.push({id:'cat_divers',label:'Accessoires & Divers',
+      desc:'Câblage, connectique, pièces détachées',color:'#f59e0b',
+      icon:'M4 6h16M4 10h16M4 14h16M4 18h16',filterValue:'all'});
+    c++;console.warn('⚠️ cat_divers manquant → ajouté');
+  }
+
+  /* ── 6. Chat & Stock ── */
   if(!Array.isArray(DB_CHAT)){DB_CHAT=[];c++;}
   if(!Array.isArray(DB_STOCK_LOG)){DB_STOCK_LOG=[];c++;}
-  if(c>0){console.log('%c'+c+' correction(s) — sauvegarde…','color:#f59e0b');sauvegarder();}
-  else console.log('%cAucune correction nécessaire ✓','color:#4ade80');
-  console.groupEnd();
+
+  if(c>0){
+    console.log('%c'+c+' correction(s) — sauvegarde…','color:#f59e0b;font-weight:700');
+    sauvegarder();
+  } else {
+    console.log('%c✓ Base de données saine — aucune correction','color:#4ade80');
+  }
   return c;
 }
 
@@ -4177,37 +4298,71 @@ window.exportCommandes    = typeof exportCommandes!=='undefined'?exportCommandes
 console.log('✅ window exports enregistrés');
 
 document.addEventListener('DOMContentLoaded',function(){
-  console.log('✅ DOMContentLoaded — initialisation app');
+  console.log('✅ DOMContentLoaded — De Cooman Racing Performance v37');
+  console.log('Tentative de login bloquée? Ouvrez F12 pour voir les logs.');
+
   charger();
-  verifierBaseDeDonnees();
+
+  /* ── PURGE AUTOMATIQUE si données manifestement corrompues ── */
+  /* Si les produits n'ont pas catalog_id ou si l'admin manque, on purge et reset */
+  const prodsCorrompus=DB_PRODUITS.filter(p=>!p.catalog_id).length;
+  const adminMissing=!DB_USERS.find(u=>u.email==='tony@admin.fr');
+  if(prodsCorrompus>DB_PRODUITS.length/2||adminMissing){
+    console.warn('⚠️ LocalStorage corrompu ('+prodsCorrompus+' produits sans catalog_id, admin='+!adminMissing+') — reset partiel');
+    if(prodsCorrompus>0){localStorage.removeItem(LS.PRODUITS);DB_PRODUITS=JSON.parse(JSON.stringify(DEFAULT_PRODUITS));}
+    if(adminMissing){localStorage.removeItem(LS.USERS);DB_USERS=JSON.parse(JSON.stringify(DEFAULT_USERS));}
+  }
+
+  verifierBaseDeDonnees(); /* garantit admin + catalog_id + catalogs config */
   applyHeroConfig();
+
   renderFaq&&renderFaq();
   renderContactBanner&&renderContactBanner();
   initReveal&&initReveal();
   updateAdminCounters&&updateAdminCounters();
 
-  /* ── Vérifier session persistée (sessionStorage) ── */
+  /* ── Restaurer session ── */
   try{
-    var savedSession=sessionStorage.getItem('dc_session');
+    const savedSession=sessionStorage.getItem('dc_session');
     if(savedSession){
-      var sUser=JSON.parse(savedSession);
-      /* Vérifier que l'user existe encore dans DB */
-      var dbUser=DB_USERS.find(function(u){return u.id===sUser.id&&u.pwd===sUser.pwd;});
-      if(dbUser){
-        console.log('Session restaurée pour',dbUser.email);
-        setLoggedIn(dbUser);
-      } else {
-        sessionStorage.removeItem('dc_session');
-        console.log('Session invalide — effacée');
-      }
+      const sUser=JSON.parse(savedSession);
+      const dbUser=DB_USERS.find(u=>u.id===sUser.id&&u.pwd===sUser.pwd);
+      if(dbUser){console.log('Session restaurée:',dbUser.email);setLoggedIn(dbUser);}
+      else{sessionStorage.removeItem('dc_session');console.log('Session invalide — effacée');}
     }
-  }catch(e){console.warn('Session restore error:',e);}
+  }catch(e){console.warn('Session restore:',e);}
 
   showView('accueil');
-  console.log('✅ App prête — PRODUITS:'+DB_PRODUITS.length+' USERS:'+DB_USERS.length
-    +' CATALOGUES:'+JSON.stringify((DB_CONFIG.catalogs||[]).map(function(c){return c.id;})));
+
+  /* ── Résumé diagnostic en console ── */
+  console.log('%c✅ App prête','color:#4ade80;font-weight:700;font-size:13px');
+  console.table({
+    'DB_PRODUITS': DB_PRODUITS.length,
+    'DB_USERS': DB_USERS.length,
+    'Admin existe': !!DB_USERS.find(u=>u.email==='tony@admin.fr'),
+    'DB_CONFIG.catalogs': (DB_CONFIG.catalogs||[]).map(c=>c.id).join(', '),
+    'catalog_ids produits': [...new Set(DB_PRODUITS.map(p=>p.catalog_id||'MANQUANT'))].join(', ')
+  });
 });
 
+/* ── resetLS : bouton de secours pour purger le LS corrompu ── */
+function resetLS(){
+  if(!confirm('Purger tout le LocalStorage ? Les données ajoutées manuellement seront perdues.'))return;
+  Object.values(LS).forEach(k=>{try{localStorage.removeItem(k);}catch(e){}});
+  sessionStorage.clear();
+  console.log('✅ LocalStorage purgé — rechargement…');
+  location.reload();
+}
+window.resetLS=resetLS;
+
 </script>
+
+<!-- Reset urgence — Ctrl+Shift+R pour afficher -->
+<button onclick="resetLS()" id="resetLsBtn"
+  style="position:fixed;bottom:16px;right:16px;z-index:9999;
+  background:rgba(239,68,68,.9);color:white;border:none;border-radius:8px;
+  padding:8px 14px;font-size:.72rem;font-weight:700;cursor:pointer;
+  font-family:Inter,sans-serif;letter-spacing:.05em;display:none;box-shadow:0 4px 20px rgba(0,0,0,.5)"
+  title="Purger le LocalStorage — Ctrl+Shift+R">🔄 Reset LS</button>
 </body>
 </html>
