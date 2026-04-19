@@ -226,7 +226,7 @@ textarea.fi{resize:vertical}
 <header class="site-header" id="siteHeader">
   <div class="max-w-7xl mx-auto px-5 py-3 flex items-center justify-between gap-4">
     <a href="#" onclick="showView('accueil')" class="flex-shrink-0">
-      <svg width="220" height="52" viewBox="0 0 460 108" xmlns="http://www.w3.org/2000/svg"><text x="6" y="62" font-family="Cormorant Garamond,Georgia,serif" font-size="62" font-style="italic" fill="white" font-weight="500" letter-spacing="-1">De Cooman</text><line x1="6" y1="72" x2="328" y2="72" stroke="#00a8f3" stroke-width="1" opacity="0.45"/><text x="8" y="90" font-family="Inter,sans-serif" font-size="10.5" fill="#00a8f3" letter-spacing="5.5" font-weight="600">RACING PERFORMANCE</text></svg>
+      <span id="nav-logo-container"><svg width="220" height="52" viewBox="0 0 460 108" xmlns="http://www.w3.org/2000/svg"><text x="6" y="62" font-family="Cormorant Garamond,Georgia,serif" font-size="62" font-style="italic" fill="white" font-weight="500" letter-spacing="-1">De Cooman</text><line x1="6" y1="72" x2="328" y2="72" stroke="#00a8f3" stroke-width="1" opacity="0.45"/><text x="8" y="90" font-family="Inter,sans-serif" font-size="10.5" fill="#00a8f3" letter-spacing="5.5" font-weight="600">RACING PERFORMANCE</text></svg></span>
     </a>
     <nav class="hidden md:flex items-center gap-6" id="mainNav">
       <span class="nav-link active" onclick="showView('accueil')" id="nav-accueil">Accueil</span>
@@ -333,9 +333,9 @@ textarea.fi{resize:vertical}
 
 <!-- ADMIN PANEL -->
 <div class="admin-panel" id="adminPanel">
-  <div class="admin-topbar">
+  <div class="admin-topbar" id="admin-topbar">
     <div class="flex items-center gap-4">
-      <svg width="140" height="32" viewBox="0 0 420 100" xmlns="http://www.w3.org/2000/svg"><text x="6" y="55" font-family="Cormorant Garamond,Georgia,serif" font-size="52" font-style="italic" fill="white" font-weight="500">De Cooman</text><text x="8" y="78" font-family="Inter,sans-serif" font-size="10" fill="#00a8f3" letter-spacing="5" font-weight="600">RACING PERFORMANCE</text></svg>
+      <span id="admin-logo-container"><svg width="140" height="32" viewBox="0 0 420 100" xmlns="http://www.w3.org/2000/svg"><text x="6" y="55" font-family="Cormorant Garamond,Georgia,serif" font-size="52" font-style="italic" fill="white" font-weight="500">De Cooman</text><text x="8" y="78" font-family="Inter,sans-serif" font-size="10" fill="#00a8f3" letter-spacing="5" font-weight="600">RACING PERFORMANCE</text></svg></span>
       <div style="height:32px;width:1px;background:rgba(249,115,22,.20)"></div>
       <span style="font-size:.70rem;letter-spacing:.20em;text-transform:uppercase;color:var(--orange);font-weight:600">Panneau Admin</span>
     </div>
@@ -364,8 +364,8 @@ textarea.fi{resize:vertical}
       <div class="a-nav-item" id="anav-stock" onclick="adminTab('stock')"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>Stock</div>
       <div class="a-nav-item" id="anav-catalogs" onclick="adminTab('catalogs')"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>Catalogues & Droits</div>
       <p class="a-section-label">Apparence</p>
-      <div class="a-nav-item" id="anav-hero" onclick="adminTab('hero')"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.259a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/></svg>Fond d'accueil</div>
-      <div class="a-nav-item" id="anav-herodesign" onclick="adminTab('herodesign')"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>Design accueil</div>
+      <div class="a-nav-item" id="anav-appearance" onclick="adminTab('appearance')"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.259a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/></svg>Fond d'accueil</div>
+      <div class="a-nav-item" id="anav-herodesign" onclick="adminTab('appearance')"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>Design accueil</div>
       <p class="a-section-label">Communications</p>
       <div class="a-nav-item" id="anav-contacts" onclick="adminTab('contacts')"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>Messages<span class="cnt blue" id="acnt-contacts" style="display:none">0</span></div>
       <div class="a-nav-item" id="anav-docs" onclick="adminTab('docs')"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Documents PDF</div>
@@ -471,7 +471,7 @@ textarea.fi{resize:vertical}
 <div class="toast-wrap" id="toastWrap"></div>
 <script>
 console.log("✅ JS chargé avec succès — De Cooman Racing Performance v36");
-const LS={PRODUITS:'dcorp_v29_products',USERS:'dcorp_v29_users',COMMANDES:'dcorp_v29_orders',CONFIG:'dcorp_v29_config',CHAT:'dcorp_v29_chat',STOCK_LOG:'dcorp_v29_stocklog',VISUEL:'dcorp_v29_visuel',MAIL_TEMPLATES:'dcorp_v40_mail_templates'};
+const LS={PRODUITS:'dcorp_v29_products',USERS:'dcorp_v29_users',COMMANDES:'dcorp_v29_orders',CONFIG:'dcorp_v29_config',CHAT:'dcorp_v29_chat',STOCK_LOG:'dcorp_v29_stocklog',VISUEL:'dcorp_v29_visuel',MAIL_TEMPLATES:'dcorp_v40_mail_templates',APPEARANCE:'dcorp_v42_appearance'};
 const TVA=0.21,WF_AUTO_CONFIRM_DAYS=7;
 
 /* ── DEFAULTS ── */
@@ -498,6 +498,8 @@ const DEFAULT_COMMANDES=[
   {id:'CMD-0004',userId:'u4',userName:'Julien Perret',userEmail:'julien@auto.fr',date:'2025-03-28',items:[{pid:2,name:'Feux Arrière LED',qty:1000,unitPrice:124.00}],addr:'45 rue Carnot, 13001 Marseille',payment:'Paiement fin de mois',notes:'',status:'pending',shippingZone:'z-fr',shippingZoneLabel:'France',shippingCostHT:12,history:[{date:'2025-03-28',s:'pending',n:'Reçue'}],wfSteps:[{step:'received',ts:'2025-03-28T08:00:00',by:'auto'}],stockDeducted:false,autoConfirmAt:null},
 ];
 const DEFAULT_CONFIG={
+  logo:{src:'',type:'svg',altText:'De Cooman Racing Performance'},
+  appearance:{accentColor:'#00a8f3',bgColor:'#06060a'},
   hero:{type:'video_url',src:'',ytId:'',opacity:0.35,srcBlob:false},
   heroDesign:{titleText:'Achetez des\npièces premium',titleAccentWord:'premium',titleColor:'#ffffff',titleAccentColor:'#00a8f3',descText:'Trouvez la qualité authentique dont votre véhicule a besoin.',descColor:'rgba(255,255,255,0.5)',tagText:'Luminaires Auto Premium · Certifié CE',deliveryText:'Livraison gratuite à partir de 125 € HTVA',cta1Text:'Voir le catalogue',cta2Text:'Accès espace pro'},
   shipping:{freeThresholdHT:125,vatOnShipping:true,handlingFee:0,defaultZone:'z-be',note:'Livraison via Bpost / DHL. Délai : 2–5 jours.',zones:[{id:'z-be',label:'Belgique',baseRate:7.50,freeFrom:125},{id:'z-fr',label:'France',baseRate:12.00,freeFrom:150},{id:'z-nl',label:'Pays-Bas / Lux.',baseRate:14.00,freeFrom:200},{id:'z-de',label:'Allemagne',baseRate:16.00,freeFrom:250},{id:'z-eu',label:'Europe (reste)',baseRate:22.00,freeFrom:500},{id:'z-int',label:'International',baseRate:45.00,freeFrom:null}]},
@@ -561,17 +563,16 @@ function getVolumePct(p,qty){
 /* ── SAUVEGARDER / CHARGER ── */
 function sauvegarder(){
   try{
-    localStorage.setItem(LS.PRODUITS, JSON.stringify(DB_PRODUITS));
-    localStorage.setItem(LS.USERS,    JSON.stringify(DB_USERS));
-    localStorage.setItem(LS.COMMANDES,JSON.stringify(DB_COMMANDES));
-    localStorage.setItem(LS.CONFIG,   JSON.stringify(DB_CONFIG));
-    localStorage.setItem(LS.CHAT,     JSON.stringify(DB_CHAT));
-    localStorage.setItem(LS.STOCK_LOG,JSON.stringify(DB_STOCK_LOG));
+    localStorage.setItem(LS.PRODUITS,  JSON.stringify(DB_PRODUITS));
+    localStorage.setItem(LS.USERS,     JSON.stringify(DB_USERS));
+    localStorage.setItem(LS.COMMANDES, JSON.stringify(DB_COMMANDES));
+    localStorage.setItem(LS.CONFIG,    JSON.stringify(DB_CONFIG));
+    localStorage.setItem(LS.CHAT,      JSON.stringify(DB_CHAT));
+    localStorage.setItem(LS.STOCK_LOG, JSON.stringify(DB_STOCK_LOG));
     /* Broadcast : force rafraîchissement dans tous les onglets ouverts */
-    window.dispatchEvent(new StorageEvent('storage',{key:LS.PRODUITS,newValue:JSON.stringify(DB_PRODUITS)}));
-    console.log('DEBUG [sauvegarder] ✓ DB_PRODUITS='+DB_PRODUITS.length
-      +' catalog_ids:'+[...new Set(DB_PRODUITS.map(p=>p.catalog_id||'?'))].join(','));
-  }catch(e){console.error('[sauvegarder] ERREUR:',e);toast('Erreur sauvegarde: '+e.message,'error');}
+    /* Dispatch LS.CHAT pour que le listener chat se déclenche */
+    window.dispatchEvent(new StorageEvent('storage',{key:LS.CHAT,newValue:JSON.stringify(DB_CHAT)}));
+  }catch(e){console.error('[sauvegarder] ERREUR:',e);}
 }
 function charger(){
   console.log('[charger] Chargement depuis LocalStorage…');
@@ -647,6 +648,18 @@ function charger(){
       console.log('[mail] Templates chargés depuis LS');
     }
   }catch(e){console.warn('[mail] Erreur chargement templates:',e);}
+  /* ── DB_APPEARANCE (logo + visuel) ── */
+  try{
+    var ap=localStorage.getItem(LS.APPEARANCE);
+    if(ap){
+      var apData=JSON.parse(ap);
+      if(apData.logo)DB_CONFIG.logo=Object.assign(DB_CONFIG.logo||{},apData.logo);
+      if(apData.hero)DB_CONFIG.hero=Object.assign(DB_CONFIG.hero||{},apData.hero);
+      if(apData.heroDesign)DB_CONFIG.heroDesign=Object.assign(DB_CONFIG.heroDesign||{},apData.heroDesign);
+      if(apData.appearance)DB_CONFIG.appearance=Object.assign(DB_CONFIG.appearance||{},apData.appearance);
+      console.log('[appearance] DB_APPEARANCE chargé depuis LS');
+    }
+  }catch(err){console.warn('[appearance] Erreur chargement:',err);}
 }
 
 function verifierBaseDeDonnees(){
@@ -927,6 +940,85 @@ function sendContactMessage(){
 
 /* ── HERO ── */
 function extractYtId(url){if(!url)return '';const m=url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);return m?m[1]:(/^[a-zA-Z0-9_-]{11}$/.test(url.trim())?url.trim():'');}
+
+/* ════════════════════════════════════════════════════════════════
+   appliquerConfigurationVisuelle()
+   Lit DB_CONFIG.logo + hero + heroDesign et les applique :
+   — Logo : #nav-logo-container, #admin-logo-container, overlay-login
+   — Hero : fond vidéo/image/YT de la page d'accueil
+   — Textes : titre, sous-titre
+   — Couleur accent CSS var
+════════════════════════════════════════════════════════════════ */
+function appliquerConfigurationVisuelle(){
+  var logo=DB_CONFIG.logo||{};
+  var hero=DB_CONFIG.hero||{};
+  var hd  =DB_CONFIG.heroDesign||{};
+  var ap  =DB_CONFIG.appearance||{};
+
+  /* ── 1. Logo ── */
+  var logoHTML='';
+  if(logo.src&&logo.src.length>10){
+    /* Image (URL ou base64) */
+    logoHTML='<img src="'+logo.src+'" id="nav-logo-img" alt="'+(logo.altText||'Logo')+'"'
+      +' style="height:38px;max-width:180px;object-fit:contain;display:block"/>';
+    console.log('[appearance] Logo image appliqué:',logo.src.slice(0,40));
+  }else{
+    /* SVG par défaut */
+    logoHTML='<svg width="220" height="52" viewBox="0 0 460 108" xmlns="http://www.w3.org/2000/svg">'
+      +'<text x="6" y="62" font-family="Cormorant Garamond,Georgia,serif" font-size="62" font-style="italic" fill="white" font-weight="500" letter-spacing="-1">'+(logo.altText||'De Cooman')+'</text>'
+      +'<line x1="6" y1="72" x2="328" y2="72" stroke="#00a8f3" stroke-width="1" opacity="0.45"/>'
+      +'<text x="8" y="90" font-family="Inter,sans-serif" font-size="10.5" fill="#00a8f3" letter-spacing="4" text-transform="uppercase">RACING PERFORMANCE</text>'
+      +'</svg>';
+  }
+
+  /* Injecter dans nav client */
+  var navLogo=document.getElementById('nav-logo-container');
+  if(navLogo)navLogo.innerHTML=logoHTML;
+
+  /* Injecter dans topbar admin */
+  var adminLogo=document.getElementById('admin-logo-container');
+  if(adminLogo){
+    if(logo.src&&logo.src.length>10){
+      adminLogo.innerHTML='<img src="'+logo.src+'" alt="'+(logo.altText||'Logo')+'" style="height:28px;max-width:130px;object-fit:contain"/>';
+    }else{
+      adminLogo.innerHTML='<span style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:700;font-style:italic;color:white">'+(logo.altText||'De Cooman')+'</span>';
+    }
+  }
+
+  /* ── 2. Fond d'accueil ── */
+  applyHeroConfig(hero);
+
+  /* ── 3. Textes héros ── */
+  applyHeroDesign(hd);
+
+  /* ── 4. Couleur accent CSS ── */
+  if(ap.accentColor){
+    document.documentElement.style.setProperty('--gold', ap.accentColor);
+    document.documentElement.style.setProperty('--gold2', ap.accentColor+'cc');
+    console.log('[appearance] Accent color:', ap.accentColor);
+  }
+
+  console.log('[appearance] appliquerConfigurationVisuelle() OK — logo='+(!!(logo.src))+' hero='+hero.type);
+}
+
+/* ── sauvegarderApparence() : persiste DB_APPEARANCE dans LS ── */
+function sauvegarderApparence(){
+  var payload={
+    logo:      DB_CONFIG.logo||{},
+    hero:      DB_CONFIG.hero||{},
+    heroDesign:DB_CONFIG.heroDesign||{},
+    appearance:DB_CONFIG.appearance||{}
+  };
+  try{
+    localStorage.setItem(LS.APPEARANCE, JSON.stringify(payload));
+    /* Aussi sauvegarder dans DB_CONFIG via sauvegarder() */
+    sauvegarder();
+    /* Broadcast pour synchroniser les autres onglets */
+    window.dispatchEvent(new StorageEvent('storage',{key:LS.APPEARANCE,newValue:JSON.stringify(payload)}));
+    console.log('[appearance] sauvegarderApparence() OK');
+  }catch(err){console.error('[appearance] Erreur sauvegarde:',err);}
+}
+
 function applyHeroConfig(cfgOverride){
   const cfg=cfgOverride||DB_CONFIG.hero||{};
   const vid=document.getElementById('heroVideo');
@@ -1325,48 +1417,162 @@ function wfCheckAutoConfirm(){
 }
 
 /* ── CHAT ── */
-function sendChatMsg(orderId,inputEl,role){
+
+/* ════════════════════════════════════════════════════════════════
+   MOTEUR CHAT — v43
+   Structure message :
+   { id, orderId, from, fromName, role:'admin'|'client',
+     text, date (ISO), readByAdmin, readByClient }
+   Stockage : DB_CHAT (tableau global, LS.CHAT)
+════════════════════════════════════════════════════════════════ */
+
+/* ── sendChatMsg : envoi sécurisé d'un message ── */
+function sendChatMsg(orderId, inputElOrText, role){
   try{
-    const text=(typeof inputEl==='string'?inputEl:inputEl?.value||'').trim();
-    if(!text)return;
-    if(!orderId){console.error('[sendChatMsg] orderId manquant');return;}
-    const msg={
+    /* Sécuriser les paramètres */
+    var text=(typeof inputElOrText==='string'
+      ? inputElOrText
+      : (inputElOrText&&inputElOrText.value)||'').trim();
+    if(!text){return;}
+    if(!orderId){console.error('[chat] sendChatMsg — orderId manquant');return;}
+    var oId=String(orderId);
+
+    /* S'assurer que DB_CHAT est un tableau */
+    if(!Array.isArray(DB_CHAT))DB_CHAT=[];
+
+    /* Construire le message */
+    var msg={
       id:'CM'+Date.now()+Math.random().toString(36).slice(2,5),
-      orderId:String(orderId),
-      from:currentUser?.id||'?',
-      fromName:currentUser?(currentUser.first+' '+currentUser.last):'Anonyme',
-      role:role||'client',
-      text,
-      date:new Date().toISOString(),
-      readByAdmin:role==='admin',
-      readByClient:role==='client'
+      orderId: oId,
+      from:    currentUser?currentUser.id:'guest',
+      fromName:currentUser?(currentUser.first+' '+currentUser.last):'Visiteur',
+      role:    role||'client',
+      text:    text,
+      date:    new Date().toISOString(),
+      readByAdmin:  role==='admin',   /* l'admin a lu son propre message */
+      readByClient: role==='client'   /* le client a lu son propre message */
     };
+
+    /* Ajouter et persister */
     DB_CHAT.push(msg);
-    sauvegarder();
-    if(typeof inputEl!=='string'&&inputEl)inputEl.value='';
-    if(role==='client'){
-      addAdminNotif('chat',`💬 Message sur ${orderId}`,`${msg.fromName} : ${text.slice(0,60)}`,orderId);
-      updateAdminCounters();
-    } else {
-      addUserNotif('chat',`Réponse sur votre commande ${orderId}`,text.slice(0,80),orderId);
+    sauvegarder(); /* dispatch LS.CHAT → les listeners se déclenchent */
+
+    /* Vider le champ de saisie */
+    if(typeof inputElOrText!=='string'&&inputElOrText){
+      inputElOrText.value='';
     }
-    ['chat-msgs-detail-'+orderId,'chat-msgs-acc-'+orderId,'admin-chat-msgs'].forEach(id=>{
-      const el=document.getElementById(id);if(el)_renderChatMessages(orderId,el);
-    });
-    console.log('DEBUG [sendChatMsg] sent orderId='+orderId+' role='+role);
-  }catch(e){
-    console.error('[sendChatMsg] ERREUR:',e);
-    toast('Erreur envoi message: '+e.message,'error');
+
+    /* Notifications croisées */
+    if(role==='client'){
+      addAdminNotif('chat','💬 Message sur '+oId,msg.fromName+' : '+text.slice(0,60),oId);
+      updateAdminCounters&&updateAdminCounters();
+    }else{
+      addUserNotif&&addUserNotif('chat','Réponse sur votre commande '+oId,text.slice(0,80),oId);
+    }
+
+    /* Rafraîchir les zones chat visibles — sans re-render complet */
+    _rafraichirZonesChat(oId);
+
+    console.log('[chat] Message envoyé orderId='+oId+' role='+role+' text='+text.slice(0,30));
+  }catch(err){
+    console.error('[chat] sendChatMsg ERREUR:',err);
+    toast('Erreur envoi : '+err.message,'error');
   }
 }
-function _renderChatMessages(orderId,containerEl){
-  if(!containerEl)return;const msgs=DB_CHAT.filter(m=>m.orderId===orderId);
-  if(!msgs.length){containerEl.innerHTML='<div style="text-align:center;padding:1.5rem 1rem;color:rgba(255,255,255,.22);font-size:.78rem">Aucun message — commencez la conversation ci-dessous.</div>';return;}
-  containerEl.innerHTML=msgs.map(m=>{const isAdmin=m.role==='admin';const d=new Date(m.date);const ts=d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});return `<div class="chat-msg ${isAdmin?'from-admin':'from-client'}"><div><div class="chat-bubble">${escH(m.text)}</div><p style="font-size:.60rem;color:rgba(255,255,255,.22);margin-top:2px;text-align:${isAdmin?'left':'right'}">${isAdmin?`<span style="font-weight:700;color:rgba(0,168,243,.50)">Support</span> · `:''}${ts}</p></div></div>`;}).join('');
-  containerEl.scrollTop=containerEl.scrollHeight;
-  msgs.forEach(m=>{if(currentUser?.role==='admin')m.readByAdmin=true;else m.readByClient=true;});sauvegarder();updateAdminCounters();
+
+/* ── _rafraichirZonesChat : met à jour tous les containers liés à une commande ── */
+function _rafraichirZonesChat(orderId){
+  /* Containers possibles dans le DOM */
+  var ids=[
+    'chat-msgs-detail-'+orderId,  /* modale détail commande */
+    'chat-msgs-acc-'+orderId,     /* accordion commande client */
+    'adminChatMsgs'               /* panneau admin chat (ordre actif) */
+  ];
+  ids.forEach(function(id){
+    var el=document.getElementById(id);
+    if(el)renderChatZone(orderId,el);
+  });
 }
-function _initChatInElement(orderId,containerId){const el=document.getElementById(containerId);if(el)_renderChatMessages(orderId,el);}
+
+/* ── renderChatZone : rendu des messages dans un container ──
+   SEULE FONCTION de rendu — remplace _renderChatMessages
+   aucun sauvegarder() ici pour éviter les boucles
+*/
+function renderChatZone(orderId, containerEl){
+  if(!containerEl){return;}
+  var oId=String(orderId||'');
+
+  try{
+    /* Sécuriser DB_CHAT */
+    if(!Array.isArray(DB_CHAT))DB_CHAT=[];
+
+    /* Filtrer les messages de cette commande */
+    var msgs=DB_CHAT.filter(function(m){return String(m.orderId)===oId;});
+
+    if(!msgs.length){
+      containerEl.innerHTML='<div style="text-align:center;padding:1.5rem 1rem;'
+        +'color:rgba(255,255,255,.22);font-family:Inter,sans-serif;font-size:.78rem">'
+        +'Aucun message — commencez la conversation ci-dessous.</div>';
+      return;
+    }
+
+    /* Rendu des bulles */
+    containerEl.innerHTML=msgs.map(function(m){
+      try{
+        var isAdmin=m.role==='admin';
+        var d=new Date(m.date||Date.now());
+        var ts=d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})
+              +' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+        var txt=String(m.text||'')
+          .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          .replace(/\n/g,'<br>');
+        var unreadDot=(!isAdmin&&!m.readByAdmin)
+          ?'<span style="width:6px;height:6px;border-radius:50%;background:#a855f7;display:inline-block;margin-left:4px;flex-shrink:0"></span>'
+          :'';
+        return '<div class="chat-msg '+(isAdmin?'from-admin':'from-client')+'">'
+          +'<div>'
+            +'<div class="chat-bubble">'+txt+'</div>'
+            +'<p style="font-size:.60rem;color:rgba(255,255,255,.22);margin-top:2px;'
+              +'text-align:'+(isAdmin?'left':'right')+'">'
+              +(isAdmin?'<span style="font-weight:700;color:rgba(0,168,243,.5)">Support</span> · ':'')
+              +ts+unreadDot
+            +'</p>'
+          +'</div>'
+        +'</div>';
+      }catch(msgErr){
+        console.warn('[chat] Erreur rendu message:',msgErr,m);
+        return '';
+      }
+    }).join('');
+
+    /* Scroll vers le bas */
+    containerEl.scrollTop=containerEl.scrollHeight;
+
+    /* Marquer comme lus (selon rôle courant) — sans re-sauvegarder ici */
+    var changed=false;
+    msgs.forEach(function(m){
+      if(currentUser&&currentUser.role==='admin'&&!m.readByAdmin){m.readByAdmin=true;changed=true;}
+      else if(currentUser&&currentUser.role!=='admin'&&!m.readByClient){m.readByClient=true;changed=true;}
+    });
+    /* Persister seulement si vraiment changé — et sans dispatcher LS.CHAT pour éviter boucle */
+    if(changed){
+      try{localStorage.setItem(LS.CHAT,JSON.stringify(DB_CHAT));}catch(e){}
+      updateAdminCounters&&updateAdminCounters();
+    }
+
+  }catch(err){
+    console.error('[chat] renderChatZone ERREUR:',err);
+    containerEl.innerHTML='<div style="padding:1rem;color:#ef4444;font-size:.75rem">'
+      +'Erreur d\'affichage du chat. Rechargez la page.</div>';
+  }
+}
+
+/* Alias de compatibilité — les appels existants avec _ fonctionnent aussi */
+function _renderChatMessages(orderId,containerEl){renderChatZone(orderId,containerEl);}
+function _initChatInElement(orderId,containerId){
+  var el=document.getElementById(containerId);
+  if(el)renderChatZone(orderId,el);
+}
 
 /* ── STOCK ── */
 function stockLog(pid,action,qty,reason,orderId){const prod=DB_PRODUITS.find(p=>p.id===pid)||{name:'Produit #'+pid};DB_STOCK_LOG.unshift({id:'SL-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),date:new Date().toISOString(),pid,productName:prod.name,action,qty,reason,orderId:orderId||null});if(DB_STOCK_LOG.length>500)DB_STOCK_LOG=DB_STOCK_LOG.slice(0,500);}
@@ -1426,7 +1632,7 @@ function adminTab(tab){
     access:renderAdminAccess,
     pricing:renderAdminPricing,
     catalog:renderAdminCatalog,
-    hero:renderAdminHero,
+    appearance:renderAdminAppearance,
     herodesign:renderAdminHeroDesign,
     modeles:renderAdminModeles,
     docs:renderAdminModeles,
@@ -2631,6 +2837,26 @@ var PDF_CSS = [
 ].join('\n');
 
 /* ── genererTemplateHTML : construit le HTML complet du document ── */
+
+/* ── _buildPdfLogoHTML : logo dans les documents PDF ── */
+function _buildPdfLogoHTML(societe){
+  var logo=DB_CONFIG.logo||{};
+  var nom=societe?societe.nom:(logo.altText||'De Cooman Racing Performance');
+  var tagline=societe?'':((DB_CONFIG.logo||{}).tagline||'Luminaires & Accessoires Auto');
+  if(logo.src&&logo.src.length>10){
+    /* Logo image : base64 ou URL (fonctionne dans html2pdf) */
+    return '<div class="pdf-logo" style="display:flex;align-items:center;gap:8px">'
+      +'<img src="'+logo.src+'" alt="'+nom+'" style="height:42px;max-width:120px;object-fit:contain"/>'
+      +'<div><div style="font-size:10pt;font-weight:700;color:#1a1a2e">'+nom+'</div>'
+      +(tagline?'<div style="font-size:7pt;color:#888">'+tagline+'</div>':'')
+      +'</div></div>';
+  }else{
+    /* Pas de logo image : texte SVG */
+    return '<div class="pdf-logo">'+nom.split(' ').slice(0,2).join('<span> ')+'</span>'
+      +'<small>'+(tagline||'Performance')+'</small></div>';
+  }
+}
+
 function genererTemplateHTML(type, orderId, acomptePct){
   console.log('PDF: Début de génération pour', type, 'orderId='+orderId);
 
@@ -2725,7 +2951,7 @@ function genererTemplateHTML(type, orderId, acomptePct){
 
     /* HEADER */
     +'<div class="pdf-header">'
-      +'<div class="pdf-logo">De Cooman<span> Racing</span><small>Performance · Luminaires & Accessoires Auto</small></div>'
+      +_buildPdfLogoHTML(societe)
       +'<div class="pdf-doc-type"><div class="type-label">'+docLabel+'</div>'
         +'<div class="doc-num">N° '+docNum+'</div>'
         +'<div class="doc-date">'+dateStr+'</div></div>'
@@ -3383,186 +3609,547 @@ function selectPdfType(type){
 }
 
 
+/* ── renderAdminChat : panneau admin messagerie ── */
 function renderAdminChat(){
   var ct=document.getElementById('adminContent');
-  var orderIds=[];
-  DB_CHAT.forEach(function(m){if(orderIds.indexOf(m.orderId)<0)orderIds.push(m.orderId);});
-  var withChat=DB_COMMANDES.filter(function(o){return orderIds.indexOf(o.id)>=0;});
-  /* Also show orders that have no messages but client navigated to them */
+  if(!ct)return;
+
+  /* Sécuriser DB_CHAT */
+  if(!Array.isArray(DB_CHAT))DB_CHAT=[];
+
+  /* Calcul des non-lus par commande */
   var unreadByOrder={};
-  DB_CHAT.filter(function(m){return m.role==='client'&&!m.readByAdmin;}).forEach(function(m){
-    unreadByOrder[m.orderId]=(unreadByOrder[m.orderId]||0)+1;
+  DB_CHAT.forEach(function(m){
+    if(m.role==='client'&&!m.readByAdmin){
+      unreadByOrder[m.orderId]=(unreadByOrder[m.orderId]||0)+1;
+    }
   });
 
-  var sidebar='<div style="width:260px;flex-shrink:0;overflow-y:auto;display:flex;flex-direction:column;gap:.3rem">';
+  /* Commandes ayant des messages */
+  var orderIds=[...new Set(DB_CHAT.map(function(m){return m.orderId;}))];
+  var withChat=DB_COMMANDES.filter(function(o){return orderIds.includes(o.id);})
+    .sort(function(a,b){
+      /* Tri par dernier message décroissant */
+      var la=DB_CHAT.filter(function(m){return m.orderId===a.id;}).slice(-1)[0];
+      var lb=DB_CHAT.filter(function(m){return m.orderId===b.id;}).slice(-1)[0];
+      return new Date((lb&&lb.date)||0)- new Date((la&&la.date)||0);
+    });
+
+  /* ── SIDEBAR : liste des conversations ── */
+  var sidebarItems='';
   if(!withChat.length){
-    sidebar+='<div style="padding:1.5rem 1rem;text-align:center;color:rgba(255,255,255,.2);font-family:Inter,sans-serif;font-size:.75rem">Aucune conversation</div>';
-  } else {
+    sidebarItems='<div style="padding:1.5rem 1rem;text-align:center;color:rgba(255,255,255,.2);'
+      +'font-family:Inter,sans-serif;font-size:.78rem">Aucune conversation.<br>Les clients peuvent envoyer des messages depuis leurs commandes.</div>';
+  }else{
     withChat.forEach(function(o){
       var unread=unreadByOrder[o.id]||0;
       var last=DB_CHAT.filter(function(m){return m.orderId===o.id;}).slice(-1)[0];
       var isActive=_adminChatOrderId===o.id;
-      sidebar+='<div onclick="openAdminChatFor(\''+o.id+'\')" id="chatorder-'+o.id+'"'
-        +' style="padding:.7rem .9rem;border-radius:10px;border:1px solid '+(isActive?'rgba(0,168,243,.4)':'rgba(255,255,255,.06)')+';background:'+(isActive?'rgba(0,168,243,.08)':'rgba(255,255,255,.02)')+';cursor:pointer;transition:all .2s">'
+      var lastText=last?(last.text.slice(0,45)+(last.text.length>45?'…':'')):' ';
+      var lastRole=last?last.role:'';
+      sidebarItems+='<div onclick="console.log(\'[chat] Sélection commande '+o.id+'\');openAdminChatFor(\''+o.id+'\')"'
+        +' id="chatorder-'+o.id+'"'
+        +' style="padding:.7rem .9rem;border-radius:10px;cursor:pointer;transition:all .15s;'
+          +'border:1px solid '+(isActive?'rgba(0,168,243,.4)':'rgba(255,255,255,.06)')+';'
+          +'background:'+(isActive?'rgba(0,168,243,.06)':'rgba(255,255,255,.01)')+';"'
+        +' onmouseover="if(\''+o.id+'\'!==_adminChatOrderId)this.style.background=\'rgba(255,255,255,.04)\'"'
+        +' onmouseout="if(\''+o.id+'\'!==_adminChatOrderId)this.style.background=\'rgba(255,255,255,.01)\'">'
         +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.2rem">'
-          +'<span style="font-family:\'Bebas Neue\',sans-serif;font-size:.88rem;color:'+(unread?'white':'rgba(255,255,255,.6)')+'">'+o.id+'</span>'
-          +(unread?'<span style="background:#a855f7;color:white;border-radius:50%;width:18px;height:18px;font-size:.6rem;display:flex;align-items:center;justify-content:center;font-weight:700">'+unread+'</span>':'')
+          +'<span style="font-family:\'Bebas Neue\',sans-serif;font-size:.88rem;letter-spacing:.06em;'
+            +'color:'+(unread?'white':'rgba(255,255,255,.6)')+';font-weight:'+(unread?'700':'400')+'">'+o.id+'</span>'
+          +(unread
+            ?'<span style="background:#a855f7;color:white;border-radius:50%;min-width:18px;height:18px;'
+              +'font-size:.6rem;display:inline-flex;align-items:center;justify-content:center;font-weight:700">'+unread+'</span>'
+            :'')
         +'</div>'
-        +'<p style="font-family:Inter,sans-serif;font-size:.7rem;color:rgba(255,255,255,.35)">'+o.userName+'</p>'
-        +(last?'<p style="font-family:Inter,sans-serif;font-size:.65rem;color:rgba(255,255,255,.2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin-top:2px">'+(last.role==='admin'?'Vous : ':'')+escHtml(last.text.slice(0,40))+'</p>':'')
+        +'<p style="font-family:Inter,sans-serif;font-size:.7rem;color:rgba(255,255,255,.35);margin-bottom:.2rem">'+o.userName+'</p>'
+        +(last
+          ?'<p style="font-family:Inter,sans-serif;font-size:.65rem;color:rgba(255,255,255,.2);'
+            +'overflow:hidden;white-space:nowrap;text-overflow:ellipsis">'
+            +(lastRole==='admin'?'<span style="color:rgba(0,168,243,.4)">Support</span> : ':'')
+            +String(lastText).replace(/</g,'&lt;')+'</p>'
+          :'')
       +'</div>';
     });
   }
-  sidebar+='</div>';
 
-  var chatPane='<div id="adminChatPane" style="flex:1;display:flex;flex-direction:column;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.06);border-radius:12px;overflow:hidden">';
+  /* ── CHAT PANE : conversation active ── */
+  var chatPaneContent='';
   if(_adminChatOrderId){
     var o=DB_COMMANDES.find(function(x){return x.id===_adminChatOrderId;})||{id:_adminChatOrderId,userName:'—'};
-    chatPane+='<div style="padding:.8rem 1rem;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between">'
-      +'<div><p style="font-family:\'Bebas Neue\',sans-serif;font-size:.95rem;color:white;letter-spacing:.06em">'+o.id+'</p>'
-        +'<p style="font-family:Inter,sans-serif;font-size:.72rem;color:rgba(255,255,255,.4)">'+o.userName+'</p></div>'
-      +'<span style="font-family:Inter,sans-serif;font-size:.68rem;color:rgba(255,255,255,.25)">Chat en temps réel · sync LS</span>'
-    +'</div>'
-    +'<div id="adminChatMsgs" style="flex:1;overflow-y:auto;padding:.85rem;scroll-behavior:smooth"></div>'
-    +'<div style="padding:.6rem .85rem;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:.4rem">'
-      +'<input type="text" id="adminChatInp" class="fi" placeholder="Répondre au client…" style="flex:1;font-size:.8rem" onkeydown="if(event.key===\'Enter\')adminSendChat()"/>'
-      +'<button onclick="adminSendChat()" class="btn btn-primary btn-sm">Envoyer</button>'
+    var oUnread=unreadByOrder[_adminChatOrderId]||0;
+    chatPaneContent=''
+      +'<div style="padding:.8rem 1rem;border-bottom:1px solid rgba(255,255,255,.06);'
+        +'display:flex;align-items:center;justify-content:space-between;flex-shrink:0">'
+        +'<div>'
+          +'<p style="font-family:\'Bebas Neue\',sans-serif;font-size:.95rem;color:white;letter-spacing:.06em">'+o.id+'</p>'
+          +'<p style="font-family:Inter,sans-serif;font-size:.72rem;color:rgba(255,255,255,.4)">'+o.userName+'</p>'
+        +'</div>'
+        +'<span style="font-family:Inter,sans-serif;font-size:.68rem;color:rgba(255,255,255,.25)">Sync temps réel · LS.CHAT</span>'
+      +'</div>'
+      +'<div id="adminChatMsgs" style="flex:1;overflow-y:auto;padding:.85rem;scroll-behavior:smooth"></div>'
+      +'<div style="padding:.6rem .85rem;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:.4rem;flex-shrink:0">'
+        +'<input type="text" id="adminChatInp" class="fi" placeholder="Répondre au client…" '
+          +'style="flex:1;font-size:.8rem" '
+          +'onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();adminSendChat();}">'
+        +'<button onclick="adminSendChat()" class="btn btn-primary btn-sm">Envoyer</button>'
+      +'</div>';
+  }else{
+    chatPaneContent='<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;'
+      +'color:rgba(255,255,255,.2);font-family:Inter,sans-serif;gap:.5rem">'
+      +'<svg style="width:40px;height:40px;opacity:.2" fill="none" stroke="currentColor" viewBox="0 0 24 24">'
+        +'<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" '
+          +'d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>'
+      +'</svg>'
+      +'<p style="font-size:.85rem">Sélectionnez une conversation à gauche</p>'
     +'</div>';
-  } else {
-    chatPane+='<div style="flex:1;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.2);font-family:Inter,sans-serif;font-size:.8rem">Sélectionnez une conversation</div>';
   }
-  chatPane+='</div>';
 
-  ct.innerHTML='<div class="flex items-center justify-between mb-5">'
+  /* ── Render final ── */
+  ct.innerHTML='<div class="flex items-center justify-between mb-4">'
     +'<div><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Messagerie</p>'
     +'<h2 class="font-display text-2xl font-bold text-white uppercase">Chat <span style="color:#00a8f3">Commandes</span></h2></div>'
+    +(Object.keys(unreadByOrder).length
+      ?'<span style="background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.3);'
+        +'color:#a855f7;font-family:Inter,sans-serif;font-size:.72rem;font-weight:700;'
+        +'padding:3px 10px;border-radius:8px">'+Object.values(unreadByOrder).reduce(function(s,n){return s+n;},0)+' non lu(s)</span>'
+      :'')
+  +'</div>'
+  +'<div style="display:flex;gap:.85rem;height:calc(100vh - 220px)">'
+    +'<div style="width:265px;flex-shrink:0;overflow-y:auto;display:flex;flex-direction:column;gap:.25rem">'+sidebarItems+'</div>'
+    +'<div id="adminChatPane" style="flex:1;display:flex;flex-direction:column;background:rgba(0,0,0,.18);'
+      +'border:1px solid rgba(255,255,255,.07);border-radius:14px;overflow:hidden">'
+      +chatPaneContent
     +'</div>'
-    +'<div style="display:flex;gap:1rem;height:calc(100vh - 220px)">'
-    +sidebar+chatPane
-    +'</div>';
+  +'</div>';
 
+  /* Remplir les messages de la conversation active */
   if(_adminChatOrderId){
-    var el=document.getElementById('adminChatMsgs');
-    if(el)renderChatMessages(_adminChatOrderId,el);
-  /* Real-time: écouter les nouveaux messages via storage event */
+    var msgsEl=document.getElementById('adminChatMsgs');
+    if(msgsEl)renderChatZone(_adminChatOrderId,msgsEl);
+  }
+
+  /* ── Storage listener (installé une seule fois) ── */
   if(!window._chatStorageListenerActive){
     window._chatStorageListenerActive=true;
     window.addEventListener('storage',function(ev){
-      if(ev.key===LS.CHAT&&adminCurrentTab==='chat'){
-        try{const d=JSON.parse(ev.newValue);if(Array.isArray(d))DB_CHAT=d;}catch(e){}
-        renderAdminChat();
+      if(ev.key!==LS.CHAT)return;
+      try{var d=JSON.parse(ev.newValue);if(Array.isArray(d))DB_CHAT=d;}catch(e){}
+      /* Rafraîchir seulement si le panneau chat est ouvert */
+      if(adminCurrentTab==='chat'){
+        var msgsEl=document.getElementById('adminChatMsgs');
+        if(msgsEl&&_adminChatOrderId){
+          renderChatZone(_adminChatOrderId,msgsEl);
+        }
+        /* Mettre à jour les pastilles non-lus dans la sidebar */
+        _updateChatSidebar();
       }
     });
-    console.log('DEBUG [renderAdminChat] storage listener activé');
+    console.log('[chat] storage listener activé (une fois)');
   }
-  }
-  /* Real-time: écouter les nouveaux messages via storage event */
-  if(!window._chatStorageListenerActive){
-    window._chatStorageListenerActive=true;
-    window.addEventListener('storage',function(ev){
-      if(ev.key===LS.CHAT&&adminCurrentTab==='chat'){
-        try{const d=JSON.parse(ev.newValue);if(Array.isArray(d))DB_CHAT=d;}catch(e){}
-        renderAdminChat();
-      }
-    });
-    console.log('DEBUG [renderAdminChat] storage listener activé');
-  }
+}
+
+/* ── _updateChatSidebar : rafraîchit uniquement les pastilles sans re-render complet ── */
+function _updateChatSidebar(){
+  var unreadByOrder={};
+  DB_CHAT.forEach(function(m){
+    if(m.role==='client'&&!m.readByAdmin){
+      unreadByOrder[m.orderId]=(unreadByOrder[m.orderId]||0)+1;
+    }
+  });
+  /* Mettre à jour chaque item de la sidebar */
+  Object.keys(unreadByOrder).forEach(function(oId){
+    var el=document.getElementById('chatorder-'+oId);
+    if(!el)return;
+    /* Si pas déjà en surbrillance — simple re-render partiel du badge */
+    /* Pour simplicité on re-render tout le chat */
+  });
+  /* Si changement détecté, re-render complet */
+  renderAdminChat();
 }
 
 
 function openAdminChatFor(orderId){
+  console.log('[chat] openAdminChatFor:', orderId);
   _adminChatOrderId=orderId;
-  DB_CHAT.filter(function(m){return m.orderId===orderId&&m.role==='client';}).forEach(function(m){m.readByAdmin=true;});
-  sauvegarder();
-  updateAdminCounters();
+  /* Marquer comme lus */
+  var changed=false;
+  DB_CHAT.forEach(function(m){
+    if(m.orderId===orderId&&m.role==='client'&&!m.readByAdmin){
+      m.readByAdmin=true; changed=true;
+    }
+  });
+  if(changed){
+    try{localStorage.setItem(LS.CHAT,JSON.stringify(DB_CHAT));}catch(e){}
+    updateAdminCounters&&updateAdminCounters();
+  }
   renderAdminChat();
 }
 
 
 function adminSendChat(){
   var inp=document.getElementById('adminChatInp');
-  if(!inp||!inp.value.trim())return;
-  sendChatMsg(_adminChatOrderId,inp.value,'admin');
-  inp.value='';
-  var el=document.getElementById('adminChatMsgs');
-  if(el)renderChatMessages(_adminChatOrderId,el);
-  renderAdminChat();
+  if(!inp||!inp.value.trim()||!_adminChatOrderId)return;
+  console.log('[chat] adminSendChat orderId='+_adminChatOrderId);
+  sendChatMsg(_adminChatOrderId, inp, 'admin');
+  /* _rafraichirZonesChat appelé dans sendChatMsg, donc pas besoin de re-render ici */
 }
 
 
-function renderAdminHero(){
-  console.log('DEBUG [hero] renderAdminHero()');
-  var ct=document.getElementById('adminContent');
-  if(!ct)return;
-  var cfg=_accueilConfig;
+function renderAdminAppearance(){
+  console.log('[appearance] renderAdminAppearance()');
+  var ct=document.getElementById('adminContent');if(!ct)return;
+  var cfg  =DB_CONFIG.hero||{};
+  var hd   =DB_CONFIG.heroDesign||{};
+  var logo =DB_CONFIG.logo||{};
+  var ap   =DB_CONFIG.appearance||{};
   var opPct=Math.round((cfg.opacity||0.35)*100);
 
-  ct.innerHTML='<div class="flex items-center justify-between mb-5">'
-    +'<div><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Apparence</p>'
-    +'<h2 class="font-display text-2xl font-bold text-white uppercase">Fond <span style="color:#00a8f3">d\'accueil</span></h2>'
-    +'<p class="text-white/35 text-sm mt-1">Vidéo (MP4 ou YouTube) ou image — appliqué sur toutes les sessions</p>'
-    +'</div></div>'
+  ct.innerHTML=`
+<div class="flex items-center justify-between mb-5 flex-wrap gap-3">
+  <div>
+    <p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Apparence</p>
+    <h2 class="font-display text-2xl font-bold text-white uppercase">Apparence <span style="color:#00a8f3">& Identité</span></h2>
+    <p class="text-white/35 text-sm mt-1">Logo · Fond d'accueil · Textes · Couleurs — sauvegardés dans une clé <code style="color:#00a8f3">DB_APPEARANCE</code></p>
+  </div>
+  <button onclick="console.log('[btn] Appliquer apparence');appliquerEtSauvegarder()"
+    class="btn btn-primary gp">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+    Appliquer les modifications
+  </button>
+</div>
 
-    /* Type selector */
-    +'<div class="card p-5 mb-4">'
-    +'<p class="fl mb-3">Type de source</p>'
-    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem">'
-    +[['video_yt','🎬 YouTube URL'],['video_url','📁 Vidéo MP4'],['image','🖼 Image']].map(function(t){
-      var active=cfg.type===t[0];
-      return '<button onclick="heroSetType(\''+t[0]+'\')" style="padding:.55rem .8rem;border-radius:9px;border:2px solid '
-        +(active?'#00a8f3':'rgba(255,255,255,.1)')+';background:'
-        +(active?'rgba(0,168,243,.1)':'rgba(255,255,255,.03)')+';color:'
-        +(active?'#00a8f3':'rgba(255,255,255,.5)')+';font-family:Inter,sans-serif;font-weight:600;font-size:.78rem;cursor:pointer;transition:all .2s">'
-        +t[1]+'</button>';
-    }).join('')
-    +'</div></div>'
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.4rem">
 
-    /* Source input */
-    +'<div class="card p-5 mb-4">'
-    +(cfg.type==='video_yt'
-      ?'<p class="fl mb-2">URL YouTube <span style="font-size:.7rem;color:rgba(255,255,255,.3);font-weight:400;text-transform:none">ex: https://www.youtube.com/watch?v=XXXXXXXXXXX</span></p>'
-        +'<div style="display:flex;gap:.4rem">'
-          +'<input type="text" id="hero-src-inp" class="fi" style="flex:1;font-size:.82rem" placeholder="https://youtube.com/watch?v=..." value="'+(cfg.yt_id?'https://youtu.be/'+cfg.yt_id:'')+'">'
-          +'<button onclick="heroApplySrc()" class="btn btn-primary btn-sm">Appliquer</button>'
-        +'</div>'
-        +(cfg.yt_id?'<p style="font-family:Inter,sans-serif;font-size:.7rem;color:#22c55e;margin-top:.4rem">✓ ID YouTube: '+cfg.yt_id+'</p>':'')
-      :cfg.type==='video_url'
-        ?'<p class="fl mb-2">URL vidéo MP4/WebM ou fichier local</p>'
-          +'<div style="display:flex;gap:.4rem;margin-bottom:.5rem">'
-            +'<input type="text" id="hero-src-inp" class="fi" style="flex:1;font-size:.82rem" placeholder="https://.../video.mp4" value="'+((!cfg.srcIsBlob&&cfg.src)?cfg.src:'')+'">'
-            +'<button onclick="heroApplySrc()" class="btn btn-primary btn-sm">Appliquer</button>'
-          +'</div>'
-          +'<label class="btn btn-ghost btn-sm" style="cursor:pointer;display:inline-flex;align-items:center;gap:.35rem">'
-            +'🎬 Importer fichier local'
-            +'<input type="file" accept="video/mp4,video/webm" style="display:none" onchange="heroFileUpload(this)"/>'
-          +'</label>'
-        :'<p class="fl mb-2">URL image ou fichier local</p>'
-          +'<div style="display:flex;gap:.4rem;margin-bottom:.5rem">'
-            +'<input type="text" id="hero-src-inp" class="fi" style="flex:1;font-size:.82rem" placeholder="https://.../image.jpg" value="'+((!cfg.srcIsBlob&&cfg.src)?cfg.src:'')+'">'
-            +'<button onclick="heroApplySrc()" class="btn btn-primary btn-sm">Appliquer</button>'
-          +'</div>'
-          +'<label class="btn btn-ghost btn-sm" style="cursor:pointer;display:inline-flex;align-items:center;gap:.35rem">'
-            +'🖼 Importer image'
-            +'<input type="file" accept="image/*" style="display:none" onchange="heroFileUpload(this)"/>'
-          +'</label>')
-    +'</div>'
+  <!-- Colonne gauche : Logo + Fond + Couleurs -->
+  <div style="display:flex;flex-direction:column;gap:1rem">
 
-    /* Opacity */
-    +'<div class="card p-5 mb-4">'
-    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">'
-      +'<p class="fl" style="margin:0">Luminosité du fond</p>'
-      +'<span id="hero-op-val" style="font-family:Bebas Neue,sans-serif;font-size:1.1rem;color:#00a8f3">'+opPct+'%</span>'
-    +'</div>'
-    +'<input type="range" id="hero-op-inp" min="5" max="90" value="'+opPct+'" style="width:100%;accent-color:#00a8f3;cursor:pointer" oninput="heroOpacityLive(this.value)">'
-    +'</div>'
+    <!-- LOGO -->
+    <div class="card p-5">
+      <p class="fl mb-3">🏷 Logo & Identité</p>
 
-    /* Save */
-    +'<div style="display:flex;gap:.5rem">'
-    +'<button onclick="heroSaveConfig()" class="btn btn-primary gp" style="flex:1">'
-      +'<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>'
-      +'Enregistrer & Diffuser</button>'
-    +'<button onclick="heroReset()" class="btn btn-ghost btn-sm">Réinitialiser</button>'
-    +'</div>';
+      <!-- Aperçu live logo -->
+      <div id="ap-logo-preview" style="display:flex;align-items:center;justify-content:center;
+        min-height:60px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.07);
+        border-radius:10px;margin-bottom:1rem;padding:.75rem">
+        ${logo.src&&logo.src.length>10
+          ?'<img src="'+logo.src+'" style="max-height:48px;max-width:160px;object-fit:contain"/>'
+          :'<svg width="160" height="38" viewBox="0 0 460 108" xmlns="http://www.w3.org/2000/svg"><text x="6" y="52" font-family="Cormorant Garamond,serif" font-size="50" font-style="italic" fill="white" font-weight="500">De Cooman</text><text x="8" y="74" font-family="Inter,sans-serif" font-size="9" fill="#00a8f3" letter-spacing="4">RACING PERFORMANCE</text></svg>'}
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:.65rem">
+        <div>
+          <label class="fl" style="margin-bottom:.3rem">URL du logo</label>
+          <div style="display:flex;gap:.4rem">
+            <input type="text" id="ap-logo-url" class="fi" style="flex:1;font-size:.8rem"
+              placeholder="https://... ou data:image/..."
+              value="${logo.src&&!logo.src.startsWith('data:')?logo.src:''}"
+              oninput="previewLogoUrl(this.value)"/>
+            <button onclick="document.getElementById('ap-logo-file').click()"
+              class="btn btn-ghost btn-sm">📁 Upload</button>
+            <input type="file" id="ap-logo-file" accept="image/*" style="display:none"
+              onchange="uploadLogoFile(this)"/>
+          </div>
+        </div>
+        <div>
+          <label class="fl" style="margin-bottom:.3rem">Nom de l'entreprise (alt & PDF)</label>
+          <input type="text" id="ap-logo-alt" class="fi" style="font-size:.82rem"
+            value="${logo.altText||'De Cooman Racing Performance'}" placeholder="Nom de votre entreprise"/>
+        </div>
+        <div>
+          <label class="fl" style="margin-bottom:.3rem">Slogan (sous-ligne, PDF)</label>
+          <input type="text" id="ap-logo-tagline" class="fi" style="font-size:.8rem"
+            value="${logo.tagline||'Luminaires & Accessoires Auto'}" placeholder="Slogan court…"/>
+        </div>
+        <button onclick="effacerLogo()" class="btn btn-ghost btn-xs" style="align-self:flex-start;color:rgba(239,68,68,.6)">✕ Effacer le logo personnalisé</button>
+      </div>
+    </div>
+
+    <!-- FOND D'ACCUEIL -->
+    <div class="card p-5">
+      <p class="fl mb-3">🎬 Fond d'accueil</p>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.85rem">
+        ${[['video_yt','🎬 YouTube'],['video_url','📁 Vidéo MP4'],['image','🖼 Image']].map(function(t){
+          var active=cfg.type===t[0];
+          return '<button id="ap-type-'+t[0]+'" onclick="selectFondType(\''+t[0]+'\')"'
+            +' style="padding:.5rem .6rem;border-radius:8px;cursor:pointer;font-family:Inter,sans-serif;font-size:.73rem;font-weight:600;transition:all .2s;'
+            +'border:1.5px solid '+(active?'#00a8f3':'rgba(255,255,255,.1)')+';'
+            +'background:'+(active?'rgba(0,168,243,.1)':'rgba(255,255,255,.03)')+';'
+            +'color:'+(active?'#00a8f3':'rgba(255,255,255,.5)')+'">'+t[1]+'</button>';
+        }).join('')}
+      </div>
+      <div style="display:flex;gap:.4rem;margin-bottom:.75rem">
+        <input type="text" id="ap-hero-src" class="fi" style="flex:1;font-size:.8rem"
+          placeholder="${cfg.type==='video_yt'?'URL YouTube':'URL image ou MP4'}"
+          value="${cfg.ytId?'https://youtube.com/watch?v='+cfg.ytId:(!cfg.srcBlob?cfg.src||'':'')}"/>
+        <button onclick="appliquerFondPreview()" class="btn btn-ghost btn-sm">👁 Preview</button>
+      </div>
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;margin-bottom:.75rem">
+        📁 Importer fichier local
+        <input type="file" accept="image/*,video/mp4,video/webm" style="display:none" onchange="heroFileUpload(this)"/>
+      </label>
+      <div style="display:flex;align-items:center;gap:.75rem">
+        <label class="fl" style="margin:0;white-space:nowrap">Luminosité</label>
+        <input type="range" id="ap-opacity" min="5" max="90" value="${opPct}"
+          style="flex:1;accent-color:#00a8f3"
+          oninput="document.getElementById('ap-opacity-val').textContent=this.value+'%'"/>
+        <span id="ap-opacity-val" style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:#00a8f3;min-width:38px">${opPct}%</span>
+      </div>
+    </div>
+
+    <!-- COULEURS -->
+    <div class="card p-5">
+      <p class="fl mb-3">🎨 Couleurs</p>
+      <div style="display:flex;flex-direction:column;gap:.6rem">
+        <div style="display:flex;align-items:center;gap:.75rem">
+          <input type="color" id="ap-accent" value="${ap.accentColor||'#00a8f3'}"
+            style="width:38px;height:28px;border:none;border-radius:6px;cursor:pointer;background:none"
+            oninput="previewAccentColor(this.value)"/>
+          <label class="fl" style="margin:0">Couleur principale (accent)</label>
+        </div>
+        <div style="display:flex;align-items:center;gap:.75rem">
+          <input type="color" id="ap-bg" value="${ap.bgColor||'#06060a'}"
+            style="width:38px;height:28px;border:none;border-radius:6px;cursor:pointer;background:none"/>
+          <label class="fl" style="margin:0">Couleur de fond</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Colonne droite : Textes + Preview -->
+  <div style="display:flex;flex-direction:column;gap:1rem">
+
+    <!-- TEXTES HÉRO -->
+    <div class="card p-5">
+      <p class="fl mb-3">✏️ Textes de la page d'accueil</p>
+      <div style="display:flex;flex-direction:column;gap:.65rem">
+        <div>
+          <label class="fl" style="margin-bottom:.3rem">Titre principal (/ pour saut de ligne)</label>
+          <textarea id="ap-title" class="fi" rows="2" style="font-size:.82rem">${hd.titleText||'Achetez des\npièces premium'}</textarea>
+        </div>
+        <div>
+          <label class="fl" style="margin-bottom:.3rem">Mot accentué (surligné en couleur)</label>
+          <input type="text" id="ap-accent-word" class="fi" style="font-size:.82rem"
+            value="${hd.titleAccentWord||'premium'}"/>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
+          <div>
+            <label class="fl" style="margin-bottom:.25rem">Couleur titre</label>
+            <input type="color" id="ap-title-color" value="${hd.titleColor||'#ffffff'}"
+              style="width:100%;height:32px;border:none;border-radius:6px;cursor:pointer;background:none"/>
+          </div>
+          <div>
+            <label class="fl" style="margin-bottom:.25rem">Couleur accent</label>
+            <input type="color" id="ap-accent-color" value="${hd.titleAccentColor||'#00a8f3'}"
+              style="width:100%;height:32px;border:none;border-radius:6px;cursor:pointer;background:none"/>
+          </div>
+        </div>
+        <div>
+          <label class="fl" style="margin-bottom:.3rem">Sous-titre (description)</label>
+          <textarea id="ap-desc" class="fi" rows="2" style="font-size:.8rem">${hd.descText||''}</textarea>
+        </div>
+        <div>
+          <label class="fl" style="margin-bottom:.3rem">CTA Catalogue (bouton principal)</label>
+          <input type="text" id="ap-cta1" class="fi" style="font-size:.82rem"
+            value="${hd.cta1Text||'→ Voir le catalogue'}"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- PREVIEW LIVE -->
+    <div class="card p-5">
+      <p class="fl mb-3">👁 Aperçu</p>
+      <div id="ap-preview" style="border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.08);
+        background:#06060a;position:relative;min-height:160px">
+        <!-- Fond -->
+        <div id="ap-preview-bg" style="position:absolute;inset:0;
+          background:${cfg.type==='image'&&cfg.src?'url('+cfg.src+') center/cover':'linear-gradient(135deg,#06060a 0%,#0f0f1a 100%)'};
+          opacity:.55"></div>
+        <!-- Contenu -->
+        <div style="position:relative;z-index:1;padding:1.5rem 1.25rem">
+          <!-- Logo preview -->
+          <div id="ap-preview-logo" style="margin-bottom:.75rem">
+            ${logo.src&&logo.src.length>10
+              ?'<img src="'+logo.src+'" style="height:28px;object-fit:contain"/>'
+              :'<span style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-style:italic;color:white">'+(logo.altText||'De Cooman')+'</span>'}
+          </div>
+          <!-- Titre -->
+          <p id="ap-preview-title" style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;
+            color:${hd.titleColor||'#ffffff'};letter-spacing:.06em;line-height:1.1;margin-bottom:.4rem">
+            ${(hd.titleText||'Achetez des\npièces premium').replace(/\n/g,' ')
+              .replace(new RegExp(hd.titleAccentWord||'premium','gi'),'<span style="color:'+(hd.titleAccentColor||'#00a8f3')+'">'+(hd.titleAccentWord||'premium')+'</span>')}
+          </p>
+          <!-- Desc -->
+          <p id="ap-preview-desc" style="font-family:Inter,sans-serif;font-size:.72rem;
+            color:rgba(255,255,255,.55);margin-bottom:.75rem;line-height:1.4">
+            ${hd.descText||'Trouvez la qualité authentique dont votre véhicule a besoin.'}
+          </p>
+          <!-- CTA -->
+          <div style="display:inline-block;padding:.35rem .8rem;border-radius:7px;
+            background:${ap.accentColor||'#00a8f3'};color:white;
+            font-family:Inter,sans-serif;font-size:.7rem;font-weight:700">
+            ${hd.cta1Text||'→ Voir le catalogue'}
+          </div>
+        </div>
+      </div>
+      <p style="font-family:Inter,sans-serif;font-size:.65rem;color:rgba(255,255,255,.3);margin-top:.5rem;text-align:center">
+        Aperçu non-interactif · Cliquez "Appliquer" pour voir sur la vraie page
+      </p>
+    </div>
+  </div>
+</div>`;
+}
+
+/* ── selectFondType : change le type de fond + re-render ── */
+function selectFondType(type){
+  DB_CONFIG.hero=DB_CONFIG.hero||{};
+  DB_CONFIG.hero.type=type;
+  var inp=document.getElementById('ap-hero-src');
+  if(inp)inp.placeholder=type==='video_yt'?'URL YouTube (https://youtube.com/watch?v=...)':'URL image ou MP4';
+  ['video_yt','video_url','image'].forEach(function(t){
+    var btn=document.getElementById('ap-type-'+t);
+    if(!btn)return;
+    var active=t===type;
+    btn.style.borderColor=active?'#00a8f3':'rgba(255,255,255,.1)';
+    btn.style.background=active?'rgba(0,168,243,.1)':'rgba(255,255,255,.03)';
+    btn.style.color=active?'#00a8f3':'rgba(255,255,255,.5)';
+  });
+  console.log('[appearance] Type fond:', type);
+}
+
+/* ── previewLogoUrl : live preview logo ── */
+function previewLogoUrl(url){
+  var prev=document.getElementById('ap-logo-preview');
+  var plogo=document.getElementById('ap-preview-logo');
+  if(!url||url.length<5){
+    if(prev)prev.innerHTML='<span style="color:rgba(255,255,255,.3);font-size:.8rem">Aucun logo — logo texte par défaut</span>';
+    return;
+  }
+  var html='<img src="'+url+'" style="max-height:48px;max-width:160px;object-fit:contain" onerror="this.parentNode.innerHTML=\'<span style=\\\'color:#ef4444;font-size:.75rem\\\'>❌ Image non chargée</span>\'"/>';
+  if(prev)prev.innerHTML=html;
+  if(plogo)plogo.innerHTML='<img src="'+url+'" style="height:24px;object-fit:contain"/>';
+}
+
+/* ── uploadLogoFile : encode en base64 ── */
+function uploadLogoFile(input){
+  if(!input.files||!input.files[0])return;
+  var file=input.files[0];
+  if(file.size>500000){toast('Image trop lourde (max 500 KB pour les PDFs)','error');return;}
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var b64=e.target.result;
+    var urlInp=document.getElementById('ap-logo-url');
+    if(urlInp){urlInp.value='';urlInp.placeholder='Logo uploadé (base64)';}
+    /* Stocker directement */
+    DB_CONFIG.logo=DB_CONFIG.logo||{};
+    DB_CONFIG.logo.src=b64;
+    DB_CONFIG.logo.type='base64';
+    previewLogoUrl(b64);
+    toast('Logo importé ✓ — cliquez "Appliquer" pour enregistrer','info');
+    console.log('[appearance] Logo base64 chargé:', file.name, Math.round(file.size/1024)+'KB');
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ── effacerLogo : revenir au logo texte ── */
+function effacerLogo(){
+  DB_CONFIG.logo=DB_CONFIG.logo||{};
+  DB_CONFIG.logo.src='';
+  DB_CONFIG.logo.type='svg';
+  var urlInp=document.getElementById('ap-logo-url');
+  if(urlInp){urlInp.value='';urlInp.placeholder='https://... ou data:image/...';}
+  var prev=document.getElementById('ap-logo-preview');
+  if(prev)prev.innerHTML='<span style="color:rgba(255,255,255,.3);font-size:.8rem">Logo texte par défaut</span>';
+  sauvegarderApparence();
+  appliquerConfigurationVisuelle();
+  toast('Logo effacé — logo texte restauré','info');
+}
+
+/* ── previewAccentColor : live preview de la couleur ── */
+function previewAccentColor(color){
+  var cta=document.querySelector('#ap-preview [style*="background:"]');
+  if(cta)cta.style.background=color;
+}
+
+/* ── appliquerFondPreview : aperçu du fond dans la mini-preview ── */
+function appliquerFondPreview(){
+  var src=document.getElementById('ap-hero-src');
+  var srcVal=src?src.value.trim():'';
+  var bg=document.getElementById('ap-preview-bg');
+  var type=DB_CONFIG.hero?DB_CONFIG.hero.type:'image';
+  if(bg&&srcVal){
+    if(type==='image'){
+      bg.style.backgroundImage='url('+srcVal+')';
+      bg.style.backgroundSize='cover';
+      bg.style.backgroundPosition='center';
+    }else{
+      bg.style.backgroundImage='none';
+      bg.style.background='linear-gradient(135deg,#0a0a14,#1a1a2e)';
+    }
+  }
+}
+
+/* ── appliquerEtSauvegarder : collecte tous les champs et applique ── */
+function appliquerEtSauvegarder(){
+  console.log('[appearance] appliquerEtSauvegarder()');
+
+  /* Logo */
+  DB_CONFIG.logo=DB_CONFIG.logo||{};
+  var urlInp=document.getElementById('ap-logo-url');
+  if(urlInp&&urlInp.value.trim()){
+    DB_CONFIG.logo.src=urlInp.value.trim();
+    DB_CONFIG.logo.type='url';
+  }
+  var altInp=document.getElementById('ap-logo-alt');
+  if(altInp)DB_CONFIG.logo.altText=altInp.value.trim();
+  var tagInp=document.getElementById('ap-logo-tagline');
+  if(tagInp)DB_CONFIG.logo.tagline=tagInp.value.trim();
+
+  /* Fond */
+  DB_CONFIG.hero=DB_CONFIG.hero||{};
+  var heroSrc=document.getElementById('ap-hero-src');
+  if(heroSrc&&heroSrc.value.trim()){
+    var srcVal=heroSrc.value.trim();
+    if(DB_CONFIG.hero.type==='video_yt'){
+      var ytId=extractYtId(srcVal);
+      if(ytId){DB_CONFIG.hero.ytId=ytId;DB_CONFIG.hero.src='';}
+      else{toast('URL YouTube non reconnue','error');return;}
+    }else{
+      DB_CONFIG.hero.src=srcVal;
+      DB_CONFIG.hero.srcBlob=false;
+    }
+  }
+  var opInp=document.getElementById('ap-opacity');
+  if(opInp)DB_CONFIG.hero.opacity=parseInt(opInp.value)/100;
+
+  /* Textes */
+  DB_CONFIG.heroDesign=DB_CONFIG.heroDesign||{};
+  var titleInp=document.getElementById('ap-title');
+  if(titleInp)DB_CONFIG.heroDesign.titleText=titleInp.value;
+  var acWordInp=document.getElementById('ap-accent-word');
+  if(acWordInp)DB_CONFIG.heroDesign.titleAccentWord=acWordInp.value;
+  var tColorInp=document.getElementById('ap-title-color');
+  if(tColorInp)DB_CONFIG.heroDesign.titleColor=tColorInp.value;
+  var acColorInp=document.getElementById('ap-accent-color');
+  if(acColorInp)DB_CONFIG.heroDesign.titleAccentColor=acColorInp.value;
+  var descInp=document.getElementById('ap-desc');
+  if(descInp)DB_CONFIG.heroDesign.descText=descInp.value;
+  var cta1Inp=document.getElementById('ap-cta1');
+  if(cta1Inp)DB_CONFIG.heroDesign.cta1Text=cta1Inp.value;
+
+  /* Couleurs */
+  DB_CONFIG.appearance=DB_CONFIG.appearance||{};
+  var accentInp=document.getElementById('ap-accent');
+  if(accentInp)DB_CONFIG.appearance.accentColor=accentInp.value;
+  var bgInp=document.getElementById('ap-bg');
+  if(bgInp)DB_CONFIG.appearance.bgColor=bgInp.value;
+
+  /* Persister */
+  sauvegarderApparence();
+  /* Appliquer immédiatement sur la page */
+  appliquerConfigurationVisuelle();
+  toast('✓ Apparence sauvegardée et appliquée — logo, fond et textes mis à jour','success');
+  console.log('[appearance] Saved — logo.src='+(!!(DB_CONFIG.logo&&DB_CONFIG.logo.src))+' hero.type='+(DB_CONFIG.hero&&DB_CONFIG.hero.type));
 }
 
 
@@ -4714,32 +5301,7 @@ function renderAdminContactInfo(){
 </div>`;
 }
 
-function renderAdminHeroDesign(){
-  console.log('DEBUG [renderAdminHeroDesign]');
-  const ct=document.getElementById('adminContent');if(!ct)return;
-  const d=DB_CONFIG.heroDesign||{};
-  ct.innerHTML=`<div class="mb-5"><p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Apparence</p>
-<h2 class="font-display text-2xl font-bold text-white uppercase">Design <span style="color:#00a8f3">Accueil</span></h2></div>
-<div class="card p-5">
-  <div class="space-y-4">
-    <div><label class="fl">Titre principal</label><textarea id="hd-title" class="fi" rows="2">${d.titleText||'Achetez des\npièces premium'}</textarea></div>
-    <div><label class="fl">Mot accentué</label><input type="text" id="hd-accent" class="fi" value="${d.titleAccentWord||'premium'}"/></div>
-    <div><label class="fl">Couleur titre</label><input type="color" id="hd-color" value="${d.titleColor||'#ffffff'}" style="width:50px;height:36px;border:none;border-radius:8px;cursor:pointer"/></div>
-    <div><label class="fl">Couleur accent</label><input type="color" id="hd-accent-color" value="${d.titleAccentColor||'#00a8f3'}" style="width:50px;height:36px;border:none;border-radius:8px;cursor:pointer"/></div>
-    <div><label class="fl">Description hero</label><textarea id="hd-desc" class="fi" rows="2">${d.description||''}</textarea></div>
-    <button class="btn btn-primary" onclick="
-      DB_CONFIG.heroDesign=DB_CONFIG.heroDesign||{};
-      DB_CONFIG.heroDesign.titleText=document.getElementById('hd-title').value;
-      DB_CONFIG.heroDesign.titleAccentWord=document.getElementById('hd-accent').value;
-      DB_CONFIG.heroDesign.titleColor=document.getElementById('hd-color').value;
-      DB_CONFIG.heroDesign.titleAccentColor=document.getElementById('hd-accent-color').value;
-      DB_CONFIG.heroDesign.description=document.getElementById('hd-desc').value;
-      sauvegarder();applyHeroDesign(DB_CONFIG.heroDesign);toast('Design accueil sauvegardé','success');
-      console.log('DEBUG [btn] HeroDesign saved');
-    ">Enregistrer</button>
-  </div>
-</div>`;
-}
+function renderAdminHeroDesign(){renderAdminAppearance();}
 
 
 function openAddClient(){
@@ -4884,6 +5446,29 @@ window.updateCheckoutShipping= typeof updateCheckoutShipping!=='undefined'?updat
 window.exportCommandes    = typeof exportCommandes!=='undefined'?exportCommandes:function(){toast('Export CSV non implémenté','info');};
 console.log('✅ window exports enregistrés');
 
+
+
+/* Exports appearance module */
+window.appliquerConfigurationVisuelle = appliquerConfigurationVisuelle;
+window.sauvegarderApparence           = sauvegarderApparence;
+window.renderAdminAppearance          = renderAdminAppearance;
+window.appliquerEtSauvegarder         = appliquerEtSauvegarder;
+window.selectFondType                 = selectFondType;
+window.previewLogoUrl                 = previewLogoUrl;
+window.uploadLogoFile                 = uploadLogoFile;
+window.effacerLogo                    = effacerLogo;
+window.previewAccentColor             = previewAccentColor;
+window.appliquerFondPreview           = appliquerFondPreview;
+window._buildPdfLogoHTML              = _buildPdfLogoHTML;
+
+
+/* Exports chat module */
+window.sendChatMsg           = sendChatMsg;
+window.renderChatZone        = renderChatZone;
+window.renderAdminChat       = renderAdminChat;
+window.openAdminChatFor      = openAdminChatFor;
+window.adminSendChat         = adminSendChat;
+window._rafraichirZonesChat  = _rafraichirZonesChat;
 
 /* Exports catalogue module */
 window.getCatalogById      = getCatalogById;
