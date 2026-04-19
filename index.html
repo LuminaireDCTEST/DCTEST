@@ -2032,36 +2032,58 @@ function closeOrderDetailAndReopen(){closeOverlay('orderDetail');}
 
 /* ── ADMIN TAB ROUTER ── */
 function adminTab(tab){
-  console.log("adminTab →", tab);
+  console.log('adminTab →', tab);
   showTabLoader();
+
   const renders={
-    dashboard:renderAdminClients,
-    orders:renderAdminOrders,
-    clients:renderAdminClients,
-    access:renderAdminAccess,
-    pricing:renderAdminPricing,
-    catalog:renderAdminCatalog,
-    appearance:renderAdminAppearance,
-    herodesign:renderAdminAppearance,
-    modeles:renderAdminDocs,
-    docs:renderAdminDocs,
-    contacts:renderAdminContacts,
+    dashboard:    renderAdminClients,
+    orders:       renderAdminOrders,
+    clients:      renderAdminClients,
+    access:       renderAdminAccess,
+    pricing:      renderAdminPricing,
+    catalog:      renderAdminCatalog,
+    stock:        renderAdminStock,
+    catalogs:     renderAdminCatalogs,
+    appearance:   renderAdminAppearance,
+    herodesign:   renderAdminAppearance,
+    hero:         renderAdminAppearance,
+    contacts:     renderAdminContacts,
+    contactinfo:  renderAdminContactInfo,
+    chat:         renderAdminChat,
+    docs:         renderAdminDocs,
+    modeles:      renderAdminDocs,
     emailsettings:renderAdminEmailSettings,
-    chat:renderAdminChat,
-    shipping:renderAdminShipping,
-    contactinfo:renderAdminContactInfo,
-    stock:renderAdminStock,
-    catalogs:renderAdminCatalogs
+    shipping:     renderAdminShipping
   };
+
+  /* Mettre à jour la nav active */
   document.querySelectorAll('.a-nav-item').forEach(el=>el.classList.remove('active'));
-  const nav=document.getElementById('anav-'+tab);if(nav)nav.classList.add('active');
+  const nav=document.getElementById('anav-'+tab);
+  if(nav)nav.classList.add('active');
   adminCurrentTab=tab;
+
+  /* Appel sécurisé — typeof guard : ne crash jamais même si fn manquante */
   const fn=renders[tab];
-  if(fn){console.log('DEBUG [adminTab]',tab);fn();}
-  else{console.warn('DEBUG [adminTab] onglet inconnu:',tab);
-    document.getElementById('adminContent').innerHTML='<p class="text-white/30 p-8">Section "'+tab+'" en cours.</p>';}
+  if(typeof fn==='function'){
+    try{
+      fn();
+    }catch(err){
+      console.error('[adminTab] Erreur dans',tab,':',err);
+      const ct=document.getElementById('adminContent');
+      if(ct)ct.innerHTML='<div class="card p-8 text-center">'
+        +'<p style="color:#ef4444;font-family:Inter,sans-serif;margin-bottom:.5rem">Erreur lors du chargement de l\'onglet <strong>'+tab+'</strong></p>'
+        +'<code style="font-size:.72rem;color:rgba(255,255,255,.3)">'+err.message+'</code>'
+        +'</div>';
+    }
+  } else {
+    console.warn('[adminTab] Onglet inconnu ou fonction non définie:', tab);
+    const ct=document.getElementById('adminContent');
+    if(ct)ct.innerHTML='<p class="text-white/30 p-8 font-display">Section "<strong>'+tab+'</strong>" disponible prochainement.</p>';
+  }
+
   requestAnimationFrame(hideTabLoader);
 }
+window.adminTab=adminTab;
 
 
 
@@ -5033,6 +5055,80 @@ function verifierCatalogues(){
   DB_USERS.forEach(u=>{if(!Array.isArray(u.catalogs))u.catalogs=['cat_luminaire'];});
 }
 
+
+
+/* ── renderAdminContactInfo : infos de contact de l'entreprise ── */
+function renderAdminContactInfo(){
+  var ct=document.getElementById('adminContent');if(!ct)return;
+  var ci=DB_CONFIG.contact||{};
+  ct.innerHTML=`
+<div class="mb-5">
+  <p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Configuration</p>
+  <h2 class="font-display text-2xl font-bold text-white uppercase">Infos <span style="color:#00a8f3">Contact</span></h2>
+  <p class="text-white/35 text-sm mt-1">Coordonnées de votre entreprise — utilisées dans les emails, PDFs et la page Contact</p>
+</div>
+<div class="card p-6" style="max-width:640px">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.9rem">
+    <div style="grid-column:1/-1">
+      <label class="fl">Nom de l'entreprise</label>
+      <input type="text" id="ci-name" class="fi" value="${ci.companyName||''}" placeholder="De Cooman Racing Performance"/>
+    </div>
+    <div style="grid-column:1/-1">
+      <label class="fl">Adresse</label>
+      <input type="text" id="ci-addr" class="fi" value="${ci.address||''}" placeholder="1 Avenue Racing, 1000 Bruxelles"/>
+    </div>
+    <div>
+      <label class="fl">Téléphone</label>
+      <input type="tel" id="ci-phone" class="fi" value="${ci.phone||''}" placeholder="+32 2 000 00 00"/>
+    </div>
+    <div>
+      <label class="fl">Email principal</label>
+      <input type="email" id="ci-email" class="fi" value="${ci.email||''}" placeholder="info@decooman.be"/>
+    </div>
+    <div>
+      <label class="fl">Site web</label>
+      <input type="url" id="ci-website" class="fi" value="${ci.website||''}" placeholder="https://decooman-racing.be"/>
+    </div>
+    <div>
+      <label class="fl">Horaires</label>
+      <input type="text" id="ci-hours" class="fi" value="${ci.hours||''}" placeholder="Lun–Ven : 8h–18h"/>
+    </div>
+    <div style="grid-column:1/-1">
+      <label class="fl">N° TVA / BCE</label>
+      <input type="text" id="ci-vat" class="fi" value="${ci.vatNumber||''}" placeholder="BE 0123.456.789"/>
+    </div>
+    <div style="grid-column:1/-1;margin-top:.5rem">
+      <button onclick="console.log('[btn] Sauvegarder infos contact');sauvegarderContactInfo()" class="btn btn-primary gp">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+        Enregistrer les informations
+      </button>
+    </div>
+  </div>
+</div>`;
+}
+
+/* ── sauvegarderContactInfo : persist dans DB_CONFIG.contact ── */
+function sauvegarderContactInfo(){
+  DB_CONFIG.contact=DB_CONFIG.contact||{};
+  var fields={
+    'ci-name':'companyName','ci-addr':'address','ci-phone':'phone',
+    'ci-email':'email','ci-website':'website','ci-hours':'hours','ci-vat':'vatNumber'
+  };
+  var changed=false;
+  Object.keys(fields).forEach(function(id){
+    var el=document.getElementById(id);
+    if(el){DB_CONFIG.contact[fields[id]]=el.value.trim();changed=true;}
+  });
+  if(changed){
+    sauvegarder();
+    toast('Informations de contact enregistrées ✓','success');
+    console.log('[contactinfo] Sauvegardé:',JSON.stringify(DB_CONFIG.contact));
+  }
+}
+window.renderAdminContactInfo  = renderAdminContactInfo;
+window.sauvegarderContactInfo  = sauvegarderContactInfo;
 
 function renderAdminContacts(){
   var ct=document.getElementById('adminContent');
