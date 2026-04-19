@@ -469,7 +469,8 @@ textarea.fi{resize:vertical}
 </div>
 
 <div class="toast-wrap" id="toastWrap"></div>
-
+<script>
+console.log("✅ JS chargé avec succès — De Cooman Racing Performance v36");
 const LS={PRODUITS:'dcorp_v29_products',USERS:'dcorp_v29_users',COMMANDES:'dcorp_v29_orders',CONFIG:'dcorp_v29_config',CHAT:'dcorp_v29_chat',STOCK_LOG:'dcorp_v29_stocklog',VISUEL:'dcorp_v29_visuel'};
 const TVA=0.21,WF_AUTO_CONFIRM_DAYS=7;
 
@@ -631,6 +632,7 @@ function toast(msg,type='info'){
 
 /* ── OVERLAYS & PANELS ── */
 function openOverlay(id){if(id==='login'&&currentUser)return;const el=document.getElementById('overlay-'+id);if(el){el.classList.add('open');document.body.style.overflow='hidden';}}
+  console.log("openOverlay →", id);
 function closeOverlay(id){const el=document.getElementById('overlay-'+id);if(el)el.classList.remove('open');document.body.style.overflow='';}
 document.querySelectorAll('.overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el){el.classList.remove('open');document.body.style.overflow='';}}));
 function openPanel(id){closeUserDrop();if(id==='cart')renderCart();if(id==='orders')renderOrders();if(id==='account')renderAccount();const el=document.getElementById('panel-'+id);if(el){el.classList.add('open');document.body.style.overflow='hidden';}}
@@ -638,6 +640,7 @@ function closePanel(id){const el=document.getElementById('panel-'+id);if(el)el.c
 
 /* ── VIEWS ── */
 function showView(name){
+  console.log("Navigation →", name);
   ['accueil','catalogue','contact','aide'].forEach(v=>{const el=document.getElementById('view-'+v);if(el)el.classList.toggle('hidden',v!==name);});
   document.querySelectorAll('.nav-link').forEach(l=>l.classList.remove('active'));
   const nl=document.getElementById('nav-'+name);if(nl)nl.classList.add('active');
@@ -659,6 +662,7 @@ function doLogin(){
   const user=DB_USERS.find(u=>u.email.toLowerCase()===email&&u.pwd===pwd);
   if(!user){toast('Identifiants incorrects','error');return;}
   if(user.status==='inactive'){toast('Compte inactif','error');return;}
+  console.log("Login réussi →", user.email, "rôle:", user.role);
   setLoggedIn(user);closeOverlay('login');toast('Bienvenue '+user.first+' 👋','success');
 }
 function doRegister(){
@@ -673,6 +677,7 @@ function doRegister(){
 }
 function setLoggedIn(user){
   currentUser=user;
+  try{sessionStorage.setItem("dc_session",JSON.stringify({id:user.id,pwd:user.pwd}));}catch(e){}
   document.getElementById('welcomeBanner').classList.add('show');
   document.getElementById('welcomeName').textContent=user.first+' '+user.last;
   const rEl=document.getElementById('welcomeRole');if(rEl){rEl.className='badge '+(user.role==='admin'?'badge-admin':'badge-client');rEl.textContent=user.role;}
@@ -689,6 +694,7 @@ function setLoggedIn(user){
 }
 function logout(){
   currentUser=null;cart=[];
+  try{sessionStorage.removeItem("dc_session");}catch(e){}
   document.getElementById('welcomeBanner').classList.remove('show');
   document.getElementById('loginBtn').classList.remove('hidden');
   document.getElementById('userMenuWrap').classList.add('hidden');
@@ -1243,6 +1249,7 @@ ${(()=>{const low=DB_PRODUITS.filter(p=>(p.stock||0)<20);return low.length?`<div
 
 /* ── ADMIN TAB ROUTER ── */
 function adminTab(tab){
+  console.log("adminTab →", tab);
   const renders={
     dashboard:renderAdminDashboard,
     orders:renderAdminOrders,
@@ -4079,18 +4086,126 @@ function saveNewClient(){
   renderAdminClients();
 }
 
+
+/* ── Exports window globaux — garantit l'accès depuis onclick HTML ── */
+window.showView           = showView;
+window.openOverlay        = openOverlay;
+window.closeOverlay       = closeOverlay;
+window.openAdminPanel     = openAdminPanel;
+window.closeAdminPanel    = closeAdminPanel;
+window.adminTab           = adminTab;
+window.doLogin            = doLogin;
+window.doRegister         = doRegister;
+window.logout             = logout;
+window.toggleUserDrop     = toggleUserDrop;
+window.closeUserDrop      = closeUserDrop;
+window.openPanel          = openPanel;
+window.closePanel         = closePanel;
+window.selectCatalog      = selectCatalog;
+window.backToCatalogChooser = backToCatalogChooser;
+window.filterCatalog      = filterCatalog;
+window.filterTech         = filterTech;
+window.addToCartFromModal = addToCartFromModal;
+window.addQty             = addQty;
+window.adjustQty          = adjustQty;
+window.resetQty           = resetQty;
+window.onQtyChange        = onQtyChange;
+window.cartChange         = cartChange;
+window.cartRemove         = cartRemove;
+window.openCheckout       = openCheckout;
+window.doCheckout         = doCheckout;
+window.sendChatMsg        = sendChatMsg;
+window.sendContactMessage = sendContactMessage;
+window.toggleFaq          = toggleFaq;
+window.sliderNav          = sliderNav;
+window.switchLoginTab     = switchLoginTab;
+window.wfAdminValidate    = wfAdminValidate;
+window.wfClientConfirm    = wfClientConfirm;
+window.openEditOrder      = openEditOrder;
+window.openEditProduct    = openEditProduct;
+window.saveProduct        = saveProduct;
+window.deleteProduct      = typeof deleteProduct!=='undefined'?deleteProduct:function(){};
+window.openEditClient     = openEditClient;
+window.saveClientEdit     = saveClientEdit;
+window.deleteClient       = typeof deleteClient!=='undefined'?deleteClient:function(){};
+window.openAddClient      = openAddClient;
+window.saveNewClient      = saveNewClient;
+window.ajouterPalier      = typeof ajouterPalier!=='undefined'?ajouterPalier:function(){};
+window.supprimerPalier    = typeof supprimerPalier!=='undefined'?supprimerPalier:function(){};
+window.updatePalier       = typeof updatePalier!=='undefined'?updatePalier:function(){};
+window.setClientDiscount  = setClientDiscount;
+window.stockAddManualUI   = stockAddManualUI;
+window.stockRemoveManualUI= stockRemoveManualUI;
+window.renderAdminStock   = renderAdminStock;
+window.genererDocument    = genererDocument;
+window.aperçuDocument     = aperçuDocument;
+window.genererEtEnvoyerDoc= genererEtEnvoyerDoc;
+window.ouvrirModalePDF    = ouvrirModalePDF;
+window.selectPdfType      = selectPdfType;
+window.heroSetType        = heroSetType;
+window.heroApplySrc       = heroApplySrc;
+window.heroOpacityLive    = heroOpacityLive;
+window.heroSaveConfig     = heroSaveConfig;
+window.heroReset          = heroReset;
+window.heroFileUpload     = heroFileUpload;
+window.adminUpdateStatus  = adminUpdateStatus;
+window.filterClientsAdmin = filterClientsAdmin;
+window.chargerSelectCatalogues = chargerSelectCatalogues;
+window.epAddImageUrl      = typeof epAddImageUrl!=='undefined'?epAddImageUrl:function(){};
+window.epRemoveImg        = typeof epRemoveImg!=='undefined'?epRemoveImg:function(){};
+window.addNewCatalog      = typeof addNewCatalog!=='undefined'?addNewCatalog:function(){};
+window.deleteCatalog      = typeof deleteCatalog!=='undefined'?deleteCatalog:function(){};
+window.toggleClientCatalog= toggleClientCatalog;
+window.addZone            = typeof addZone!=='undefined'?addZone:function(){};
+window.deleteZone         = typeof deleteZone!=='undefined'?deleteZone:function(){};
+window.saveShipping       = typeof saveShipping!=='undefined'?saveShipping:function(){};
+window.renderAdminCatalogFiltered = typeof renderAdminCatalogFiltered!=='undefined'?renderAdminCatalogFiltered:function(){};
+window.openAdminChatFor   = typeof openAdminChatFor!=='undefined'?openAdminChatFor:function(){};
+window.adminSendChat      = typeof adminSendChat!=='undefined'?adminSendChat:function(){};
+window.markMsgRead        = typeof markMsgRead!=='undefined'?markMsgRead:function(){};
+window.openOrderDetail    = typeof openOrderDetail!=='undefined'?openOrderDetail:function(){};
+window.showOrderDetail    = typeof showOrderDetail!=='undefined'?showOrderDetail:function(){};
+window.closeOrderDetailAndReopen = typeof closeOrderDetailAndReopen!=='undefined'?closeOrderDetailAndReopen:function(){};
+window.approveRequest     = typeof approveRequest!=='undefined'?approveRequest:function(){};
+window.rejectRequest      = typeof rejectRequest!=='undefined'?rejectRequest:function(){};
+window.toggleAdminNotifPanel = typeof toggleAdminNotifPanel!=='undefined'?toggleAdminNotifPanel:function(){};
+window.toggleUserNotifPanel  = typeof toggleUserNotifPanel!=='undefined'?toggleUserNotifPanel:function(){};
+window.markAllAdminNotifRead = typeof markAllAdminNotifRead!=='undefined'?markAllAdminNotifRead:function(){};
+window.markAllUserNotifRead  = typeof markAllUserNotifRead!=='undefined'?markAllUserNotifRead:function(){};
+window.updateCheckoutShipping= typeof updateCheckoutShipping!=='undefined'?updateCheckoutShipping:function(){};
+window.exportCommandes    = typeof exportCommandes!=='undefined'?exportCommandes:function(){toast('Export CSV non implémenté','info');};
+console.log('✅ window exports enregistrés');
+
 document.addEventListener('DOMContentLoaded',function(){
+  console.log('✅ DOMContentLoaded — initialisation app');
   charger();
-  verifierBaseDeDonnees(); /* migre catalog_id manquants + répare DB_CONFIG */
-  applyHeroConfig();       /* applique fond d'accueil persisté */
+  verifierBaseDeDonnees();
+  applyHeroConfig();
   renderFaq&&renderFaq();
   renderContactBanner&&renderContactBanner();
   initReveal&&initReveal();
   updateAdminCounters&&updateAdminCounters();
+
+  /* ── Vérifier session persistée (sessionStorage) ── */
+  try{
+    var savedSession=sessionStorage.getItem('dc_session');
+    if(savedSession){
+      var sUser=JSON.parse(savedSession);
+      /* Vérifier que l'user existe encore dans DB */
+      var dbUser=DB_USERS.find(function(u){return u.id===sUser.id&&u.pwd===sUser.pwd;});
+      if(dbUser){
+        console.log('Session restaurée pour',dbUser.email);
+        setLoggedIn(dbUser);
+      } else {
+        sessionStorage.removeItem('dc_session');
+        console.log('Session invalide — effacée');
+      }
+    }
+  }catch(e){console.warn('Session restore error:',e);}
+
   showView('accueil');
-  console.log('DEBUG [init] ✓ prêt — DB_PRODUITS='+DB_PRODUITS.length
-    +' DB_USERS='+DB_USERS.length
-    +' DB_CONFIG.catalogs='+JSON.stringify((DB_CONFIG.catalogs||[]).map(c=>c.id)));
+  console.log('✅ App prête — PRODUITS:'+DB_PRODUITS.length+' USERS:'+DB_USERS.length
+    +' CATALOGUES:'+JSON.stringify((DB_CONFIG.catalogs||[]).map(function(c){return c.id;})));
 });
 
 </script>
