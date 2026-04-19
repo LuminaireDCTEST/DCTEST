@@ -752,8 +752,7 @@ function toast(msg,type='info'){
 }
 
 /* ── OVERLAYS & PANELS ── */
-function openOverlay(id){if(id==='login'&&currentUser)return;const el=document.getElementById('overlay-'+id);if(el){el.classList.add('open');document.body.style.overflow='hidden';}}
-  console.log("openOverlay →", id);
+function openOverlay(id){if(id==='login'&&currentUser)return;const el=document.getElementById('overlay-'+id);if(el){el.classList.add('open');document.body.style.overflow='hidden';}console.log('openOverlay →', id);}
 function closeOverlay(id){const el=document.getElementById('overlay-'+id);if(el)el.classList.remove('open');document.body.style.overflow='';}
 document.querySelectorAll('.overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el){el.classList.remove('open');document.body.style.overflow='';}}));
 function openPanel(id){closeUserDrop();if(id==='cart')renderCart();if(id==='orders')renderOrders();if(id==='account')renderAccount();const el=document.getElementById('panel-'+id);if(el){el.classList.add('open');document.body.style.overflow='hidden';}}
@@ -777,14 +776,30 @@ function initReveal(){document.querySelectorAll('.reveal:not(.v)').forEach(el=>{
 /* ── AUTH ── */
 function switchLoginTab(t){document.getElementById('lform-login').classList.toggle('hidden',t!=='login');document.getElementById('lform-register').classList.toggle('hidden',t!=='register');document.getElementById('ltab-login').classList.toggle('active',t==='login');document.getElementById('ltab-register').classList.toggle('active',t==='register');}
 function doLogin(){
-  const email=(document.getElementById('loginEmail').value||'').trim().toLowerCase();
-  const pwd=document.getElementById('loginPwd').value;
-  if(!email||!pwd){toast('Remplissez tous les champs','error');return;}
-  const user=DB_USERS.find(u=>u.email.toLowerCase()===email&&u.pwd===pwd);
-  if(!user){toast('Identifiants incorrects','error');return;}
-  if(user.status==='inactive'){toast('Compte inactif','error');return;}
-  console.log("Login réussi →", user.email, "rôle:", user.role);
-  setLoggedIn(user);closeOverlay('login');toast('Bienvenue '+user.first+' 👋','success');
+  try{
+    const rawEmail=(document.getElementById('loginEmail')&&document.getElementById('loginEmail').value)||'';
+    const rawPwd  =(document.getElementById('loginPwd')&&document.getElementById('loginPwd').value)||'';
+    const email=rawEmail.trim().toLowerCase();
+    const pwd  =rawPwd;
+    console.log('Tentative de login pour:',email,'— DB_USERS.length='+DB_USERS.length);
+    if(!email||!pwd){toast('Email et mot de passe requis','error');return;}
+
+    /* Chercher dans DB_USERS (comparaison email insensible à la casse) */
+    const user=DB_USERS.find(u=>u.email.toLowerCase().trim()===email&&u.pwd===pwd);
+    if(!user){
+      console.warn('Login échoué — utilisateurs disponibles:',DB_USERS.map(u=>u.email+'('+u.role+')').join(', '));
+      toast('Identifiants incorrects','error');
+      return;
+    }
+    if(user.status==='inactive'){toast('Compte inactif — contactez l\'administration','error');return;}
+    console.log('%cLogin réussi: '+user.email+' ('+user.role+')','color:#4ade80;font-weight:700');
+    setLoggedIn(user);
+    closeOverlay('login');
+    toast('Bienvenue '+user.first+' 👋','success');
+  }catch(err){
+    console.error('[doLogin] ERREUR:',err);
+    toast('Erreur de connexion: '+err.message,'error');
+  }
 }
 function doRegister(){
   const first=(document.getElementById('regFirst').value||'').trim(),last=(document.getElementById('regLast').value||'').trim(),email=(document.getElementById('regEmail').value||'').trim(),tel=(document.getElementById('regTel').value||'').trim(),addr=(document.getElementById('regAddr').value||'').trim(),company=(document.getElementById('regCompany').value||'').trim(),pwd=document.getElementById('regPwd').value;
@@ -4298,59 +4313,113 @@ window.exportCommandes    = typeof exportCommandes!=='undefined'?exportCommandes
 console.log('✅ window exports enregistrés');
 
 document.addEventListener('DOMContentLoaded',function(){
-  console.log('✅ DOMContentLoaded — De Cooman Racing Performance v37');
-  console.log('Tentative de login bloquée? Ouvrez F12 pour voir les logs.');
+  console.log('=== De Cooman Racing Performance v38 ===');
+  console.log('Système Admin : Initialisation...');
 
-  charger();
-
-  /* ── PURGE AUTOMATIQUE si données manifestement corrompues ── */
-  /* Si les produits n'ont pas catalog_id ou si l'admin manque, on purge et reset */
-  const prodsCorrompus=DB_PRODUITS.filter(p=>!p.catalog_id).length;
-  const adminMissing=!DB_USERS.find(u=>u.email==='tony@admin.fr');
-  if(prodsCorrompus>DB_PRODUITS.length/2||adminMissing){
-    console.warn('⚠️ LocalStorage corrompu ('+prodsCorrompus+' produits sans catalog_id, admin='+!adminMissing+') — reset partiel');
-    if(prodsCorrompus>0){localStorage.removeItem(LS.PRODUITS);DB_PRODUITS=JSON.parse(JSON.stringify(DEFAULT_PRODUITS));}
-    if(adminMissing){localStorage.removeItem(LS.USERS);DB_USERS=JSON.parse(JSON.stringify(DEFAULT_USERS));}
+  /* ══════════════════════════════════════════════════════
+     ÉTAPE 1 : Charger le LocalStorage avec protection totale
+  ══════════════════════════════════════════════════════ */
+  try{charger();}catch(err){
+    console.error('[Init] charger() a échoué — reset complet',err);
+    DB_PRODUITS=JSON.parse(JSON.stringify(DEFAULT_PRODUITS));
+    DB_USERS=JSON.parse(JSON.stringify(DEFAULT_USERS));
+    DB_COMMANDES=JSON.parse(JSON.stringify(DEFAULT_COMMANDES));
+    DB_CONFIG=JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+    DB_CHAT=[]; DB_STOCK_LOG=[];
   }
 
-  verifierBaseDeDonnees(); /* garantit admin + catalog_id + catalogs config */
-  applyHeroConfig();
+  /* ══════════════════════════════════════════════════════
+     ÉTAPE 2 : GARANTIE ABSOLUE du compte admin
+     Exécutée AVANT toute lecture de session — irréversible
+  ══════════════════════════════════════════════════════ */
+  const ADMIN_EMAIL='tony@admin.fr';
+  const ADMIN_PWD  ='admin123';
+  const adminIdx   = DB_USERS.findIndex(u=>u.email.toLowerCase()===ADMIN_EMAIL);
 
-  renderFaq&&renderFaq();
-  renderContactBanner&&renderContactBanner();
-  initReveal&&initReveal();
-  updateAdminCounters&&updateAdminCounters();
+  if(adminIdx===-1){
+    /* Admin n'existe pas → création forcée */
+    console.warn('%c⚠️ Admin introuvable → création forcée','color:#f59e0b;font-weight:700');
+    DB_USERS.unshift({
+      id:'u_admin_dc',first:'Tony',last:'Admin',
+      email:ADMIN_EMAIL,pwd:ADMIN_PWD,
+      role:'admin',status:'active',avatar:'TA',discount:0,
+      catalogs:['cat_luminaire','cat_divers'],
+      tel:'+32 6 98 76 54',addr:'1 av. Racing, 69000 Lyon',company:'De Cooman RP'
+    });
+  } else {
+    /* Admin existe → forcer pwd + role au cas où ils auraient été écrasés */
+    DB_USERS[adminIdx].pwd   =ADMIN_PWD;
+    DB_USERS[adminIdx].role  ='admin';
+    DB_USERS[adminIdx].status='active';
+    console.log('%c✅ Compte admin vérifié: '+ADMIN_EMAIL+' / '+ADMIN_PWD,'color:#4ade80;font-weight:700');
+  }
+  /* Sauvegarder immédiatement pour que les rechargements suivants soient propres */
+  try{localStorage.setItem(LS.USERS,JSON.stringify(DB_USERS));}catch(e){}
 
-  /* ── Restaurer session ── */
+  /* ══════════════════════════════════════════════════════
+     ÉTAPE 3 : Vérification et migration des données
+  ══════════════════════════════════════════════════════ */
+  try{
+    verifierBaseDeDonnees();
+  }catch(err){
+    console.error('[Init] verifierBaseDeDonnees() erreur (non bloquant)',err);
+  }
+
+  /* ══════════════════════════════════════════════════════
+     ÉTAPE 4 : Initialisation UI
+  ══════════════════════════════════════════════════════ */
+  try{applyHeroConfig();}catch(e){console.warn('[Init] applyHeroConfig',e);}
+  try{renderFaq&&renderFaq();}catch(e){}
+  try{renderContactBanner&&renderContactBanner();}catch(e){}
+  try{initReveal&&initReveal();}catch(e){}
+  try{updateAdminCounters&&updateAdminCounters();}catch(e){}
+
+  /* ══════════════════════════════════════════════════════
+     ÉTAPE 5 : Restauration de session
+  ══════════════════════════════════════════════════════ */
   try{
     const savedSession=sessionStorage.getItem('dc_session');
     if(savedSession){
       const sUser=JSON.parse(savedSession);
+      /* Lookup FRAIS depuis DB (pas depuis la session cachée) */
       const dbUser=DB_USERS.find(u=>u.id===sUser.id&&u.pwd===sUser.pwd);
-      if(dbUser){console.log('Session restaurée:',dbUser.email);setLoggedIn(dbUser);}
-      else{sessionStorage.removeItem('dc_session');console.log('Session invalide — effacée');}
+      if(dbUser&&dbUser.status!=='inactive'){
+        console.log('[Session] Restaurée:',dbUser.email,'('+dbUser.role+')');
+        setLoggedIn(dbUser);
+      } else {
+        sessionStorage.removeItem('dc_session');
+        console.log('[Session] Invalide → effacée');
+      }
     }
-  }catch(e){console.warn('Session restore:',e);}
+  }catch(e){console.warn('[Session] Erreur restore:',e);}
 
   showView('accueil');
 
-  /* ── Résumé diagnostic en console ── */
-  console.log('%c✅ App prête','color:#4ade80;font-weight:700;font-size:13px');
+  /* ══════════════════════════════════════════════════════
+     ÉTAPE 6 : Rapport de santé dans la console F12
+  ══════════════════════════════════════════════════════ */
+  const adminOk=!!DB_USERS.find(u=>u.email===ADMIN_EMAIL&&u.pwd===ADMIN_PWD&&u.role==='admin');
+  const prodsOk=DB_PRODUITS.filter(p=>p.catalog_id).length;
+  const catsOk =(DB_CONFIG.catalogs||[]).length;
+  console.log('%c=== RAPPORT DE SANTÉ ===','color:#00a8f3;font-weight:700;font-size:13px');
   console.table({
-    'DB_PRODUITS': DB_PRODUITS.length,
-    'DB_USERS': DB_USERS.length,
-    'Admin existe': !!DB_USERS.find(u=>u.email==='tony@admin.fr'),
-    'DB_CONFIG.catalogs': (DB_CONFIG.catalogs||[]).map(c=>c.id).join(', '),
-    'catalog_ids produits': [...new Set(DB_PRODUITS.map(p=>p.catalog_id||'MANQUANT'))].join(', ')
+    'Admin tony@admin.fr':     adminOk?'✅ OK':'❌ MANQUANT',
+    'DB_PRODUITS total':        DB_PRODUITS.length,
+    'Produits avec catalog_id': prodsOk+'/'+DB_PRODUITS.length,
+    'DB_USERS total':           DB_USERS.length,
+    'DB_CONFIG.catalogs':       (DB_CONFIG.catalogs||[]).map(c=>c.id).join(', ')||'VIDE',
+    'SessionStorage':           sessionStorage.getItem('dc_session')?'Session active':'Aucune session'
   });
+  if(!adminOk)console.error('❌ CRITIQUE: Admin non créé — rechargez la page ou videz le LS');
+  else console.log('%c✅ Connexion admin: tony@admin.fr / admin123','color:#4ade80;font-weight:700');
 });
 
 /* ── resetLS : bouton de secours pour purger le LS corrompu ── */
 function resetLS(){
-  if(!confirm('Purger tout le LocalStorage ? Les données ajoutées manuellement seront perdues.'))return;
+  if(!confirm('Purger tout le LocalStorage?\n\nCela va supprimer toutes les données ajoutées manuellement (produits, clients, commandes personnalisées).\nLes données par défaut seront rechargées.\n\nContinuer ?'))return;
   Object.values(LS).forEach(k=>{try{localStorage.removeItem(k);}catch(e){}});
   sessionStorage.clear();
-  console.log('✅ LocalStorage purgé — rechargement…');
+  console.log('✅ LocalStorage purgé — rechargement');
   location.reload();
 }
 window.resetLS=resetLS;
