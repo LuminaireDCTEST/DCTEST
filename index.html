@@ -308,7 +308,7 @@ img[loading="lazy"]{background:rgba(255,255,255,.04)}
 <div id="view-catalogue" class="view-section hidden" style="padding-top:130px;max-width:1400px;margin:0 auto;padding-left:1.25rem;padding-right:1.25rem;padding-bottom:5rem">
   <div class="text-center mb-8 reveal"><p style="color:var(--gold);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;margin-bottom:.5rem;opacity:.60">Notre sélection</p><h2 class="sec-title mb-1">Catalogue <span>Premium</span></h2><div class="glow-line mt-4 mx-auto" style="max-width:140px"></div></div>
   <div id="catalogChooser" style="display:none"></div>
-  <div id="catalogBackBtn" style="display:none;margin-bottom:1rem"><button onclick="backToCatalogChooser()" class="btn btn-ghost btn-sm">← Changer de catalogue</button></div>
+  <div id="catalogBackBtn" style="display:none;margin-bottom:.75rem;position:sticky;top:4px;z-index:10"><button onclick="retourChoixCatalogue()" class="btn btn-ghost btn-sm" style="cursor:pointer;backdrop-filter:blur(8px);background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.12)"><svg style="width:14px;height:14px;flex-shrink:0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg> Catalogues</button></div>
   <div style="display:flex;gap:1.5rem;align-items:flex-start" id="catalogMainLayout">
     <div id="catalogSidebar" style="width:210px;flex-shrink:0;position:sticky;top:120px;display:none"></div>
     <div style="flex:1;min-width:0"><div id="catalogActiveFilterBar" style="margin-bottom:1rem"></div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5" id="productGrid"></div></div>
@@ -1682,30 +1682,64 @@ ${available.map(c=>{
 </div>`;
 }
 function selectCatalog(id){
-  console.log('DEBUG [selectCatalog] catalogue sélectionné:',id);
+  console.log('[catalog] selectCatalog id='+id);
   activeCatalogId=id;
   activeSubFilter='all';
   activeTechFilter='';
-  /* Transition UI */
-  const chooser=document.getElementById('catalogChooser');
-  const layout=document.getElementById('catalogMainLayout');
-  const sidebar=document.getElementById('catalogSidebar');
-  const backBtn=document.getElementById('catalogBackBtn');
-  if(chooser)chooser.style.display='none';
-  if(layout)layout.style.display='flex';
-  if(sidebar)sidebar.style.display='block';
-  /* Flèche retour : visible si ≥ 2 catalogues disponibles ou toujours */
-  if(backBtn){
-    backBtn.style.display='flex';
-    backBtn.style.alignItems='center';
-    backBtn.style.gap='.4rem';
-    backBtn.innerHTML='<svg style="width:16px;height:16px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg> Catalogues';
-  }
-  renderSidebar();
-  afficherProduits(id); /* appel direct */
-}
-function backToCatalogChooser(){activeCatalogId=null;initCatalogue();}
 
+  /* Transition UI : cacher le chooser, montrer la grille */
+  var chooser=document.getElementById('catalogChooser');
+  var layout =document.getElementById('catalogMainLayout');
+  var sidebar=document.getElementById('catalogSidebar');
+  var backBtn=document.getElementById('catalogBackBtn');
+
+  if(chooser)chooser.style.display='none';
+  if(layout) layout.style.display='flex';
+  if(sidebar)sidebar.style.display='block';
+
+  /* Bouton retour : simplement l'afficher — NE PAS modifier innerHTML
+     car il contient déjà onclick="backToCatalogChooser()" */
+  if(backBtn){
+    backBtn.style.display='block';
+    /* Afficher uniquement si ≥ 2 catalogues disponibles */
+    var available=_getAvailableCatalogs();
+    backBtn.style.visibility=available.length>1?'visible':'hidden';
+  }
+
+  renderSidebar();
+  afficherProduits(id);
+}
+function backToCatalogChooser(){
+  console.log('[catalog] backToCatalogChooser → retour chooser');
+  activeCatalogId=null;
+  activeSubFilter='all';
+  activeTechFilter='';
+
+  /* Vider la grille pour éviter les doublons */
+  var grid=document.getElementById('productGrid');
+  if(grid)grid.innerHTML='';
+
+  /* Masquer la vue catalogue */
+  var layout =document.getElementById('catalogMainLayout');
+  var sidebar=document.getElementById('catalogSidebar');
+  var backBtn=document.getElementById('catalogBackBtn');
+  if(layout) layout.style.display='none';
+  if(sidebar)sidebar.style.display='none';
+  if(backBtn)backBtn.style.display='none';
+
+  /* Re-afficher le chooser avec tuiles fraîches
+     _renderChooser() recalcule les prix TTC via getUserTaxRate() */
+  var chooser=document.getElementById('catalogChooser');
+  if(chooser)chooser.style.display='block';
+  _renderChooser();
+
+  console.log('[catalog] Chooser re-affiché — TVA recalculée via getUserTaxRate');
+}
+
+/* Alias exact demandé — pointe vers backToCatalogChooser */
+function retourChoixCatalogue(){backToCatalogChooser();}
+window.retourChoixCatalogue =retourChoixCatalogue;
+window.backToCatalogChooser=backToCatalogChooser;
 function renderSidebar(){
   const sb=document.getElementById('catalogSidebar');if(!sb)return;
   const prods=DB_PRODUITS.filter(p=>(p.catalog_id||'cat_luminaire')===activeCatalogId);
@@ -1767,6 +1801,7 @@ function afficherProduits(idCat){
   }
 
   const disc=currentUser?userDiscount(currentUser):0;
+    /* Prix TTC recalculé via getUserTaxRate(currentUser) dans _buildProdCard */
   grid.innerHTML=prods.map(p=>_buildProdCard(p,disc)).join('');
   grid.onclick=e=>{const card=e.target.closest('[data-pid]');if(card)openProductModal(parseInt(card.getAttribute('data-pid'),10));};
   syncPublicFilters&&syncPublicFilters();
