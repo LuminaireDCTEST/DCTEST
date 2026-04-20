@@ -401,7 +401,20 @@ img[loading="lazy"]{background:rgba(255,255,255,.04)}
 <div class="panel" id="panel-account"><div class="panel-hdr"><h2 style="font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:700;color:white;text-transform:uppercase;letter-spacing:.06em">👤 Mon Compte</h2><button class="btn btn-ghost btn-sm" onclick="closePanel('account')">← Retour</button></div><div class="max-w-2xl mx-auto px-5 py-7" id="accountPanelInner"></div></div>
 
 <!-- OVERLAY LOGIN -->
-<div class="overlay" id="overlay-login"><div class="modal" style="max-width:420px"><button style="position:absolute;top:1rem;right:1rem;color:rgba(255,255,255,.25);background:none;border:none;cursor:pointer;font-size:1.2rem" onclick="closeOverlay('login')">✕</button><div style="display:flex;gap:.50rem;margin-bottom:1.4rem"><button class="filter-tab active" id="ltab-login" onclick="switchLoginTab('login')">Connexion</button><button class="filter-tab" id="ltab-register" onclick="switchLoginTab('register')">Inscription</button></div><div id="lform-login"><h3 style="font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:700;color:white;text-transform:uppercase;letter-spacing:.06em;margin-bottom:1.2rem">Espace Pro</h3><div class="space-y-3"><div><label class="fl">Email</label><input type="email" id="loginEmail" class="fi" placeholder="votre@email.fr"/></div><div><label class="fl">Mot de passe</label><input type="password" id="loginPwd" class="fi" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/></div><button class="btn btn-primary w-full" onclick="doLogin()">Se connecter</button><p style="font-size:.72rem;color:rgba(255,255,255,.28);text-align:center">Pas de compte ? <button onclick="switchLoginTab('register')" style="color:var(--gold);background:none;border:none;cursor:pointer;font-size:.72rem;text-decoration:underline">S'inscrire</button></p></div></div><div id="lform-register" class="hidden"><h3 style="font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:700;color:white;text-transform:uppercase;letter-spacing:.06em;margin-bottom:1.2rem">Demande de compte</h3><div class="space-y-3"><div class="grid grid-cols-2 gap-3"><div><label class="fl">Prénom *</label><input type="text" id="regFirst" class="fi" placeholder="Jean"/></div><div><label class="fl">Nom *</label><input type="text" id="regLast" class="fi" placeholder="Dupont"/></div></div><div><label class="fl">Email *</label><input type="email" id="regEmail" class="fi" placeholder="jean@entreprise.fr"/></div><div><label class="fl">Téléphone</label><input type="tel" id="regTel" class="fi" placeholder="+32 …"/></div><div><label class="fl">Adresse</label><input type="text" id="regAddr" class="fi" placeholder="12 rue…"/></div><div><label class="fl">Raison sociale</label><input type="text" id="regCompany" class="fi" placeholder="Garage Dupont SARL"/></div><div><label class="fl">Mot de passe *</label><input type="password" id="regPwd" class="fi" placeholder="8+ caractères"/></div><button class="btn btn-primary w-full" onclick="doRegister()">Soumettre la demande</button><p style="font-size:.65rem;color:rgba(255,255,255,.20);text-align:center">Examinée par un administrateur.</p></div></div></div></div>
+<div class="overlay" id="overlay-login"><div class="modal" style="max-width:420px"><button style="position:absolute;top:1rem;right:1rem;color:rgba(255,255,255,.25);background:none;border:none;cursor:pointer;font-size:1.2rem" onclick="closeOverlay('login')">✕</button><div style="display:flex;gap:.50rem;margin-bottom:1.4rem"><button class="filter-tab active" id="ltab-login" onclick="switchLoginTab('login')">Connexion</button><button class="filter-tab" id="ltab-register" onclick="switchLoginTab('register')">Inscription</button></div><div id="lform-login"><h3 style="font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:700;color:white;text-transform:uppercase;letter-spacing:.06em;margin-bottom:1.2rem">Espace Pro</h3><div class="space-y-3"><div><label class="fl">Email</label><input type="email" id="loginEmail" class="fi" placeholder="votre@email.fr"/></div><div><label class="fl">Mot de passe</label><input type="password" id="loginPwd" class="fi" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/></div><button class="btn btn-primary w-full" onclick="doLogin()">Se connecter</button><p style="font-size:.72rem;color:rgba(255,255,255,.28);text-align:center">Pas de compte ? <button onclick="switchLoginTab('register')" style="color:var(--gold);background:none;border:none;cursor:pointer;font-size:.72rem;text-decoration:underline">S'inscrire</button></p></div></div><div id="lform-register" class="hidden"><h3 style="font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:700;color:white;text-transform:uppercase;letter-spacing:.06em;margin-bottom:1.2rem">Demande de compte</h3><div class="space-y-3"><div class="grid grid-cols-2 gap-3"><div><label class="fl">Prénom *</label><input type="text" id="regFirst" class="fi" placeholder="Jean"/></div><div><label class="fl">Nom *</label><input type="text" id="regLast" class="fi" placeholder="Dupont"/></div></div><div><label class="fl">Email *</label><input type="email" id="regEmail" class="fi" placeholder="jean@entreprise.fr"/></div><div><label class="fl">Téléphone</label><input type="tel" id="regTel" class="fi" placeholder="+32 …"/></div><div><label class="fl">Adresse</label><input type="text" id="regAddr" class="fi" placeholder="12 rue…"/></div><div><label class="fl">Raison sociale</label><input type="text" id="regCompany" class="fi" placeholder="Garage Dupont SARL"/></div><div><label class="fl">Pays *</label><select id="regCountry" class="fi" onchange="var r=window.TAX_RATES;var pct=r?r[this.value]||20:20;this.title='TVA applicable : '+pct+'%'"><option value="France">France (TVA 20%)</option>
+<option value="Belgique" selected>Belgique (TVA 21%)</option>
+<option value="Luxembourg">Luxembourg (TVA 17%)</option>
+<option value="Pays-Bas">Pays-Bas (TVA 21%)</option>
+<option value="Allemagne">Allemagne (TVA 19%)</option>
+<option value="Espagne">Espagne (TVA 21%)</option>
+<option value="Italie">Italie (TVA 22%)</option>
+<option value="Portugal">Portugal (TVA 23%)</option>
+<option value="Autriche">Autriche (TVA 20%)</option>
+<option value="Suisse">Suisse (TVA 7.7%)</option>
+<option value="Royaume-Uni">Royaume-Uni (TVA 20%)</option>
+<option value="Maroc">Maroc (TVA 20%)</option>
+<option value="Exonéré (HT)">Exonéré HT (TVA 0%)</option></select></div>
+    <div><label class="fl">Mot de passe *</label><input type="password" id="regPwd" class="fi" placeholder="8+ caractères"/></div><button class="btn btn-primary w-full" onclick="doRegister()">Soumettre la demande</button><p style="font-size:.65rem;color:rgba(255,255,255,.20);text-align:center">Examinée par un administrateur.</p></div></div></div></div>
 
 <!-- OVERLAY PRODUIT -->
 <div class="overlay" id="overlay-product"><div class="modal" style="max-width:540px"><button style="position:absolute;top:1rem;right:1rem;color:rgba(255,255,255,.25);background:none;border:none;cursor:pointer;font-size:1.2rem" onclick="closeOverlay('product')">✕</button><div style="display:flex;gap:1rem;margin-bottom:1.1rem"><div style="position:relative;width:90px;height:90px;border-radius:12px;border:1px solid var(--border);flex-shrink:0;overflow:hidden;background:#111"><img id="modImg" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:block"/><button id="modImgPrev" onclick="sliderNav(-1)" style="display:none;position:absolute;left:0;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.55);border:none;color:white;cursor:pointer;padding:2px 5px;font-size:.75rem;line-height:1;border-radius:0 4px 4px 0">‹</button><button id="modImgNext" onclick="sliderNav(1)" style="display:none;position:absolute;right:0;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.55);border:none;color:white;cursor:pointer;padding:2px 5px;font-size:.75rem;line-height:1;border-radius:4px 0 0 4px">›</button><div id="modImgDots" style="position:absolute;bottom:4px;left:0;right:0;display:none;justify-content:center;gap:3px"></div></div><div><p style="color:rgba(0,168,243,.55);font-size:.63rem;letter-spacing:.14em;text-transform:uppercase;margin-bottom:.2rem" id="modCat">—</p><h3 style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:700;color:white" id="modName">—</h3><p style="color:rgba(255,255,255,.38);font-size:.72rem;margin-top:.2rem" id="modRef">—</p><p style="color:#22c55e;font-size:.70rem;font-weight:600;margin-top:.2rem" id="modDiscount"></p></div></div><div class="glow-line mb-4"></div><label class="fl mb-2">Quantité <span style="font-size:.66rem;color:rgba(255,255,255,.25);text-transform:none;letter-spacing:0;font-weight:400">(cliquer les paliers pour cumuler)</span></label><div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem"><button class="qty-preset" onclick="addQty(10)">+10</button><button class="qty-preset" onclick="addQty(100)">+100</button><button class="qty-preset" onclick="addQty(250)">+250</button><button class="qty-preset" onclick="addQty(500)">+500</button><button class="qty-preset" onclick="addQty(1000)">+1 000</button><button class="qty-preset" onclick="addQty(2000)">+2 000</button></div><div style="display:flex;align-items:center;gap:.65rem;margin-bottom:1rem;flex-wrap:wrap"><div class="qty-input-wrap" style="flex:1;min-width:150px"><button class="qty-btn" onclick="adjustQty(-1)">−</button><input type="number" id="qtyInput" class="qty-num" value="0" min="0" oninput="onQtyChange()"/><button class="qty-btn" onclick="adjustQty(1)">+</button><span style="color:rgba(255,255,255,.30);font-size:.82rem;margin-left:.4rem">u.</span></div><button class="btn btn-ghost btn-xs" onclick="resetQty()">↺ Reset</button></div><div style="display:flex;align-items:center;gap:.6rem;margin-bottom:1rem;flex-wrap:wrap"><span class="fl" style="margin:0;white-space:nowrap">Zone livraison</span><select id="modShippingZone" class="fi" style="flex:1;font-size:.78rem;padding:.38rem .70rem" onchange="calcModalPrices(parseInt(document.getElementById('qtyInput').value)||0)"></select></div><div id="modVolTiers" style="margin-bottom:1rem"></div><div id="modSavingsCallout" style="display:none" class="savings-callout"></div><div class="price-box mb-4"><div class="price-row"><span class="price-label">Prix unitaire HT</span><div style="display:flex;align-items:baseline;gap:.5rem"><span class="price-val ht" id="modUnit">—</span><span id="modCrossPrice" style="display:none;text-decoration:line-through;font-size:.72rem;color:rgba(255,255,255,.22)"></span></div></div><div class="price-row" id="modDiscRow" style="display:none"><span class="price-label" style="color:#22c55e">Remise client</span><span style="font-weight:600;font-size:.80rem;color:#22c55e" id="modDiscVal">—</span></div><div class="price-row" id="modVolRow" style="display:none"><span class="price-label" style="color:var(--gold)">Remise volume</span><span style="font-weight:600;font-size:.80rem;color:var(--gold)" id="modVolVal">—</span></div><div class="price-row"><span class="price-label">Total HT articles</span><span class="price-val ht" id="modHT">—</span></div><div class="price-row" id="modShippingRow"><span class="price-label">Livraison HT</span><span style="font-size:.82rem;color:rgba(255,255,255,.50)" id="modShippingVal">—</span></div><div class="price-row"><span class="price-label">TVA 21%</span><span class="price-val tva" id="modTVA">—</span></div><div class="price-row" style="border-bottom:none"><span class="price-label" style="color:rgba(255,255,255,.75);font-weight:600">Total TTC</span><span class="price-val ttc" id="modTTC">—</span></div></div><div id="modVolHint" style="display:none;align-items:center;gap:.5rem;background:rgba(0,168,243,.06);border:1px solid rgba(0,168,243,.15);border-radius:8px;padding:.55rem .9rem;margin-bottom:1rem;font-size:.75rem;color:rgba(255,255,255,.50);line-height:1.5"></div><button class="btn btn-primary w-full gp" onclick="addToCartFromModal()"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17"/></svg>Ajouter au panier</button></div></div>
@@ -419,7 +432,30 @@ img[loading="lazy"]{background:rgba(255,255,255,.04)}
 <div class="overlay" id="overlay-editOrder"><div class="modal" style="max-width:500px"><button style="position:absolute;top:1rem;right:1rem;color:rgba(255,255,255,.25);background:none;border:none;cursor:pointer;font-size:1.2rem" onclick="closeOverlay('editOrder')">✕</button><h3 style="font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:700;color:white;text-transform:uppercase;margin-bottom:.25rem">Modifier la commande</h3><p id="editOrderId" style="color:rgba(255,255,255,.28);font-size:.70rem;margin-bottom:1rem">—</p><div class="glow-line mb-4"></div><div class="space-y-3"><div><label class="fl">Statut</label><select id="eo-status" class="fi"><option value="pending">En attente</option><option value="confirmed">Confirmée</option><option value="shipped">Expédiée</option><option value="delivered">Livrée</option><option value="cancelled">Annulée</option></select></div><div><label class="fl">Paiement</label><select id="eo-payment" class="fi"><option>Carte bancaire</option><option>Facture proforma</option><option>Paiement fin de mois</option><option>Virement bancaire</option><option>Chèque</option></select></div><div><label class="fl">Adresse</label><input type="text" id="eo-addr" class="fi"/></div><div><label class="fl">Notes</label><textarea id="eo-notes" class="fi" rows="2"></textarea></div><div><label class="fl">Note historique</label><input type="text" id="eo-histNote" class="fi" placeholder="Raison…"/></div></div><div style="display:flex;gap:.5rem;margin-top:1.2rem"><button class="btn btn-ghost flex-1" onclick="closeOverlay('editOrder')">Annuler</button><button class="btn btn-primary flex-1" onclick="saveOrderEdit()">✓ Enregistrer</button></div></div></div>
 
 <!-- OVERLAY ÉDITION CLIENT -->
-<div class="overlay" id="overlay-editClient"><div class="modal" style="max-width:520px"><button style="position:absolute;top:1rem;right:1rem;color:rgba(255,255,255,.25);background:none;border:none;cursor:pointer;font-size:1.2rem" onclick="closeOverlay('editClient')">✕</button><h3 style="font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:700;color:white;text-transform:uppercase;margin-bottom:.25rem">Éditer le client</h3><p id="editClientId" style="color:rgba(255,255,255,.28);font-size:.70rem;margin-bottom:1rem">—</p><div class="glow-line mb-4"></div><div class="space-y-3"><div class="grid grid-cols-2 gap-3"><div><label class="fl">Prénom *</label><input type="text" id="ec-first" class="fi"/></div><div><label class="fl">Nom *</label><input type="text" id="ec-last" class="fi"/></div></div><div><label class="fl">Email *</label><input type="email" id="ec-email" class="fi"/></div><div><label class="fl">Téléphone</label><input type="tel" id="ec-tel" class="fi"/></div><div><label class="fl">Adresse</label><input type="text" id="ec-addr" class="fi"/></div><div><label class="fl">Entreprise</label><input type="text" id="ec-company" class="fi"/></div><div class="grid grid-cols-2 gap-3"><div><label class="fl">Rôle</label><select id="ec-role" class="fi" onchange="updateEditClientRoleUI()"><option value="client">Client</option><option value="admin">Administrateur</option></select></div><div><label class="fl">Statut</label><select id="ec-status" class="fi"><option value="active">Actif</option><option value="inactive">Inactif</option></select></div></div><div id="ec-adminWarn" class="hidden" style="background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.20);border-radius:8px;padding:.60rem .90rem;font-size:.75rem;color:var(--orange)">⚠ Rôle Admin : accès complet.</div><div><label class="fl">Remise (%)</label><input type="number" id="ec-discount" class="fi" min="0" max="100" step="0.5"/></div><div><label class="fl mb-2">Accès catalogues</label><div id="ec-catalogAccess" style="display:flex;flex-wrap:wrap;gap:.4rem"></div></div></div><div style="display:flex;gap:.5rem;margin-top:1.2rem"><button class="btn btn-ghost flex-1" onclick="closeOverlay('editClient')">Annuler</button><button class="btn btn-primary flex-1" onclick="saveClientEdit()">✓ Enregistrer</button></div></div></div>
+<div class="overlay" id="overlay-editClient"><div class="modal" style="max-width:520px"><button style="position:absolute;top:1rem;right:1rem;color:rgba(255,255,255,.25);background:none;border:none;cursor:pointer;font-size:1.2rem" onclick="closeOverlay('editClient')">✕</button><h3 style="font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:700;color:white;text-transform:uppercase;margin-bottom:.25rem">Éditer le client</h3><p id="editClientId" style="color:rgba(255,255,255,.28);font-size:.70rem;margin-bottom:1rem">—</p><div class="glow-line mb-4"></div><div class="space-y-3"><div class="grid grid-cols-2 gap-3"><div><label class="fl">Prénom *</label><input type="text" id="ec-first" class="fi"/></div><div><label class="fl">Nom *</label><input type="text" id="ec-last" class="fi"/></div></div><div><label class="fl">Email *</label><input type="email" id="ec-email" class="fi"/></div><div><label class="fl">Téléphone</label><input type="tel" id="ec-tel" class="fi"/></div><div><label class="fl">Adresse</label><input type="text" id="ec-addr" class="fi"/></div><div><label class="fl">Entreprise</label><input type="text" id="ec-company" class="fi"/></div><div class="grid grid-cols-2 gap-3"><div><label class="fl">Rôle</label><select id="ec-role" class="fi" onchange="updateEditClientRoleUI()"><option value="client">Client</option><option value="admin">Administrateur</option></select></div><div><label class="fl">Statut</label><select id="ec-status" class="fi"><option value="active">Actif</option><option value="inactive">Inactif</option></select></div></div><div id="ec-adminWarn" class="hidden" style="background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.20);border-radius:8px;padding:.60rem .90rem;font-size:.75rem;color:var(--orange)">⚠ Rôle Admin : accès complet.</div><div><label class="fl">Remise (%)</label><input type="number" id="ec-discount" class="fi" min="0" max="100" step="0.5"/></div>
+<div><label class="fl">Pays</label>
+  <select id="ec-country" class="fi"><option value="France">France (TVA 20%)</option>
+<option value="Belgique" selected>Belgique (TVA 21%)</option>
+<option value="Luxembourg">Luxembourg (TVA 17%)</option>
+<option value="Pays-Bas">Pays-Bas (TVA 21%)</option>
+<option value="Allemagne">Allemagne (TVA 19%)</option>
+<option value="Espagne">Espagne (TVA 21%)</option>
+<option value="Italie">Italie (TVA 22%)</option>
+<option value="Portugal">Portugal (TVA 23%)</option>
+<option value="Autriche">Autriche (TVA 20%)</option>
+<option value="Suisse">Suisse (TVA 7.7%)</option>
+<option value="Royaume-Uni">Royaume-Uni (TVA 20%)</option>
+<option value="Maroc">Maroc (TVA 20%)</option>
+<option value="Exonéré (HT)">Exonéré HT (TVA 0%)</option></select>
+</div>
+<div><label class="fl">Taux TVA manuel (%)</label>
+  <div style="display:flex;align-items:center;gap:.5rem">
+    <input type="number" id="ec-taxrate" class="fi" min="0" max="100" step="0.1" placeholder="Auto selon pays" style="flex:1"/>
+    <button onclick="document.getElementById('ec-taxrate').value=''" class="btn btn-ghost btn-xs" title="Effacer → calcul auto">Auto</button>
+  </div>
+  <p style="font-family:Inter,sans-serif;font-size:.62rem;color:rgba(255,255,255,.3);margin-top:.2rem">
+    Vide = auto selon pays · 0 = exonéré HT · valeur = taux forcé</p>
+</div><div><label class="fl mb-2">Accès catalogues</label><div id="ec-catalogAccess" style="display:flex;flex-wrap:wrap;gap:.4rem"></div></div></div><div style="display:flex;gap:.5rem;margin-top:1.2rem"><button class="btn btn-ghost flex-1" onclick="closeOverlay('editClient')">Annuler</button><button class="btn btn-primary flex-1" onclick="saveClientEdit()">✓ Enregistrer</button></div></div></div>
 
 
 <!-- OVERLAY AJOUT CLIENT -->
@@ -448,6 +484,26 @@ img[loading="lazy"]{background:rgba(255,255,255,.04)}
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1rem">
       <div><label class="fl">Remise globale (%)</label><input type="number" id="nc-discount" class="fi" value="0" min="0" max="50" step="0.5"/></div>
+    <div style="margin-bottom:.7rem"><label class="fl">Pays / Fiscalité</label>
+      <select id="nc-country" class="fi" onchange="var r=window.TAX_RATES;var pct=r?r[this.value]||20:20;var el=document.getElementById('nc-taxrate');if(el)el.placeholder='Auto: '+pct+'%'"><option value="France">France (TVA 20%)</option>
+<option value="Belgique" selected>Belgique (TVA 21%)</option>
+<option value="Luxembourg">Luxembourg (TVA 17%)</option>
+<option value="Pays-Bas">Pays-Bas (TVA 21%)</option>
+<option value="Allemagne">Allemagne (TVA 19%)</option>
+<option value="Espagne">Espagne (TVA 21%)</option>
+<option value="Italie">Italie (TVA 22%)</option>
+<option value="Portugal">Portugal (TVA 23%)</option>
+<option value="Autriche">Autriche (TVA 20%)</option>
+<option value="Suisse">Suisse (TVA 7.7%)</option>
+<option value="Royaume-Uni">Royaume-Uni (TVA 20%)</option>
+<option value="Maroc">Maroc (TVA 20%)</option>
+<option value="Exonéré (HT)">Exonéré HT (TVA 0%)</option></select>
+    </div>
+    <div style="margin-bottom:.7rem"><label class="fl">Taux TVA manuel (%)</label>
+      <input type="number" id="nc-taxrate" class="fi" min="0" max="100" step="0.1" placeholder="Auto selon pays"
+        title="Laisser vide = taux automatique selon le pays. Saisir 0 pour HT (exonéré)."/>
+      <p style="font-family:Inter,sans-serif;font-size:.62rem;color:rgba(255,255,255,.3);margin-top:.2rem">Laisser vide = taux automatique du pays sélectionné</p>
+    </div>
       <div><label class="fl">Rôle</label>
         <select id="nc-role" class="fi">
           <option value="client">Client</option>
@@ -500,6 +556,32 @@ console.log=function(){
 
 const LS={PRODUITS:'dcorp_v29_products',USERS:'dcorp_v29_users',COMMANDES:'dcorp_v29_orders',CONFIG:'dcorp_v29_config',CHAT:'dcorp_v29_chat',STOCK_LOG:'dcorp_v29_stocklog',VISUEL:'dcorp_v29_visuel',MAIL_TEMPLATES:'dcorp_v40_mail_templates',APPEARANCE:'dcorp_v42_appearance'};
 const TVA=0.21,WF_AUTO_CONFIRM_DAYS=7;
+
+/* ════════════════════════════════════════════════════════════════
+   TAX_RATES — Taux de TVA par pays (en %)
+   L'admin peut toujours modifier manuellement via u.taxRate
+════════════════════════════════════════════════════════════════ */
+const TAX_RATES={
+  'Belgique':21,'France':20,'Luxembourg':17,'Pays-Bas':21,
+  'Allemagne':19,'Espagne':21,'Italie':22,'Portugal':23,
+  'Autriche':20,'Suisse':7.7,'Royaume-Uni':20,'Maroc':20,
+  'Tunisie':19,'Sénégal':18,'Algérie':19,'Exonéré (HT)':0
+};
+
+/* getUserTaxRate : taux TVA décimal pour un utilisateur */
+function getUserTaxRate(user){
+  if(!user)return TVA; /* Anonyme → Belgique 21% */
+  if(typeof user.taxRate==='number')return user.taxRate/100; /* Taux manuel */
+  if(user.country&&TAX_RATES[user.country]!==undefined)
+    return TAX_RATES[user.country]/100; /* Auto par pays */
+  return 0.20; /* Défaut : France 20% */
+}
+
+/* getOrderTaxRate : taux figé dans une commande passée */
+function getOrderTaxRate(order){
+  if(order&&typeof order.taxRate==='number')return order.taxRate/100;
+  return TVA; /* Rétrocompat commandes avant v48 */
+}
 
 /* ── DEFAULTS ── */
 const DEFAULT_PRODUITS=[
@@ -749,8 +831,8 @@ function _revokeOldBlobURL(){
 
 const oHT=o=>(o.items||[]).reduce((s,i)=>s+i.unitPrice*i.qty,0);
 const oShip=o=>o.shippingCostHT||0;
-const oTVA=o=>(oHT(o)+oShip(o))*TVA;
-const oTTC=o=>oHT(o)+oShip(o)+oTVA(o);
+const oTVA=o=>(oHT(o)+oShip(o))*getOrderTaxRate(o); /* TVA figée dans o.taxRate */
+const oTTC=o=>oHT(o)+oShip(o)+oTVA(o); /* TTC = HT articles + HT livraison + TVA */
 const userDiscount=u=>u?((u.discount||0)/100):0;
 const sBadge=s=>`<span class="badge ${SB[s]||'badge-pending'}">${SL[s]||s}</span>`;
 
@@ -1063,7 +1145,9 @@ async function doRegister(){
   DB_CONFIG.pendingRequests.push({
     id:'req'+Date.now(),first,last,email,tel,addr,company,
     date:today(),
-    _pwd: hashedPwd  /* SHA-256 hash — plus de base64 réversible */
+    _pwd: hashedPwd,
+    _country:(document.getElementById('regCountry')?.value||'France'),
+    _taxRate:null  /* SHA-256 hash — plus de base64 réversible */
   });
   sauvegarder();
   addAdminNotif('access','🆕 Nouvelle demande',first+' '+last+' ('+email+')',null);
@@ -1727,7 +1811,7 @@ function _updateVolTierVisuals(qty){
 function _applyVolTier(qty){const inp=document.getElementById('qtyInput');if(!inp)return;inp.value=qty;const vt=document.getElementById('vtag-'+qty);if(vt){vt.classList.add('tier-pop');setTimeout(()=>vt.classList.remove('tier-pop'),350);}calcModalPrices(qty);}
 function calcModalPrices(qty){
   if(!modalProduct)return;const p=modalProduct;const disc=currentUser?userDiscount(currentUser):0;const volP=getVolumePct(p,qty)/100;const effUnit=p.price*(1-disc)*(1-volP);const htItems=effUnit*qty;
-  const zoneId=document.getElementById('modShippingZone')?.value||DB_CONFIG.shipping.defaultZone;const ship=calcShipping(htItems,zoneId);const tva=(htItems+ship)*TVA;const ttc=htItems+ship+tva;
+  const zoneId=document.getElementById('modShippingZone')?.value||DB_CONFIG.shipping.defaultZone;const ship=calcShipping(htItems,zoneId);const tva=(htItems+ship)*getUserTaxRate(currentUser);const ttc=htItems+ship+tva;
   _updateVolTierVisuals(qty);
   const mu=document.getElementById('modUnit');if(mu)mu.textContent=qty>0?fmt(effUnit):'—';
   const cross=document.getElementById('modCrossPrice');if(cross){if((disc>0||volP>0)&&qty>0){cross.textContent=fmt(p.price);cross.style.display='inline';}else cross.style.display='none';}
@@ -1756,13 +1840,13 @@ function addToCartFromModal(){
 /* ── PANIER ── */
 function cartHT(){return cart.reduce((s,i)=>s+i.unitPrice*i.qty,0);}
 function cartTVA(){return cartHT()*TVA;}
-function cartTTC(){return cartHT()*(1+TVA);}
+function cartTTC(){var rate=getUserTaxRate(currentUser);return cartHT()*(1+rate);}
 function updateCartBadge(){const total=cart.reduce((s,i)=>s+i.qty,0);const badge=document.getElementById('cartCount');if(!badge)return;badge.textContent=total;badge.classList.toggle('hidden',total===0);if(total>0)badge.classList.add('bump');setTimeout(()=>badge.classList.remove('bump'),300);}
 function renderCart(){
   const el=document.getElementById('cartPanelInner');if(!el)return;
   if(!cart.length){el.innerHTML=`<div class="empty-state"><svg class="w-16 h-16 mx-auto mb-3" fill="none" stroke="rgba(0,168,243,.22)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg><p style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:rgba(255,255,255,.38);letter-spacing:.08em">Panier vide</p><p>Ajoutez des produits depuis le catalogue.</p><button class="btn btn-outline mt-4" onclick="closePanel('cart');showView('catalogue')">Voir le catalogue</button></div>`;return;}
   let totalGross=0;cart.forEach(item=>{const p=item.product;if(p)totalGross+=p.price*item.qty;});const totalSaved=totalGross-cartHT();
-  el.innerHTML=`<div class="mb-4">${cart.map(item=>{const p=item.product;const catPrice=p?p.price:item.unitPrice;const cD=currentUser?(currentUser.discount||0)/100:0;const vP=p?getVolumePct(p,item.qty)/100:0;const hasDisco=item.unitPrice<catPrice-0.001;let badges='';if(cD>0)badges+=`<span style="background:rgba(34,197,94,.12);color:#4ade80;border-radius:4px;padding:1px 6px;font-size:.60rem;font-weight:700;margin-right:3px">−${(cD*100).toFixed(0)}% client</span>`;if(vP>0)badges+=`<span style="background:rgba(0,168,243,.12);color:#00a8f3;border-radius:4px;padding:1px 6px;font-size:.60rem;font-weight:700">−${(vP*100).toFixed(0)}% vol.</span>`;return `<div class="cart-item"><img src="${p&&p.img?p.img:PHOLDER}" alt="${p?.name||''}" class="cart-item-img" onerror="this.src='${PHOLDER}'"/><div style="flex:1;min-width:0"><p style="font-weight:600;color:white;font-size:.84rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${p?.name||'Produit'}</p>${badges?`<div style="margin-top:3px">${badges}</div>`:''}<p style="color:rgba(255,255,255,.40);font-size:.70rem;margin-top:1px">${fmt(item.unitPrice)}/u. HT</p></div><div style="display:flex;align-items:center;gap:.35rem;flex-shrink:0"><button class="qty-btn" style="width:26px;height:26px" onclick="cartChange(${item.pid},-1)">−</button><span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:white;width:52px;text-align:center">${fmtN(item.qty)}</span><button class="qty-btn" style="width:26px;height:26px" onclick="cartChange(${item.pid},1)">+</button></div><div style="flex-shrink:0;text-align:right;min-width:80px">${hasDisco?`<p style="font-size:.63rem;color:rgba(255,255,255,.25);text-decoration:line-through">${fmt(catPrice*item.qty)} HT</p>`:''}<p style="font-family:'Bebas Neue',sans-serif;color:var(--gold);font-size:.94rem">${fmt(item.unitPrice*item.qty)}</p><p style="font-size:.62rem;color:rgba(255,255,255,.22)">HT</p></div><button onclick="cartRemove(${item.pid})" style="color:rgba(255,255,255,.20);background:none;border:none;cursor:pointer;flex-shrink:0;font-size:1.1rem;padding:0 2px" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='rgba(255,255,255,.20)'">✕</button></div>`;}).join('')}</div><div class="price-box mb-5">${totalSaved>0.01?`<div class="price-row" style="background:rgba(34,197,94,.05);border-radius:6px;padding:.35rem .5rem;border:none"><span class="price-label" style="color:#4ade80">💸 Économie totale</span><span style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:#4ade80">−${fmt(totalSaved)}</span></div>`:''}<div class="price-row"><span class="price-label">Sous-total HT</span><span class="price-val ht">${fmt(cartHT())}</span></div><div class="price-row"><span class="price-label">TVA 21%</span><span class="price-val tva">${fmt(cartTVA())}</span></div><div class="price-row" style="border-bottom:none"><span class="price-label" style="color:rgba(255,255,255,.72);font-weight:600">Total TTC</span><span class="price-val ttc">${fmt(cartTTC())}</span></div></div><div style="display:flex;gap:.65rem"><button class="btn btn-danger" onclick="cart=[];updateCartBadge();renderCart()">Vider</button><button class="btn btn-primary flex-1" onclick="closePanel('cart');openCheckout()">Commander →</button></div>`;
+  el.innerHTML=`<div class="mb-4">${cart.map(item=>{const p=item.product;const catPrice=p?p.price:item.unitPrice;const cD=currentUser?(currentUser.discount||0)/100:0;const vP=p?getVolumePct(p,item.qty)/100:0;const hasDisco=item.unitPrice<catPrice-0.001;let badges='';if(cD>0)badges+=`<span style="background:rgba(34,197,94,.12);color:#4ade80;border-radius:4px;padding:1px 6px;font-size:.60rem;font-weight:700;margin-right:3px">−${(cD*100).toFixed(0)}% client</span>`;if(vP>0)badges+=`<span style="background:rgba(0,168,243,.12);color:#00a8f3;border-radius:4px;padding:1px 6px;font-size:.60rem;font-weight:700">−${(vP*100).toFixed(0)}% vol.</span>`;return `<div class="cart-item"><img src="${p&&p.img?p.img:PHOLDER}" alt="${p?.name||''}" class="cart-item-img" onerror="this.src='${PHOLDER}'"/><div style="flex:1;min-width:0"><p style="font-weight:600;color:white;font-size:.84rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${p?.name||'Produit'}</p>${badges?`<div style="margin-top:3px">${badges}</div>`:''}<p style="color:rgba(255,255,255,.40);font-size:.70rem;margin-top:1px">${fmt(item.unitPrice)}/u. HT</p></div><div style="display:flex;align-items:center;gap:.35rem;flex-shrink:0"><button class="qty-btn" style="width:26px;height:26px" onclick="cartChange(${item.pid},-1)">−</button><span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:white;width:52px;text-align:center">${fmtN(item.qty)}</span><button class="qty-btn" style="width:26px;height:26px" onclick="cartChange(${item.pid},1)">+</button></div><div style="flex-shrink:0;text-align:right;min-width:80px">${hasDisco?`<p style="font-size:.63rem;color:rgba(255,255,255,.25);text-decoration:line-through">${fmt(catPrice*item.qty)} HT</p>`:''}<p style="font-family:'Bebas Neue',sans-serif;color:var(--gold);font-size:.94rem">${fmt(item.unitPrice*item.qty)}</p><p style="font-size:.62rem;color:rgba(255,255,255,.22)">HT</p></div><button onclick="cartRemove(${item.pid})" style="color:rgba(255,255,255,.20);background:none;border:none;cursor:pointer;flex-shrink:0;font-size:1.1rem;padding:0 2px" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='rgba(255,255,255,.20)'">✕</button></div>`;}).join('')}</div><div class="price-box mb-5">${totalSaved>0.01?`<div class="price-row" style="background:rgba(34,197,94,.05);border-radius:6px;padding:.35rem .5rem;border:none"><span class="price-label" style="color:#4ade80">💸 Économie totale</span><span style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:#4ade80">−${fmt(totalSaved)}</span></div>`:''}<div class="price-row"><span class="price-label">Sous-total HT</span><span class="price-val ht">${fmt(cartHT())}</span></div><div class="price-row"><span class="price-label">TVA ${(getUserTaxRate(currentUser)*100).toFixed(0)}%</span><span class="price-val tva">${fmt(cartTVA())}</span></div><div class="price-row" style="border-bottom:none"><span class="price-label" style="color:rgba(255,255,255,.72);font-weight:600">Total TTC</span><span class="price-val ttc">${fmt(cartTTC())}</span></div></div><div style="display:flex;gap:.65rem"><button class="btn btn-danger" onclick="cart=[];updateCartBadge();renderCart()">Vider</button><button class="btn btn-primary flex-1" onclick="closePanel('cart');openCheckout()">Commander →</button></div>`;
 }
 function cartChange(pid,d){const item=cart.find(c=>c.pid===pid);if(!item)return;item.qty=Math.max(1,item.qty+d);const p=item.product;if(p){const disc=currentUser?userDiscount(currentUser):0;item.unitPrice=p.price*(1-disc)*(1-getVolumePct(p,item.qty)/100);}updateCartBadge();renderCart();}
 function cartRemove(pid){cart=cart.filter(c=>c.pid!==pid);updateCartBadge();renderCart();}
@@ -1782,8 +1866,8 @@ function updateCheckoutShipping(){
 function doCheckout(){
   const addr=(document.getElementById('coAddr')?.value||'').trim();const pay=document.getElementById('coPay')?.value;const zid=document.getElementById('coShippingZone')?.value||DB_CONFIG.shipping.defaultZone;
   if(!addr){toast('Adresse de livraison requise','error');return;}if(!pay){toast('Mode de paiement requis','error');return;}
-  const zone=DB_CONFIG.shipping.zones.find(z=>z.id===zid)||{label:'—'};const ship=calcShipping(cartHT(),zid);const ordId=uid();const ts=new Date().toISOString();
-  const order={id:ordId,userId:currentUser.id,userName:currentUser.first+' '+currentUser.last,userEmail:currentUser.email,date:today(),items:cart.map(c=>({pid:c.pid,name:c.product?.name||'Produit',qty:c.qty,unitPrice:c.unitPrice})),addr,payment:pay,notes:document.getElementById('coNotes')?.value||'',status:'pending',shippingZone:zid,shippingZoneLabel:zone.label,shippingCostHT:ship,history:[{date:today(),s:'pending',n:'Commande passée en ligne'}],wfSteps:[{step:'received',ts,by:'auto'}],stockDeducted:false,autoConfirmAt:null};
+  var _taxRate=getUserTaxRate(currentUser);const zone=DB_CONFIG.shipping.zones.find(z=>z.id===zid)||{label:'—'};const ship=calcShipping(cartHT(),zid);const ordId=uid();const ts=new Date().toISOString();
+  const order={id:ordId,taxRate:Math.round(_taxRate*10000)/100,userId:currentUser.id,userName:currentUser.first+' '+currentUser.last,userEmail:currentUser.email,date:today(),items:cart.map(c=>({pid:c.pid,name:c.product?.name||'Produit',qty:c.qty,unitPrice:c.unitPrice})),addr,payment:pay,notes:document.getElementById('coNotes')?.value||'',status:'pending',shippingZone:zid,shippingZoneLabel:zone.label,shippingCostHT:ship,history:[{date:today(),s:'pending',n:'Commande passée en ligne'}],wfSteps:[{step:'received',ts,by:'auto'}],stockDeducted:false,autoConfirmAt:null};
   DB_COMMANDES.unshift(order);stockDeductOrder(order);sauvegarder();cart=[];updateCartBadge();closeOverlay('checkout');
   addAdminNotif('order','📦 Nouvelle commande '+ordId,currentUser.first+' '+currentUser.last+' · '+fmt(oTTC(order))+' TTC',ordId);updateAdminCounters();
   toast(`Commande ${ordId} enregistrée ✓`,'success');setTimeout(()=>{closePanel('cart');openPanel('orders');},400);
@@ -2001,9 +2085,40 @@ function renderChatZone(orderId, containerEl){
 /* Alias de compatibilité — les appels existants avec _ fonctionnent aussi */
 
 /* ── STOCK ── */
-function stockLog(pid,action,qty,reason,orderId){const prod=DB_PRODUITS.find(p=>p.id===pid)||{name:'Produit #'+pid};DB_STOCK_LOG.unshift({id:'SL-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),date:new Date().toISOString(),pid,productName:prod.name,action,qty,reason,orderId:orderId||null});if(DB_STOCK_LOG.length>500)DB_STOCK_LOG=DB_STOCK_LOG.slice(0,500);}
-function stockDeductOrder(order){if(order.stockDeducted)return;(order.items||[]).forEach(item=>{const prod=DB_PRODUITS.find(p=>p.id===item.pid);if(!prod)return;prod.stock=Math.max(0,(prod.stock||0)-item.qty);stockLog(item.pid,'-',item.qty,'Vente — commande '+order.id,order.id);});order.stockDeducted=true;}
-function stockAddManual(pid,qty,reason){const prod=DB_PRODUITS.find(p=>p.id===pid);if(!prod)return;prod.stock=(prod.stock||0)+qty;stockLog(pid,'+',qty,reason||'Entrée manuelle',null);sauvegarder();toast(`+${fmtN(qty)} u. ajouté à "${prod.name}"`, 'success');}
+function stockLog(pid, action, qty, reason, orderId, commentaire){
+  var prod=DB_PRODUITS.find(function(p){return p.id===pid;})||{name:'Produit #'+pid};
+  var entry={
+    id:       'SL-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),
+    date:     new Date().toISOString(),
+    pid:      pid,
+    productName: prod.name,
+    action:   action,          /* '+' | '-' | '=' */
+    qty:      qty,
+    reason:   reason||'Manuel', /* rétrocompat */
+    commentaire: commentaire||(reason||'Manuel'), /* champ B2B principal */
+    orderId:  orderId||null
+  };
+  if(!Array.isArray(DB_STOCK_LOG))DB_STOCK_LOG=[];
+  DB_STOCK_LOG.unshift(entry);
+  if(DB_STOCK_LOG.length>500)DB_STOCK_LOG=DB_STOCK_LOG.slice(0,500);
+  console.log('[stock] Mouvement enregistré:',action+qty,'→',prod.name,'| commentaire:',entry.commentaire);
+}
+function stockDeductOrder(order){
+  if(order.stockDeducted)return;
+  var commentaire='Commande #'+order.id;
+  (order.items||[]).forEach(function(item){
+    var prod=DB_PRODUITS.find(function(p){return p.id===item.pid;});
+    if(!prod)return;
+    prod.stock=Math.max(0,(prod.stock||0)-item.qty);
+    stockLog(item.pid, '-', item.qty,
+      'Vente — commande '+order.id,  /* reason rétrocompat */
+      order.id,                       /* orderId */
+      commentaire                     /* commentaire B2B */
+    );
+  });
+  order.stockDeducted=true;
+  console.log('[stock] Déduction commande '+order.id+' — '+( order.items||[]).length+' article(s)');
+}
 function stockRemoveManual(pid,qty,reason){const prod=DB_PRODUITS.find(p=>p.id===pid);if(!prod)return;prod.stock=Math.max(0,(prod.stock||0)-qty);stockLog(pid,'-',qty,reason||'Sortie manuelle',null);sauvegarder();toast(`−${fmtN(qty)} u. retirés de "${prod.name}"`, 'success');}
 
 /* ── DÉTAIL COMMANDE ── */
@@ -2304,6 +2419,8 @@ function approveRequest(rid){
     role:role,
     status:'active',
     avatar:((r.first||'?')[0]+(r.last||'?')[0]).toUpperCase(),
+    country:r._country||'France',
+    taxRate:(r._taxRate!==null&&r._taxRate!==undefined)?r._taxRate:(TAX_RATES[r._country||'France']||20),
     discount:0,
     catalogs:catalogs
   };
@@ -2378,7 +2495,7 @@ function openEditClient(uid){
   const idEl=document.getElementById('editClientId');if(idEl)idEl.textContent='Client — '+u.email;
   const fs={'ec-first':u.first,'ec-last':u.last,'ec-email':u.email,
     'ec-tel':u.tel||'','ec-addr':u.addr||'','ec-company':u.company||'',
-    'ec-role':u.role,'ec-status':u.status||'active','ec-discount':u.discount||0};
+    'ec-role':u.role,'ec-status':u.status||'active','ec-discount':u.discount||0,'ec-country':u.country||'France','ec-taxrate':typeof u.taxRate==='number'?u.taxRate:''};
   Object.entries(fs).forEach(([id,val])=>{const el=document.getElementById(id);if(el)el.value=val;});
   const catsDiv=document.getElementById('ec-catalogs');
   if(catsDiv){
@@ -3451,7 +3568,7 @@ function genererTemplateHTML(type, orderId, acomptePct){
           +'<div class="pdf-total-row ht"><span>Sous-total HT</span><span>'+ht.toFixed(2)+' €</span></div>'
           +(ship>0?'<div class="pdf-total-row ship"><span>Livraison'+(o.shippingZoneLabel?' ('+o.shippingZoneLabel+')':'')+'</span><span>'+ship.toFixed(2)+' €</span></div>':'')
           +(ship===0&&o.shippingZone?'<div class="pdf-total-row ship" style="color:#059669"><span>Livraison</span><span>Gratuite ✓</span></div>':'')
-          +'<div class="pdf-total-row tva"><span>TVA 21%</span><span>'+tva.toFixed(2)+' €</span></div>'
+          +'<div class="pdf-total-row tva"><span>TVA '+(Math.round(getOrderTaxRate(o)*10000)/100)+'%</span><span>'+tva.toFixed(2)+' €</span></div>'
           +'<div class="pdf-total-row ttc"><span>TOTAL TTC</span><span>'+(type==='avoir'?'−':'')+ttc.toFixed(2)+' €</span></div>'
         +'</div></div>'
       :'')
@@ -5302,75 +5419,169 @@ function renderAdminContacts(){
 
 
 function renderAdminStock(){
-  const ct=document.getElementById('adminContent');if(!ct)return;
-  console.log('DEBUG [renderAdminStock] DB_PRODUITS='+DB_PRODUITS.length);
+  var ct=document.getElementById('adminContent');if(!ct)return;
+  console.log('[stock] renderAdminStock prods='+DB_PRODUITS.length+' logs='+(DB_STOCK_LOG||[]).length);
 
-  const rows=DB_PRODUITS.map(p=>{
-    const stk=p.stock||0;
-    const stkColor=stk===0?'#ef4444':stk<20?'#f59e0b':'#4ade80';
-    const catLabel=DB_CONFIG.catalogs?DB_CONFIG.catalogs.find(c=>c.id===p.catalog_id)?.label||p.catalog_id:p.catalog_id;
-    /* Historique pour ce produit */
-    const hist=(DB_STOCK_LOG||[]).filter(l=>l.pid===p.id).slice(-3).reverse();
-    const histHtml=hist.length
-      ?hist.map(h=>`<div style="font-size:.6rem;color:rgba(255,255,255,.3);font-family:Inter,sans-serif">
-        ${h.date||''} · ${h.action==='+'?'<span style="color:#4ade80">+'+h.qty+'</span>':'<span style="color:#ef4444">-'+Math.abs(h.qty)+'</span>'} · ${h.reason||''}</div>`).join('')
-      :'<div style="font-size:.6rem;color:rgba(255,255,255,.2)">Aucun mouvement</div>';
-    return `<tr>
-      <td style="font-size:.72rem;color:rgba(255,255,255,.4)">${p.ref}</td>
-      <td><p style="font-weight:500;color:white;font-size:.82rem">${p.name}</p>
-          <p style="font-size:.62rem;color:rgba(255,255,255,.3)">${catLabel}</p></td>
-      <td><span style="font-family:'Bebas Neue',sans-serif;font-size:1.15rem;color:${stkColor}">${stk}</span></td>
-      <td style="min-width:130px">${histHtml}</td>
-      <td><div style="display:flex;gap:.3rem">
-        <button onclick="console.log('DEBUG [btn] +stock ${p.id}');stockAddManualUI(${p.id})"
-          style="background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);color:#4ade80;
-          border-radius:7px;padding:4px 10px;cursor:pointer;font-size:.72rem;font-weight:700">+ Stock</button>
-        <button onclick="console.log('DEBUG [btn] -stock ${p.id}');stockRemoveManualUI(${p.id})"
-          style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#ef4444;
-          border-radius:7px;padding:4px 10px;cursor:pointer;font-size:.72rem;font-weight:700">− Stock</button>
-      </div></td>
-    </tr>`;
+  var rows=DB_PRODUITS.map(function(p){
+    var stk=p.stock||0;
+    var stkColor=stk===0?'#ef4444':stk<20?'#f59e0b':'#4ade80';
+    var catLabel=(DB_CONFIG.catalogs||[]).reduce(function(acc,c){return c.id===p.catalog_id?c.label:acc;},p.catalog_id||'—');
+    /* 3 derniers mouvements */
+    var hist=(DB_STOCK_LOG||[]).filter(function(l){return l.pid===p.id;}).slice(0,3);
+    var histHtml=hist.length
+      ?hist.map(function(h){
+          var d=(h.date||'').slice(0,10);
+          var col=h.action==='+'?'#4ade80':'#f87171';
+          var comment=h.commentaire||h.reason||'';
+          return '<div style="font-size:.6rem;font-family:Inter,sans-serif;color:rgba(255,255,255,.35);margin-bottom:1px;'
+            +'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px" title="'+comment+'">'
+            +'<span style="color:'+col+';font-weight:700">'+(h.action==='+'?'+':'-')+Math.abs(h.qty||0)+'</span>'
+            +' <span style="color:rgba(255,255,255,.2)">'+d+'</span>'
+            +(comment?' · <span style="color:rgba(255,255,255,.3)">'+comment.slice(0,22)+(comment.length>22?'…':'')+'</span>':'')
+            +'</div>';
+        }).join('')
+      :'<div style="font-size:.6rem;color:rgba(255,255,255,.2);font-family:Inter,sans-serif">Aucun mouvement</div>';
+
+    return '<tr>'
+      +'<td style="font-size:.7rem;color:rgba(255,255,255,.4);font-family:monospace">'+p.ref+'</td>'
+      +'<td><p style="font-weight:500;color:white;font-size:.82rem;margin-bottom:1px">'+p.name+'</p>'
+          +'<p style="font-size:.62rem;color:rgba(255,255,255,.3)">'+catLabel+'</p></td>'
+      +'<td><span style="font-family:\'Bebas Neue\',sans-serif;font-size:1.15rem;color:'+stkColor+'">'+stk+'</span>'
+          +'<span style="font-family:Inter,sans-serif;font-size:.6rem;color:rgba(255,255,255,.25);margin-left:3px">u.</span></td>'
+      +'<td>'+histHtml+'</td>'
+      +'<td><div style="display:flex;gap:.3rem;flex-wrap:nowrap">'
+          +'<button onclick="ajusterStock('+p.id+',\'%2B\')" title="Entrée stock"'
+            +' style="background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);color:#4ade80;'
+            +'border-radius:7px;padding:4px 10px;cursor:pointer;font-size:.72rem;font-weight:700;transition:all .15s"'
+            +' onmouseover="this.style.background=\'rgba(74,222,128,.2)\'" onmouseout="this.style.background=\'rgba(74,222,128,.1)\'"'
+            +'>📥 +</button>'
+          +'<button onclick="ajusterStock('+p.id+',\'-\')" title="Sortie stock"'
+            +' style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#f87171;'
+            +'border-radius:7px;padding:4px 10px;cursor:pointer;font-size:.72rem;font-weight:700;transition:all .15s"'
+            +' onmouseover="this.style.background=\'rgba(239,68,68,.2)\'" onmouseout="this.style.background=\'rgba(239,68,68,.1)\'"'
+            +'>📤 −</button>'
+      +'</div></td>'
+      +'</tr>';
   }).join('');
 
-  ct.innerHTML=`
-<div class="flex flex-wrap items-center justify-between gap-4 mb-5">
-  <div>
-    <p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Logistique</p>
-    <h2 class="font-display text-2xl font-bold text-white uppercase">Gestion <span style="color:#00a8f3">Stock</span></h2>
-  </div>
-  <button onclick="renderAdminStock()" class="btn btn-ghost btn-sm">🔄 Rafraîchir</button>
-</div>
+  ct.innerHTML=''
+    +'<div class="flex flex-wrap items-center justify-between gap-4 mb-5">'
+      +'<div>'
+        +'<p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Logistique</p>'
+        +'<h2 class="font-display text-2xl font-bold text-white uppercase">Gestion <span style="color:#00a8f3">Stock</span></h2>'
+        +'<p class="text-white/35 text-sm mt-1">'+DB_PRODUITS.length+' article(s) · '+(DB_STOCK_LOG||[]).length+' mouvement(s) enregistré(s)</p>'
+      +'</div>'
+      +'<div style="display:flex;gap:.5rem">'
+        +'<button onclick="renderStockHistory()" class="btn btn-ghost btn-sm">📋 Historique complet</button>'
+        +'<button onclick="renderAdminStock()" class="btn btn-ghost btn-sm">🔄 Rafraîchir</button>'
+      +'</div>'
+    +'</div>'
 
-<div class="card overflow-hidden mb-5">
-  <div style="overflow-x:auto">
-  <table class="a-table">
-    <thead><tr>
-      <th>Réf.</th><th>Article</th><th>Stock</th><th>Derniers mouvements</th><th>Actions</th>
-    </tr></thead>
-    <tbody>${rows||'<tr><td colspan="5" style="text-align:center;color:rgba(255,255,255,.3)">Aucun produit</td></tr>'}</tbody>
-  </table>
-  </div>
-</div>
+    +'<div class="card overflow-hidden mb-5">'
+      +'<div style="overflow-x:auto">'
+      +'<table class="a-table">'
+        +'<thead><tr>'
+          +'<th>Réf.</th><th>Article</th><th>Stock</th><th style="min-width:160px">Derniers mouvements</th><th>Actions</th>'
+        +'</tr></thead>'
+        +'<tbody>'+( rows||'<tr><td colspan="5" style="text-align:center;color:rgba(255,255,255,.3);padding:1.5rem">Aucun produit</td></tr>')+'</tbody>'
+      +'</table>'
+      +'</div>'
+    +'</div>'
 
-<div class="card p-5">
-  <p class="fl mb-3">Historique complet des mouvements</p>
-  <div style="max-height:260px;overflow-y:auto">
-  ${!(DB_STOCK_LOG&&DB_STOCK_LOG.length)
-    ? '<p class="text-white/30 text-sm">Aucun mouvement enregistré.</p>'
-    : `<table class="a-table"><thead><tr><th>Date</th><th>Article</th><th>Mouvement</th><th>Motif</th><th>Commande</th></tr></thead>
-    <tbody>${[...DB_STOCK_LOG].reverse().slice(0,50).map(l=>{
-      const p=DB_PRODUITS.find(x=>x.id===l.pid);
-      return `<tr>
-        <td style="font-size:.68rem;color:rgba(255,255,255,.4);white-space:nowrap">${(l.date||'').slice(0,16)}</td>
-        <td style="font-size:.75rem">${p?p.name:'#'+l.pid}</td>
-        <td style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:${l.action==='+'?'#4ade80':'#f87171'}">
-          ${l.action==='+'?'+':'-'}${Math.abs(l.qty||0)}</td>
-        <td style="font-size:.7rem;color:rgba(255,255,255,.5)">${l.reason||''}</td>
-        <td style="font-size:.7rem;color:#00a8f3">${l.orderId||'—'}</td>
-      </tr>`;
-    }).join('')}</tbody></table>`}
-  </div>
-</div>`;
+    +'<div id="stock-history-zone">'
+      /* renderStockHistory() sera injecté ici */
+    +'</div>';
+
+  /* Afficher l'historique immédiatement */
+  renderStockHistory();
+}
+
+/* ════════════════════════════════════════════════════════════════
+   renderStockHistory — historique complet avec colonne Commentaire
+════════════════════════════════════════════════════════════════ */
+function renderStockHistory(limit){
+  limit=limit||50;
+  var zone=document.getElementById('stock-history-zone');
+  if(!zone)return;
+
+  var logs=(DB_STOCK_LOG||[]).slice(0,limit);
+
+  if(!logs.length){
+    zone.innerHTML='<div class="card p-5"><p class="text-white/30 text-sm">Aucun mouvement enregistré.</p></div>';
+    return;
+  }
+
+  var rows=logs.map(function(l){
+    var prod=DB_PRODUITS.find(function(x){return x.id===l.pid;});
+    var prodName=prod?prod.name:('Produit #'+l.pid);
+    var col=l.action==='+'?'#4ade80':'#f87171';
+    var dateStr=(l.date||'').replace('T',' ').slice(0,16);
+    var commentaire=l.commentaire||l.reason||'—';
+    /* Tronquer les longs commentaires avec tooltip */
+    var commentShort=commentaire.length>45?commentaire.slice(0,42)+'…':commentaire;
+
+    return '<tr>'
+      +'<td style="font-size:.68rem;color:rgba(255,255,255,.4);white-space:nowrap">'+dateStr+'</td>'
+      +'<td style="font-size:.75rem;max-width:160px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"'
+          +' title="'+prodName+'">'+prodName+'</td>'
+      +'<td style="font-family:\'Bebas Neue\',sans-serif;font-size:1rem;color:'+col+';text-align:center">'
+          +(l.action==='+'?'+':l.action==='-'?'-':'=')+(Math.abs(l.qty||0))+'</td>'
+      +'<td style="font-size:.7rem;color:rgba(255,255,255,.55);max-width:200px;overflow:hidden;'
+          +'white-space:nowrap;text-overflow:ellipsis" title="'+commentaire+'">'
+          +commentShort+'</td>'
+      +'<td style="font-size:.7rem;color:#00a8f3">'
+          +(l.orderId&&l.orderId!=='admin'
+            ?'<a onclick="adminTab(\'orders\')" style="cursor:pointer;text-decoration:underline dotted;color:#00a8f3">#'+l.orderId+'</a>'
+            :'<span style="color:rgba(255,255,255,.2)">Manuel</span>')
+          +'</td>'
+      +'</tr>';
+  }).join('');
+
+  zone.innerHTML='<div class="card p-5">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem">'
+      +'<p class="fl" style="margin:0">Historique des mouvements '
+        +'<span style="font-family:Inter,sans-serif;font-size:.68rem;font-weight:400;color:rgba(255,255,255,.3)">('+(DB_STOCK_LOG||[]).length+' total · affichage '+logs.length+')</span>'
+      +'</p>'
+      +'<div style="display:flex;gap:.4rem">'
+        +(limit<(DB_STOCK_LOG||[]).length
+          ?'<button onclick="renderStockHistory(200)" class="btn btn-ghost btn-xs">Voir plus</button>'
+          :'')
+        +'<button onclick="exportStockCSV()" class="btn btn-ghost btn-xs" title="Exporter CSV">📊 CSV</button>'
+      +'</div>'
+    +'</div>'
+    +'<div style="overflow-x:auto;max-height:340px;overflow-y:auto">'
+    +'<table class="a-table">'
+      +'<thead><tr>'
+        +'<th style="white-space:nowrap">Date</th>'
+        +'<th>Article</th>'
+        +'<th style="text-align:center">Mvt</th>'
+        +'<th style="min-width:160px">Commentaire</th>'
+        +'<th>Commande</th>'
+      +'</tr></thead>'
+      +'<tbody>'+rows+'</tbody>'
+    +'</table>'
+    +'</div>'
+  +'</div>';
+}
+
+/* ── exportStockCSV : exporte l'historique en CSV ── */
+function exportStockCSV(){
+  if(!(DB_STOCK_LOG||[]).length){toast('Aucun mouvement à exporter','info');return;}
+  var header='Date;Article;Ref;Mouvement;Quantite;Commentaire;Commande\n';
+  var rows=DB_STOCK_LOG.map(function(l){
+    var prod=DB_PRODUITS.find(function(x){return x.id===l.pid;})||{name:'#'+l.pid,ref:''};
+    var date=(l.date||'').replace('T',' ').slice(0,16);
+    var comment=(l.commentaire||l.reason||'').replace(/;/g,',');
+    return [date,prod.name,prod.ref||'',l.action==='+'?'Entrée':'Sortie',l.qty,comment,l.orderId||''].join(';');
+  }).join('\n');
+  var blob=new Blob(['\uFEFF'+header+rows],{type:'text/csv;charset=utf-8;'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;a.download='stock_mouvements_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){a.remove();URL.revokeObjectURL(url);},1000);
+  toast('Export CSV téléchargé ✓','success');
+  console.log('[stock] Export CSV: '+(DB_STOCK_LOG||[]).length+' lignes');
 }
 
 
@@ -5445,27 +5656,169 @@ function openEditOrder(orderId){
   showOrderDetail(o.id);  // pass the string id, not the object
 }
 
-function stockAddManualUI(pid){
-  console.log('DEBUG [stockAddManualUI] pid='+pid);
-  const p=DB_PRODUITS.find(x=>x.id===pid);if(!p)return;
-  const qty=parseInt(prompt('Quantité à ajouter au stock de "'+p.name+'":')||'0');
-  if(!qty||qty<=0)return;
-  p.stock=(p.stock||0)+qty;
-  stockLog(pid,'+',qty,'Ajout manuel','admin');
-  sauvegarder();renderAdminStock();
-  toast('+'+qty+' unités ajoutées à '+p.name,'success');
+/* ════════════════════════════════════════════════════════════════
+   ajusterStock(pid, direction)
+   Ouvre une modale inline dans #adminContent pour saisir :
+   - Quantité
+   - Commentaire / Raison (obligatoire, défaut = 'Manuel')
+   direction : '+' pour entrée | '-' pour sortie
+════════════════════════════════════════════════════════════════ */
+function ajusterStock(pid, direction){
+  var p=DB_PRODUITS.find(function(x){return x.id===pid;});
+  if(!p){toast('Produit introuvable','error');return;}
+  direction=direction||'+';
+
+  var label=direction==='+'?'Entrée en stock (addition)':'Sortie de stock (soustraction)';
+  var couleur=direction==='+'?'#4ade80':'#f87171';
+  var icon=direction==='+'?'📥':'📤';
+
+  /* Suggestions de commentaires selon la direction */
+  var suggestions=direction==='+'
+    ? ['Réception fournisseur','Retour client','Correction inventaire','Transfert entrepôt']
+    : ['Casse / Perte','Vente directe','Correction inventaire','Inventaire physique'];
+
+  /* Injecter une modale inline dans la card stock du produit */
+  var modalId='stock-modal-'+pid;
+  var existing=document.getElementById(modalId);
+  if(existing){existing.remove();return;} /* Toggle : re-clic ferme */
+
+  var modal=document.createElement('div');
+  modal.id=modalId;
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;display:flex;align-items:center;justify-content:center;padding:1rem';
+  modal.innerHTML=`
+<div style="background:#0f0f1a;border:1px solid rgba(255,255,255,.1);border-radius:16px;
+  padding:1.5rem;width:100%;max-width:420px;box-shadow:0 25px 60px rgba(0,0,0,.5)">
+  <!-- Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem">
+    <div>
+      <p style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.08em;color:${couleur}">${icon} ${label}</p>
+      <p style="font-family:Inter,sans-serif;font-size:.78rem;color:rgba(255,255,255,.5);margin-top:2px">${p.name}</p>
+    </div>
+    <button onclick="document.getElementById('${modalId}').remove()"
+      style="background:none;border:none;color:rgba(255,255,255,.3);cursor:pointer;font-size:1.3rem;line-height:1;padding:4px">✕</button>
+  </div>
+
+  <!-- Stock actuel -->
+  <div style="background:rgba(255,255,255,.04);border-radius:10px;padding:.65rem 1rem;margin-bottom:1rem;
+    display:flex;align-items:center;justify-content:space-between">
+    <span style="font-family:Inter,sans-serif;font-size:.75rem;color:rgba(255,255,255,.4)">Stock actuel</span>
+    <span style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:${(p.stock||0)===0?'#ef4444':(p.stock||0)<20?'#f59e0b':'#4ade80'}">${p.stock||0} unités</span>
+  </div>
+
+  <!-- Quantité -->
+  <div style="margin-bottom:.85rem">
+    <label style="font-family:Inter,sans-serif;font-size:.75rem;font-weight:600;color:rgba(255,255,255,.6);display:block;margin-bottom:.35rem">
+      Quantité à ${direction==='+'?'ajouter':'retirer'} *
+    </label>
+    <input type="number" id="adj-qty-${pid}" min="1" value="1"
+      style="width:100%;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.15);border-radius:8px;
+      padding:.55rem .85rem;color:white;font-family:Inter,sans-serif;font-size:.9rem;outline:none"
+      onfocus="this.style.borderColor='${couleur}'" onblur="this.style.borderColor='rgba(255,255,255,.15)'"/>
+  </div>
+
+  <!-- Commentaire -->
+  <div style="margin-bottom:1rem">
+    <label style="font-family:Inter,sans-serif;font-size:.75rem;font-weight:600;color:rgba(255,255,255,.6);display:block;margin-bottom:.35rem">
+      Commentaire / Raison <span style="color:rgba(255,255,255,.3);font-weight:400">(obligatoire)</span>
+    </label>
+    <input type="text" id="adj-comment-${pid}" placeholder="Ex: ${suggestions[0]}…"
+      style="width:100%;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.15);border-radius:8px;
+      padding:.55rem .85rem;color:white;font-family:Inter,sans-serif;font-size:.82rem;outline:none;margin-bottom:.4rem"
+      onfocus="this.style.borderColor='${couleur}'" onblur="this.style.borderColor='rgba(255,255,255,.15)'"/>
+    <!-- Suggestions rapides -->
+    <div style="display:flex;flex-wrap:wrap;gap:.25rem">
+      ${suggestions.map(function(s){return `<button type="button"
+        onclick="document.getElementById('adj-comment-${pid}').value='${s}'"
+        style="font-family:Inter,sans-serif;font-size:.62rem;padding:2px 8px;border-radius:5px;cursor:pointer;
+        border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:rgba(255,255,255,.45);transition:all .15s"
+        onmouseover="this.style.background='rgba(255,255,255,.1)'" onmouseout="this.style.background='rgba(255,255,255,.04)'"
+        >${s}</button>`;}).join('')}
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div style="display:flex;gap:.5rem">
+    <button onclick="document.getElementById('${modalId}').remove()"
+      style="flex:1;padding:.6rem;border-radius:9px;border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.04);color:rgba(255,255,255,.5);cursor:pointer;font-family:Inter,sans-serif;font-size:.8rem">
+      Annuler
+    </button>
+    <button onclick="validerAjustementStock(${pid},'${direction}')"
+      style="flex:2;padding:.6rem;border-radius:9px;border:1px solid ${couleur}44;
+      background:${couleur}18;color:${couleur};cursor:pointer;font-family:Inter,sans-serif;
+      font-size:.82rem;font-weight:700;transition:all .2s"
+      onmouseover="this.style.background='${couleur}28'" onmouseout="this.style.background='${couleur}18'">
+      ${icon} Confirmer le mouvement
+    </button>
+  </div>
+</div>`;
+
+  document.body.appendChild(modal);
+
+  /* Focus auto sur quantité */
+  setTimeout(function(){
+    var inp=document.getElementById('adj-qty-'+pid);
+    if(inp){inp.focus();inp.select();}
+  },60);
+
+  /* Fermeture sur Escape ou clic backdrop */
+  modal.addEventListener('click',function(e){
+    if(e.target===modal)modal.remove();
+  });
 }
 
-function stockRemoveManualUI(pid){
-  console.log('DEBUG [stockRemoveManualUI] pid='+pid);
-  const p=DB_PRODUITS.find(x=>x.id===pid);if(!p)return;
-  const qty=parseInt(prompt('Quantité à retirer du stock de "'+p.name+'":')||'0');
-  if(!qty||qty<=0)return;
-  p.stock=Math.max(0,(p.stock||0)-qty);
-  stockLog(pid,'-',qty,'Retrait manuel','admin');
-  sauvegarder();renderAdminStock();
-  toast('-'+qty+' unités retirées de '+p.name,'info');
+/* ── validerAjustementStock : applique le mouvement ── */
+function validerAjustementStock(pid, direction){
+  var p=DB_PRODUITS.find(function(x){return x.id===pid;});
+  if(!p){toast('Produit introuvable','error');return;}
+
+  var qtyEl     =document.getElementById('adj-qty-'+pid);
+  var commentEl =document.getElementById('adj-comment-'+pid);
+  var qty       =parseInt(qtyEl?qtyEl.value:'0')||0;
+  var commentaire=(commentEl?commentEl.value.trim():'')||'Manuel';
+
+  if(qty<=0){toast('Quantité invalide (minimum 1)','error');if(qtyEl)qtyEl.focus();return;}
+  if(!commentaire){toast('Le commentaire est obligatoire','error');if(commentEl)commentEl.focus();return;}
+
+  var stockAvant=p.stock||0;
+  if(direction==='+'){
+    p.stock=stockAvant+qty;
+  }else{
+    p.stock=Math.max(0,stockAvant-qty);
+    if(stockAvant<qty){
+      toast('⚠️ Stock insuffisant — ajusté à 0','info');
+    }
+  }
+
+  /* Enregistrer le mouvement avec commentaire */
+  stockLog(pid, direction, qty,
+    commentaire,    /* reason = commentaire pour rétrocompat */
+    null,           /* orderId : null pour mouvement manuel */
+    commentaire     /* commentaire B2B */
+  );
+
+  sauvegarder();
+
+  var icon=direction==='+'?'📥':'📤';
+  var msg=direction==='+'
+    ?icon+' +'+qty+' u. ajouté(es) à "'+p.name+'" ('+commentaire+')'
+    :icon+' −'+qty+' u. retiré(es) de "'+p.name+'" ('+commentaire+')';
+  toast(msg,'success');
+
+  console.log('[stock] Ajustement: '+direction+qty+' sur '+p.name+' | commentaire: '+commentaire+' | stock: '+stockAvant+'→'+p.stock);
+
+  /* Fermer la modale */
+  var modal=document.getElementById('stock-modal-'+pid);
+  if(modal)modal.remove();
+
+  /* Rafraîchir l'onglet stock */
+  if(typeof renderAdminStock==='function')renderAdminStock();
 }
+
+/* Aliases rétrocompat — redirigent vers ajusterStock */
+function stockAddManualUI(pid){ajusterStock(pid,'+');}
+function stockRemoveManualUI(pid){ajusterStock(pid,'-');}
+
 
 function markMsgRead(id){
   const msgs=DB_CONFIG.contactMessages||[];
@@ -5481,6 +5834,8 @@ async function saveClientEdit(){
   const rEl=document.getElementById('ec-role');if(rEl)u.role=rEl.value;
   const stEl=document.getElementById('ec-status');if(stEl)u.status=stEl.value;
   const dEl=document.getElementById('ec-discount');if(dEl)u.discount=parseFloat(dEl.value)||0;
+    var _cEl=document.getElementById('ec-country');if(_cEl)u.country=_cEl.value;
+    var _trEl=document.getElementById('ec-taxrate');u.taxRate=(_trEl&&_trEl.value.trim()!=='')?parseFloat(_trEl.value):null;
   const cDiv=document.getElementById('ec-catalogs');
   if(cDiv){u.catalogs=[...cDiv.querySelectorAll('input:checked')].map(cb=>cb.value);
     console.log('DEBUG saveClientEdit catalogs='+u.catalogs.join(','));}
@@ -5807,7 +6162,9 @@ async function saveNewClient(){
     status:'active',
     avatar:first[0]+(last[0]||''),
     discount:parseFloat(document.getElementById('nc-discount')?.value)||0,
-    catalogs:cats.length?cats:['cat_luminaire']
+    country:(document.getElementById('nc-country')?.value||'France'),
+      taxRate:parseFloat(document.getElementById('nc-taxrate')?.value)||null,
+      catalogs:cats.length?cats:['cat_luminaire']
   };
   DB_USERS.push(newUser);
   sauvegarder();
@@ -6014,6 +6371,23 @@ function hideTabLoader(){
 /* ── Patch adminTab pour utiliser le loader ── */
 
 
+
+
+
+/* Exports TVA module */
+window.TAX_RATES=TAX_RATES;
+window.getUserTaxRate=getUserTaxRate;
+window.getOrderTaxRate=getOrderTaxRate;
+window.cartTVA=cartTVA;
+window.cartTTC=cartTTC;
+
+/* Exports stock module v47 */
+window.ajusterStock           = ajusterStock;
+window.validerAjustementStock = validerAjustementStock;
+window.renderStockHistory     = renderStockHistory;
+window.exportStockCSV         = exportStockCSV;
+window.stockAddManualUI       = stockAddManualUI;
+window.stockRemoveManualUI    = stockRemoveManualUI;
 
 /* Exports filter editor */
 window.renderFilterEditor   = renderFilterEditor;
