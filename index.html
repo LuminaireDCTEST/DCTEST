@@ -2325,7 +2325,7 @@ function adminTab(tab){
   showTabLoader();
 
   const renders={
-    dashboard:    renderAdminClients,
+    dashboard:    renderAdminDashboard,
     orders:       renderAdminOrders,
     clients:      renderAdminClients,
     access:       renderAdminAccess,
@@ -2400,6 +2400,235 @@ function renderClientsTable(users){
     </tr>`;
   }).join('');
 }
+
+
+/* ════════════════════════════════════════════════════════════════
+   renderAdminDashboard — Tableau de bord avec stats TVA-aware
+════════════════════════════════════════════════════════════════ */
+function renderAdminDashboard(){
+  var ct=document.getElementById('adminContent');
+  if(!ct)return;
+  console.log('[dashboard] renderAdminDashboard');
+
+  /* ── Calculs stats ── */
+  var cmds=DB_COMMANDES||[];
+  var users=DB_USERS||[];
+  var prods=DB_PRODUITS||[];
+  var pending=DB_CONFIG.pendingRequests||[];
+  var chatUnread=(DB_CHAT||[]).filter(function(m){return m.role==='client'&&!m.readByAdmin;}).length;
+  var msgUnread=(DB_CONFIG.contactMessages||[]).filter(function(m){return !m.read;}).length;
+
+  /* Commandes par statut */
+  var cmdPending  =cmds.filter(function(o){return o.status==='pending';});
+  var cmdConfirmed=cmds.filter(function(o){return o.status==='confirmed';});
+  var cmdShipped  =cmds.filter(function(o){return o.status==='shipped';});
+  var cmdDelivered=cmds.filter(function(o){return o.status==='delivered';});
+
+  /* CA — HT et TTC en utilisant les fonctions TVA */
+  var caHT =cmds.filter(function(o){return o.status!=='cancelled';})
+                .reduce(function(s,o){return s+oHT(o)+oShip(o);},0);
+  var caTTC=cmds.filter(function(o){return o.status!=='cancelled';})
+                .reduce(function(s,o){return s+oTTC(o);},0);
+  var caPending=cmdPending.reduce(function(s,o){return s+oTTC(o);},0);
+  var caDelivered=cmdDelivered.reduce(function(s,o){return s+oTTC(o);},0);
+
+  /* Stock alertes */
+  var stockBas =prods.filter(function(p){return (p.stock||0)<5;});
+  var stockMoyen=prods.filter(function(p){return (p.stock||0)>=5&&(p.stock||0)<20;});
+
+  /* Clients */
+  var nbClients=users.filter(function(u){return u.role==='client'&&u.status==='active';}).length;
+
+  /* Dernières commandes (5) */
+  var lastCmds=cmds.slice(0,5);
+
+  /* Derniers mouvements stock (5) */
+  var lastStock=(DB_STOCK_LOG||[]).slice(0,5);
+
+  /* ── Couleurs statuts ── */
+  function sColor(st){
+    return {pending:'#f59e0b',confirmed:'#00a8f3',shipped:'#a855f7',delivered:'#22c55e',cancelled:'#ef4444'}[st]||'rgba(255,255,255,.4)';
+  }
+
+  /* ── Mini bar chart CA mensuel (3 derniers mois) ── */
+  var now=new Date();
+  var months=[];
+  for(var m=2;m>=0;m--){
+    var d=new Date(now.getFullYear(),now.getMonth()-m,1);
+    var mStr=(d.getMonth()+1).toString().padStart(2,'0');
+    var yStr=d.getFullYear().toString();
+    var label=d.toLocaleString('fr-FR',{month:'short'});
+    var mCmds=cmds.filter(function(o){
+      return o.date&&o.date.slice(0,7)===(yStr+'-'+mStr)&&o.status!=='cancelled';
+    });
+    var mCA=mCmds.reduce(function(s,o){return s+oTTC(o);},0);
+    months.push({label:label,ca:mCA,n:mCmds.length});
+  }
+  var maxCA=Math.max.apply(null,months.map(function(m){return m.ca;}))||1;
+
+  var barChart=months.map(function(m){
+    var pct=Math.round((m.ca/maxCA)*100);
+    return '<div style="display:flex;flex-direction:column;align-items:center;gap:.3rem;flex:1">'
+      +'<span style="font-family:\'Bebas Neue\',sans-serif;font-size:.75rem;color:#00a8f3">'+fmt(m.ca)+'</span>'
+      +'<div style="width:100%;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;height:60px;display:flex;align-items:flex-end">'
+        +'<div style="width:100%;height:'+pct+'%;background:linear-gradient(to top,#00a8f3,rgba(0,168,243,.35));border-radius:3px;transition:height .4s ease;min-height:3px"></div>'
+      +'</div>'
+      +'<span style="font-family:Inter,sans-serif;font-size:.68rem;color:rgba(255,255,255,.4)">'+m.label+' ('+m.n+')</span>'
+    +'</div>';
+  }).join('');
+
+  /* ── Render ── */
+  ct.innerHTML=''
+
+  /* En-tête */
+  +'<div class="flex flex-wrap items-center justify-between gap-4 mb-6">'
+    +'<div>'
+      +'<p class="text-orange-400 text-xs tracking-widest uppercase mb-0.5">Vue d\'ensemble</p>'
+      +'<h2 class="font-display text-2xl font-bold text-white uppercase">Tableau de <span style="color:#00a8f3">Bord</span></h2>'
+      +'<p class="text-white/35 text-sm mt-1">Données en temps réel · TVA calculée par client</p>'
+    +'</div>'
+    +'<button onclick="renderAdminDashboard()" class="btn btn-ghost btn-sm">🔄 Actualiser</button>'
+  +'</div>'
+
+  /* KPI row 1 */
+  +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.85rem;margin-bottom:1rem">'
+
+    /* CA Total TTC */
+    +'<div class="card p-4" style="border-left:3px solid #00a8f3">'
+      +'<p style="font-family:Inter,sans-serif;font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.4);margin-bottom:.35rem">CA Total TTC</p>'
+      +'<p style="font-family:\'Bebas Neue\',sans-serif;font-size:1.6rem;color:#00a8f3;letter-spacing:.04em;line-height:1">'+fmt(caTTC)+'</p>'
+      +'<p style="font-family:Inter,sans-serif;font-size:.65rem;color:rgba(255,255,255,.3);margin-top:.2rem">HT : '+fmt(caHT)+' · '+cmds.filter(function(o){return o.status!=='cancelled';}).length+' cde(s)</p>'
+    +'</div>'
+
+    /* Commandes en attente */
+    +'<div class="card p-4" style="border-left:3px solid #f59e0b">'
+      +'<p style="font-family:Inter,sans-serif;font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.4);margin-bottom:.35rem">En attente</p>'
+      +'<p style="font-family:\'Bebas Neue\',sans-serif;font-size:1.6rem;color:#f59e0b;letter-spacing:.04em;line-height:1">'+cmdPending.length+'</p>'
+      +'<p style="font-family:Inter,sans-serif;font-size:.65rem;color:rgba(255,255,255,.3);margin-top:.2rem">'+fmt(caPending)+' TTC à traiter</p>'
+    +'</div>'
+
+    /* Alertes stock */
+    +'<div class="card p-4" style="border-left:3px solid '+(stockBas.length>0?'#ef4444':'#22c55e')+'">'
+      +'<p style="font-family:Inter,sans-serif;font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.4);margin-bottom:.35rem">Stock critique</p>'
+      +'<p style="font-family:\'Bebas Neue\',sans-serif;font-size:1.6rem;color:'+(stockBas.length>0?'#ef4444':'#22c55e')+';letter-spacing:.04em;line-height:1">'+stockBas.length+'</p>'
+      +'<p style="font-family:Inter,sans-serif;font-size:.65rem;color:rgba(255,255,255,.3);margin-top:.2rem">'+stockMoyen.length+' en stock faible (<20)</p>'
+    +'</div>'
+
+    /* Demandes comptes */
+    +'<div class="card p-4" style="border-left:3px solid '+(pending.length>0?'#a855f7':'rgba(255,255,255,.15)')+'">'
+      +'<p style="font-family:Inter,sans-serif;font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.4);margin-bottom:.35rem">Approbations</p>'
+      +'<p style="font-family:\'Bebas Neue\',sans-serif;font-size:1.6rem;color:'+(pending.length>0?'#a855f7':'rgba(255,255,255,.3)')+';letter-spacing:.04em;line-height:1">'+pending.length+'</p>'
+      +'<p style="font-family:Inter,sans-serif;font-size:.65rem;color:rgba(255,255,255,.3);margin-top:.2rem">Comptes à approuver</p>'
+    +'</div>'
+
+  +'</div>'
+
+  /* KPI row 2 */
+  +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.85rem;margin-bottom:1.2rem">'
+
+    +'<div class="card p-4">'
+      +'<p style="font-family:Inter,sans-serif;font-size:.65rem;color:rgba(255,255,255,.35);margin-bottom:.2rem">CA Livré</p>'
+      +'<p style="font-family:\'Bebas Neue\',sans-serif;font-size:1.2rem;color:#22c55e">'+fmt(caDelivered)+'</p>'
+    +'</div>'
+    +'<div class="card p-4">'
+      +'<p style="font-family:Inter,sans-serif;font-size:.65rem;color:rgba(255,255,255,.35);margin-bottom:.2rem">Clients actifs</p>'
+      +'<p style="font-family:\'Bebas Neue\',sans-serif;font-size:1.2rem;color:white">'+nbClients+'</p>'
+    +'</div>'
+    +'<div class="card p-4">'
+      +'<p style="font-family:Inter,sans-serif;font-size:.65rem;color:rgba(255,255,255,.35);margin-bottom:.2rem">Messages non lus</p>'
+      +'<p style="font-family:\'Bebas Neue\',sans-serif;font-size:1.2rem;color:'+(msgUnread>0?'#f59e0b':'rgba(255,255,255,.3)')+'">'+msgUnread+'</p>'
+    +'</div>'
+    +'<div class="card p-4">'
+      +'<p style="font-family:Inter,sans-serif;font-size:.65rem;color:rgba(255,255,255,.35);margin-bottom:.2rem">Chats en attente</p>'
+      +'<p style="font-family:\'Bebas Neue\',sans-serif;font-size:1.2rem;color:'+(chatUnread>0?'#a855f7':'rgba(255,255,255,.3)')+'">'+chatUnread+'</p>'
+    +'</div>'
+
+  +'</div>'
+
+  /* Contenu principal : 2 colonnes */
+  +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;margin-bottom:1.1rem">'
+
+    /* Graphique CA mensuel */
+    +'<div class="card p-5">'
+      +'<p class="fl mb-4">CA mensuel TTC (3 mois)</p>'
+      +'<div style="display:flex;gap:.75rem;align-items:flex-end;height:100px;padding:0 .5rem">'+barChart+'</div>'
+    +'</div>'
+
+    /* Alertes stock */
+    +'<div class="card p-5">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem">'
+        +'<p class="fl" style="margin:0">⚠️ Stock critique (<5 u.)</p>'
+        +'<button onclick="adminTab(\'stock\')" style="font-family:Inter,sans-serif;font-size:.65rem;font-weight:700;padding:2px 9px;border-radius:6px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.07);color:#ef4444;cursor:pointer">Gérer →</button>'
+      +'</div>'
+      +(stockBas.length===0
+        ?'<p style="font-family:Inter,sans-serif;font-size:.8rem;color:rgba(255,255,255,.3);text-align:center;padding:1rem">✅ Tous les stocks sont suffisants</p>'
+        :stockBas.map(function(p){
+          var s=p.stock||0;
+          var col=s===0?'#ef4444':'#f59e0b';
+          return '<div style="display:flex;align-items:center;justify-content:space-between;padding:.4rem .6rem;'
+            +'margin-bottom:.3rem;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:8px">'
+            +'<span style="font-family:Inter,sans-serif;font-size:.78rem;color:white;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:180px" title="'+p.name+'">'+p.name+'</span>'
+            +'<span style="font-family:\'Bebas Neue\',sans-serif;font-size:1rem;color:'+col+';flex-shrink:0;margin-left:.5rem">'+(s===0?'RUPTURE':s+' u.')+'</span>'
+          +'</div>';
+        }).join(''))
+    +'</div>'
+
+  +'</div>'
+
+  /* 2e rangée */
+  +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.1rem">'
+
+    /* Dernières commandes */
+    +'<div class="card p-5">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem">'
+        +'<p class="fl" style="margin:0">Dernières commandes</p>'
+        +'<button onclick="adminTab(\'orders\')" style="font-family:Inter,sans-serif;font-size:.65rem;font-weight:700;padding:2px 9px;border-radius:6px;border:1px solid rgba(0,168,243,.25);background:rgba(0,168,243,.07);color:#00a8f3;cursor:pointer">Toutes →</button>'
+      +'</div>'
+      +(lastCmds.length===0
+        ?'<p style="color:rgba(255,255,255,.3);font-size:.8rem;text-align:center;padding:.75rem">Aucune commande</p>'
+        :lastCmds.map(function(o){
+          var col=sColor(o.status);
+          return '<div style="display:flex;align-items:center;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05)">'
+            +'<div style="min-width:0">'
+              +'<code style="font-size:.7rem;color:#00a8f3">'+o.id+'</code>'
+              +'<p style="font-family:Inter,sans-serif;font-size:.68rem;color:rgba(255,255,255,.4);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:140px">'+o.userName+'</p>'
+            +'</div>'
+            +'<div style="text-align:right;flex-shrink:0">'
+              +'<p style="font-family:\'Bebas Neue\',sans-serif;font-size:.9rem;color:#00a8f3">'+fmt(oTTC(o))+'</p>'
+              +'<span style="font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:4px;background:'+col+'18;border:1px solid '+col+'44;color:'+col+'">'+((SL[o.status])||o.status)+'</span>'
+            +'</div>'
+          +'</div>';
+        }).join(''))
+    +'</div>'
+
+    /* Accès rapides */
+    +'<div class="card p-5">'
+      +'<p class="fl mb-3">Accès rapides</p>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">'
+        +[
+          {tab:'orders',   label:'📦 Commandes',    count:cmdPending.length,  color:'#f59e0b',  note:cmdPending.length+' en attente'},
+          {tab:'clients',  label:'👤 Clients',       count:nbClients,          color:'#00a8f3',  note:pending.length+' à approuver'},
+          {tab:'stock',    label:'📊 Stock',          count:stockBas.length,    color:stockBas.length>0?'#ef4444':'#22c55e', note:stockBas.length>0?stockBas.length+' rupture(s)':'OK'},
+          {tab:'chat',     label:'💬 Chat',           count:chatUnread,         color:'#a855f7',  note:chatUnread+' non lu(s)'},
+          {tab:'catalog',  label:'🛍 Produits',       count:prods.length,       color:'rgba(255,255,255,.5)', note:prods.length+' articles'},
+          {tab:'docs',     label:'📄 Documents',      count:0,                  color:'rgba(255,255,255,.5)', note:'PDF & emails'}
+        ].map(function(item){
+          return '<button onclick="adminTab(\''+item.tab+'\')"'
+            +' style="padding:.6rem .8rem;border-radius:9px;cursor:pointer;text-align:left;'
+            +'border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.03);'
+            +'transition:all .15s"'
+            +' onmouseover="this.style.background=\'rgba(255,255,255,.08)\';this.style.borderColor=\''+item.color+'44\'"'
+            +' onmouseout="this.style.background=\'rgba(255,255,255,.03)\';this.style.borderColor=\'rgba(255,255,255,.07)\'">'
+            +'<p style="font-family:Inter,sans-serif;font-size:.78rem;font-weight:600;color:white;margin-bottom:2px">'+item.label+'</p>'
+            +'<p style="font-family:Inter,sans-serif;font-size:.62rem;color:rgba(255,255,255,.35)">'+item.note+'</p>'
+          +'</button>';
+        }).join('')
+      +'</div>'
+    +'</div>'
+
+  +'</div>';
+}
+window.renderAdminDashboard=renderAdminDashboard;
 
 function renderAdminClients(){
   console.log('[renderAdminClients] DB_USERS='+DB_USERS.length);
