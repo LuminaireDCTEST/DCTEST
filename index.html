@@ -417,7 +417,7 @@ img[loading="lazy"]{background:rgba(255,255,255,.04)}
     <div><label class="fl">Mot de passe *</label><input type="password" id="regPwd" class="fi" placeholder="8+ caractères"/></div><button class="btn btn-primary w-full" onclick="doRegister()">Soumettre la demande</button><p style="font-size:.65rem;color:rgba(255,255,255,.20);text-align:center">Examinée par un administrateur.</p></div></div></div></div>
 
 <!-- OVERLAY PRODUIT -->
-<div class="overlay" id="overlay-product"><div class="modal" style="max-width:540px"><button style="position:absolute;top:1rem;right:1rem;color:rgba(255,255,255,.25);background:none;border:none;cursor:pointer;font-size:1.2rem" onclick="closeOverlay('product')">✕</button><div style="display:flex;gap:1rem;margin-bottom:1.1rem"><div style="position:relative;width:90px;height:90px;border-radius:12px;border:1px solid var(--border);flex-shrink:0;overflow:hidden;background:#111"><img id="modImg" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:block"/><button id="modImgPrev" onclick="sliderNav(-1)" style="display:none;position:absolute;left:0;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.55);border:none;color:white;cursor:pointer;padding:2px 5px;font-size:.75rem;line-height:1;border-radius:0 4px 4px 0">‹</button><button id="modImgNext" onclick="sliderNav(1)" style="display:none;position:absolute;right:0;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.55);border:none;color:white;cursor:pointer;padding:2px 5px;font-size:.75rem;line-height:1;border-radius:4px 0 0 4px">›</button><div id="modImgDots" style="position:absolute;bottom:4px;left:0;right:0;display:none;justify-content:center;gap:3px"></div></div><div><p style="color:rgba(0,168,243,.55);font-size:.63rem;letter-spacing:.14em;text-transform:uppercase;margin-bottom:.2rem" id="modCat">—</p><h3 style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:700;color:white" id="modName">—</h3><p style="color:rgba(255,255,255,.38);font-size:.72rem;margin-top:.2rem" id="modRef">—</p><p style="color:#22c55e;font-size:.70rem;font-weight:600;margin-top:.2rem" id="modDiscount"></p></div></div><div class="glow-line mb-4"></div><label class="fl mb-2">Quantité <span style="font-size:.66rem;color:rgba(255,255,255,.25);text-transform:none;letter-spacing:0;font-weight:400">(cliquer les paliers pour cumuler)</span></label><div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem"><button class="qty-preset" onclick="addQty(10)">+10</button><button class="qty-preset" onclick="addQty(100)">+100</button><button class="qty-preset" onclick="addQty(250)">+250</button><button class="qty-preset" onclick="addQty(500)">+500</button><button class="qty-preset" onclick="addQty(1000)">+1 000</button><button class="qty-preset" onclick="addQty(2000)">+2 000</button></div><div style="display:flex;align-items:center;gap:.65rem;margin-bottom:1rem;flex-wrap:wrap"><div class="qty-input-wrap" style="flex:1;min-width:150px"><button class="qty-btn" onclick="adjustQty(-1)">−</button><input type="number" id="qtyInput" class="qty-num" value="0" min="0" oninput="onQtyChange()"/><button class="qty-btn" onclick="adjustQty(1)">+</button><span style="color:rgba(255,255,255,.30);font-size:.82rem;margin-left:.4rem">u.</span></div><button class="btn btn-ghost btn-xs" onclick="resetQty()">↺ Reset</button></div><div style="display:flex;align-items:center;gap:.6rem;margin-bottom:1rem;flex-wrap:wrap"><span class="fl" style="margin:0;white-space:nowrap">Zone livraison</span><select id="modShippingZone" class="fi" style="flex:1;font-size:.78rem;padding:.38rem .70rem" onchange="calcModalPrices(parseInt(document.getElementById('qtyInput').value)||0)"></select></div><div id="modVolTiers" style="margin-bottom:1rem"></div><div id="modSavingsCallout" style="display:none" class="savings-callout"></div><div class="price-box mb-4"><div class="price-row"><span class="price-label">Prix unitaire HT</span><div style="display:flex;align-items:baseline;gap:.5rem"><span class="price-val ht" id="modUnit">—</span><span id="modCrossPrice" style="display:none;text-decoration:line-through;font-size:.72rem;color:rgba(255,255,255,.22)"></span></div></div><div class="price-row" id="modDiscRow" style="display:none"><span class="price-label" style="color:#22c55e">Remise client</span><span style="font-weight:600;font-size:.80rem;color:#22c55e" id="modDiscVal">—</span></div><div class="price-row" id="modVolRow" style="display:none"><span class="price-label" style="color:var(--gold)">Remise volume</span><span style="font-weight:600;font-size:.80rem;color:var(--gold)" id="modVolVal">—</span></div><div class="price-row"><span class="price-label">Total HT articles</span><span class="price-val ht" id="modHT">—</span></div><div class="price-row" id="modShippingRow"><span class="price-label">Livraison HT</span><span style="font-size:.82rem;color:rgba(255,255,255,.50)" id="modShippingVal">—</span></div><div class="price-row"><span class="price-label">TVA 21%</span><span class="price-val tva" id="modTVA">—</span></div><div class="price-row" style="border-bottom:none"><span class="price-label" style="color:rgba(255,255,255,.75);font-weight:600">Total TTC</span><span class="price-val ttc" id="modTTC">—</span></div></div><div id="modVolHint" style="display:none;align-items:center;gap:.5rem;background:rgba(0,168,243,.06);border:1px solid rgba(0,168,243,.15);border-radius:8px;padding:.55rem .9rem;margin-bottom:1rem;font-size:.75rem;color:rgba(255,255,255,.50);line-height:1.5"></div><button class="btn btn-primary w-full gp" onclick="addToCartFromModal()"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17"/></svg>Ajouter au panier</button></div></div>
+<div class="overlay" id="overlay-product"><div class="modal" style="max-width:540px"><button style="position:absolute;top:1rem;right:1rem;color:rgba(255,255,255,.25);background:none;border:none;cursor:pointer;font-size:1.2rem" onclick="closeOverlay('product')">✕</button><div style="display:flex;gap:1rem;margin-bottom:1.1rem"><div style="position:relative;width:90px;height:90px;border-radius:12px;border:1px solid var(--border);flex-shrink:0;overflow:hidden;background:#111"><img id="modImg" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:block"/><button id="modImgPrev" onclick="sliderNav(-1)" style="display:none;position:absolute;left:0;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.55);border:none;color:white;cursor:pointer;padding:2px 5px;font-size:.75rem;line-height:1;border-radius:0 4px 4px 0">‹</button><button id="modImgNext" onclick="sliderNav(1)" style="display:none;position:absolute;right:0;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.55);border:none;color:white;cursor:pointer;padding:2px 5px;font-size:.75rem;line-height:1;border-radius:4px 0 0 4px">›</button><div id="modImgDots" style="position:absolute;bottom:4px;left:0;right:0;display:none;justify-content:center;gap:3px"></div></div><div><p style="color:rgba(0,168,243,.55);font-size:.63rem;letter-spacing:.14em;text-transform:uppercase;margin-bottom:.2rem" id="modCat">—</p><h3 style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:700;color:white" id="modName">—</h3><p style="color:rgba(255,255,255,.38);font-size:.72rem;margin-top:.2rem" id="modRef">—</p><p style="color:#22c55e;font-size:.70rem;font-weight:600;margin-top:.2rem" id="modDiscount"></p></div></div><div class="glow-line mb-4"></div><label class="fl mb-2">Quantité <span style="font-size:.66rem;color:rgba(255,255,255,.25);text-transform:none;letter-spacing:0;font-weight:400">(cliquer les paliers pour cumuler)</span></label><div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem"><button class="qty-preset" onclick="addQty(10)">+10</button><button class="qty-preset" onclick="addQty(100)">+100</button><button class="qty-preset" onclick="addQty(250)">+250</button><button class="qty-preset" onclick="addQty(500)">+500</button><button class="qty-preset" onclick="addQty(1000)">+1 000</button><button class="qty-preset" onclick="addQty(2000)">+2 000</button></div><div style="display:flex;align-items:center;gap:.65rem;margin-bottom:1rem;flex-wrap:wrap"><div class="qty-input-wrap" style="flex:1;min-width:150px"><button class="qty-btn" onclick="adjustQty(-1)">−</button><input type="number" id="qtyInput" class="qty-num" value="0" min="0" oninput="onQtyChange()"/><button class="qty-btn" onclick="adjustQty(1)">+</button><span style="color:rgba(255,255,255,.30);font-size:.82rem;margin-left:.4rem">u.</span></div><button class="btn btn-ghost btn-xs" onclick="resetQty()">↺ Reset</button></div><div style="display:flex;align-items:center;gap:.6rem;margin-bottom:1rem;flex-wrap:wrap"><span class="fl" style="margin:0;white-space:nowrap">Zone livraison</span><select id="modShippingZone" class="fi" style="flex:1;font-size:.78rem;padding:.38rem .70rem" onchange="calcModalPrices(parseInt(document.getElementById('qtyInput').value)||0)"></select></div><div id="modVolTiers" style="margin-bottom:1rem"></div><div id="modSavingsCallout" style="display:none" class="savings-callout"></div><div class="price-box mb-4"><div class="price-row"><span class="price-label">Prix unitaire HT</span><div style="display:flex;align-items:baseline;gap:.5rem"><span class="price-val ht" id="modUnit">—</span><span id="modCrossPrice" style="display:none;text-decoration:line-through;font-size:.72rem;color:rgba(255,255,255,.22)"></span></div></div><div class="price-row" id="modDiscRow" style="display:none"><span class="price-label" style="color:#22c55e">Remise client</span><span style="font-weight:600;font-size:.80rem;color:#22c55e" id="modDiscVal">—</span></div><div class="price-row" id="modVolRow" style="display:none"><span class="price-label" style="color:var(--gold)">Remise volume</span><span style="font-weight:600;font-size:.80rem;color:var(--gold)" id="modVolVal">—</span></div><div class="price-row"><span class="price-label">Total HT articles</span><span class="price-val ht" id="modHT">—</span></div><div class="price-row" id="modShippingRow"><span class="price-label">Livraison HT</span><span style="font-size:.82rem;color:rgba(255,255,255,.50)" id="modShippingVal">—</span></div><div class="price-row"><span class="price-label" id="modTVALabel">TVA 21%</span><span class="price-val tva" id="modTVA">—</span></div><div class="price-row" style="border-bottom:none"><span class="price-label" style="color:rgba(255,255,255,.75);font-weight:600">Total TTC</span><span class="price-val ttc" id="modTTC">—</span></div></div><div id="modVolHint" style="display:none;align-items:center;gap:.5rem;background:rgba(0,168,243,.06);border:1px solid rgba(0,168,243,.15);border-radius:8px;padding:.55rem .9rem;margin-bottom:1rem;font-size:.75rem;color:rgba(255,255,255,.50);line-height:1.5"></div><button class="btn btn-primary w-full gp" onclick="addToCartFromModal()"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17"/></svg>Ajouter au panier</button></div></div>
 
 <!-- OVERLAY CHECKOUT -->
 <div class="overlay" id="overlay-checkout"><div class="modal" style="max-width:560px"><button style="position:absolute;top:1rem;right:1rem;color:rgba(255,255,255,.25);background:none;border:none;cursor:pointer;font-size:1.2rem" onclick="closeOverlay('checkout')">✕</button><p style="color:rgba(0,168,243,.55);font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;margin-bottom:.3rem">Finalisation</p><h3 style="font-family:'Cormorant Garamond',serif;font-size:1.6rem;font-weight:700;color:white;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.25rem">Passer la commande</h3><p id="coSummary" style="color:rgba(255,255,255,.30);font-size:.80rem;margin-bottom:1rem"></p><div class="glow-line mb-5"></div><div class="space-y-3"><div><label class="fl">Adresse de livraison *</label><input type="text" id="coAddr" class="fi" placeholder="Rue, Ville, Code postal"/></div><div><label class="fl">Mode de paiement *</label><select id="coPay" class="fi"><option value="">— Sélectionner —</option><option>Carte bancaire</option><option>Facture proforma</option><option>Paiement fin de mois</option><option>Virement bancaire</option><option>Chèque</option></select></div><div><label class="fl">Zone de livraison</label><select id="coShippingZone" class="fi" onchange="updateCheckoutShipping()"></select><p id="coShippingLine" style="font-size:.72rem;color:rgba(0,168,243,.70);margin-top:.4rem;padding:.3rem .6rem;background:rgba(0,168,243,.06);border-radius:6px;display:none"></p></div><div><label class="fl">Notes</label><textarea id="coNotes" class="fi" rows="2" placeholder="Instructions spéciales..."></textarea></div></div><div class="price-box mt-4 mb-4" id="coFinalBox"></div><button class="btn btn-primary w-full" onclick="doCheckout()"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Confirmer la commande</button></div></div>
@@ -833,6 +833,27 @@ const oHT=o=>(o.items||[]).reduce((s,i)=>s+i.unitPrice*i.qty,0);
 const oShip=o=>o.shippingCostHT||0;
 const oTVA=o=>(oHT(o)+oShip(o))*getOrderTaxRate(o); /* TVA figée dans o.taxRate */
 const oTTC=o=>oHT(o)+oShip(o)+oTVA(o); /* TTC = HT articles + HT livraison + TVA */
+
+/* ════════════════════════════════════════════════════════════════
+   calculerPrix — Utilitaire anti-arrondi JS
+   Toutes les fonctions prix appellent ceci pour éviter
+   0.1+0.2 = 0.30000000000000004
+════════════════════════════════════════════════════════════════ */
+/**
+ * calculerPrix(htAmount, tauxDecimal) → {ht, tva, ttc, taux, tauxPct}
+ * @param {number} htAmount  — montant HT (articles + livraison)
+ * @param {number} tauxDecimal — ex: 0.21 pour 21%
+ */
+function calculerPrix(htAmount, tauxDecimal){
+  var ht  = parseFloat(htAmount.toFixed(2));
+  var taux = tauxDecimal||0;
+  var tva  = parseFloat((ht*taux).toFixed(2));
+  var ttc  = parseFloat((ht+tva).toFixed(2));
+  var tauxPct = Math.round(taux*10000)/100; /* 0.21 → 21, 0.077 → 7.7 */
+  return {ht:ht, tva:tva, ttc:ttc, taux:taux, tauxPct:tauxPct};
+}
+window.calculerPrix=calculerPrix;
+
 const userDiscount=u=>u?((u.discount||0)/100):0;
 const sBadge=s=>`<span class="badge ${SB[s]||'badge-pending'}">${SL[s]||s}</span>`;
 
@@ -1417,7 +1438,7 @@ function renderAdminEmailSettings(){
     {tag:'{numero_doc}',desc:'N° document'},{tag:'{date}',desc:'Date du document'},
     {tag:'{total_ttc}',desc:'Total TTC'},{tag:'{total_ht}',desc:'Total HT'},
     {tag:'{lignes_articles}',desc:'Liste articles'},{tag:'{client_email}',desc:'Email client'},
-    {tag:'{lien_paiement}',desc:'Lien paiement'},{tag:'{lien_site}',desc:'URL site'}
+    {tag:'{lien_paiement}',desc:'Lien paiement'},{tag:'{taux_tva}',desc:'Taux TVA appliqué (ex: 21%)'},{tag:'{montant_tva}',desc:'Montant TVA en €'},{tag:'{lien_site}',desc:'URL site'}
   ];
   ct.innerHTML=`
 <div class="flex items-center justify-between mb-5">
@@ -1754,10 +1775,50 @@ function afficherProduits(idCat){
 
 /* Compat alias */
 function renderProductGrid(){afficherProduits(activeCatalogId);}
-function _buildProdCard(p,disc){
-  const effPrice=p.price*(1-disc);const imgs=(p.images&&p.images.length)?p.images:(p.img?[p.img]:[]);const mainImg=imgs[0]||PHOLDER;
-  const priceHtml=currentUser?`<div>${disc>0?`<p style="text-decoration:line-through;font-size:.70rem;color:rgba(255,255,255,.22)">${fmt(p.price)}</p>`:''}<span class="prod-price">${fmt(effPrice)}</span><span style="font-size:.70rem;color:rgba(255,255,255,.25);margin-left:.2rem">/u. HT</span>${disc>0?`<p style="font-size:.68rem;color:#22c55e;font-weight:700">−${disc*100}% client</p>`:''}</div>`:'<span class="prod-price-locked" onclick="event.stopPropagation();openOverlay(\'login\')">🔒 Prix pro</span>';
-  return `<div class="card card-product reveal" data-pid="${p.id}"><div style="overflow:hidden;position:relative"><img src="${mainImg}" alt="${p.name}" class="prod-img" loading="lazy" onerror="this.src='${PHOLDER}'"/>${p.isNew?`<span class="prod-badge" style="background:rgba(0,168,243,.15);color:#00a8f3;border:1px solid rgba(0,168,243,.30)">Nouveau</span>`:''}${p.badge&&!p.isNew?`<span class="prod-badge" style="background:rgba(255,255,255,.07);color:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.12)">${p.badge}</span>`:''}${imgs.length>1?`<div style="position:absolute;bottom:6px;left:0;right:0;display:flex;justify-content:center;gap:3px;z-index:3">${imgs.map((_,i)=>`<div style="width:5px;height:5px;border-radius:1px;background:${i===0?'#00a8f3':'rgba(255,255,255,.40)'}"></div>`).join('')}</div>`:''}<div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.58),transparent);pointer-events:none;z-index:1"></div><div style="position:absolute;bottom:8px;left:9px;z-index:2;font-size:.60rem;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.45)">${p.ref}</div></div><div style="padding:.9rem"><h3 style="font-family:'Cormorant Garamond',serif;font-weight:600;color:white;font-size:.94rem;margin-bottom:.55rem;line-height:1.3">${p.name}</h3><div style="display:flex;align-items:flex-end;justify-content:space-between">${priceHtml}<button onclick="event.stopPropagation()" style="width:30px;height:30px;border-radius:6px;border:1px solid rgba(0,168,243,.22);background:rgba(0,168,243,.06);color:var(--gold);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .18s;flex-shrink:0" onmouseover="this.style.background='rgba(0,168,243,.15)'" onmouseout="this.style.background='rgba(0,168,243,.06)'" title="Commander"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg></button></div></div></div>`;
+function _buildProdCard(p, disc){
+  var effPrice=p.price*(1-disc);
+  var imgs=(p.images&&p.images.length)?p.images:(p.img?[p.img]:[]);
+  var mainImg=imgs[0]||PHOLDER;
+  var taxRate=getUserTaxRate(currentUser);
+  var prix=calculerPrix(effPrice, taxRate);
+  var tauxLabel=Math.round(taxRate*10000)/100; /* 21 ou 20 ou 7.7 */
+
+  var priceHtml;
+  if(currentUser){
+    priceHtml='<div>'
+      +(disc>0?'<p style="text-decoration:line-through;font-size:.70rem;color:rgba(255,255,255,.22)">'+fmt(p.price)+' HT</p>':'')
+      +'<div style="display:flex;align-items:baseline;gap:.3rem;flex-wrap:wrap">'
+        +'<span class="prod-price">'+fmt(prix.ttc)+'</span>'
+        +'<span style="font-size:.62rem;color:rgba(255,255,255,.35)">TTC</span>'
+      +'</div>'
+      +'<p style="font-size:.62rem;color:rgba(255,255,255,.30);margin-top:1px">'
+        +fmt(effPrice)+' HT · TVA '+tauxLabel+'%'
+      +'</p>'
+      +(disc>0?'<p style="font-size:.68rem;color:#22c55e;font-weight:700">−'+(disc*100)+'% client</p>':'')
+    +'</div>';
+  }else{
+    priceHtml='<span class="prod-price-locked" onclick="event.stopPropagation();openOverlay(\'login\')">🔒 Prix pro</span>';
+  }
+
+  return '<div class="card card-product reveal" data-pid="'+p.id+'">'
+    +'<div style="overflow:hidden;position:relative">'
+      +'<img src="'+mainImg+'" alt="'+p.name+'" class="prod-img" loading="lazy" onerror="this.src=\''+PHOLDER+'\'"/>'
+      +(p.isNew?'<span class="prod-badge" style="background:rgba(0,168,243,.15);color:#00a8f3;border:1px solid rgba(0,168,243,.30)">Nouveau</span>':'')
+      +(p.badge&&!p.isNew?'<span class="prod-badge" style="background:rgba(255,255,255,.07);color:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.12)">'+p.badge+'</span>':'')
+      +(imgs.length>1?'<div style="position:absolute;bottom:6px;left:0;right:0;display:flex;justify-content:center;gap:3px;z-index:3">'
+        +imgs.map(function(_,i){return '<div style="width:5px;height:5px;border-radius:1px;background:'+(i===0?'#00a8f3':'rgba(255,255,255,.40)')+'"></div>';}).join('')
+        +'</div>':'')
+      +'<div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.58),transparent);pointer-events:none;z-index:1"></div>'
+      +'<div style="position:absolute;bottom:8px;left:9px;z-index:2;font-size:.60rem;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.45)">'+p.ref+'</div>'
+    +'</div>'
+    +'<div style="padding:.9rem">'
+      +'<h3 style="font-family:\'Cormorant Garamond\',serif;font-weight:600;color:white;font-size:.94rem;margin-bottom:.55rem;line-height:1.3">'+p.name+'</h3>'
+      +'<div style="display:flex;align-items:flex-end;justify-content:space-between">'
+        +priceHtml
+        +'<button onclick="event.stopPropagation()" style="width:30px;height:30px;border-radius:6px;border:1px solid rgba(0,168,243,.22);background:rgba(0,168,243,.06);color:var(--gold);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .18s;flex-shrink:0" onmouseover="this.style.background=\'rgba(0,168,243,.15)\'" onmouseout="this.style.background=\'rgba(0,168,243,.06)\'" title="Commander"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg></button>'
+      +'</div>'
+    +'</div>'
+  +'</div>';
 }
 function searchProducts(q){
   const grid=document.getElementById('productGrid');if(!grid||!activeCatalogId)return;
@@ -1810,17 +1871,58 @@ function _updateVolTierVisuals(qty){
 }
 function _applyVolTier(qty){const inp=document.getElementById('qtyInput');if(!inp)return;inp.value=qty;const vt=document.getElementById('vtag-'+qty);if(vt){vt.classList.add('tier-pop');setTimeout(()=>vt.classList.remove('tier-pop'),350);}calcModalPrices(qty);}
 function calcModalPrices(qty){
-  if(!modalProduct)return;const p=modalProduct;const disc=currentUser?userDiscount(currentUser):0;const volP=getVolumePct(p,qty)/100;const effUnit=p.price*(1-disc)*(1-volP);const htItems=effUnit*qty;
-  const zoneId=document.getElementById('modShippingZone')?.value||DB_CONFIG.shipping.defaultZone;const ship=calcShipping(htItems,zoneId);const tva=(htItems+ship)*getUserTaxRate(currentUser);const ttc=htItems+ship+tva;
+  if(!modalProduct)return;
+  var p=modalProduct;
+  var disc=currentUser?userDiscount(currentUser):0;
+  var volP=getVolumePct(p,qty)/100;
+  var effUnit=p.price*(1-disc)*(1-volP);
+  var htItems=effUnit*qty;
+  var zoneId=document.getElementById('modShippingZone')?.value||DB_CONFIG.shipping.defaultZone;
+  var ship=calcShipping(htItems,zoneId);
+  /* Utiliser calculerPrix pour précision */
+  var taxRate=getUserTaxRate(currentUser);
+  var pc=calculerPrix(htItems+ship, taxRate);
+  var tva=pc.tva; var ttc=pc.ttc;
+  var tauxLabel=pc.tauxPct;
+
   _updateVolTierVisuals(qty);
-  const mu=document.getElementById('modUnit');if(mu)mu.textContent=qty>0?fmt(effUnit):'—';
-  const cross=document.getElementById('modCrossPrice');if(cross){if((disc>0||volP>0)&&qty>0){cross.textContent=fmt(p.price);cross.style.display='inline';}else cross.style.display='none';}
-  const dr=document.getElementById('modDiscRow'),dv=document.getElementById('modDiscVal');if(dr&&dv){if(disc>0&&qty>0){dr.style.display='flex';dv.textContent=`−${(disc*100).toFixed(1)}%`;}else dr.style.display='none';}
-  const vr=document.getElementById('modVolRow'),vv=document.getElementById('modVolVal');if(vr&&vv){if(volP>0&&qty>0){vr.style.display='flex';vv.textContent=`−${(volP*100).toFixed(1)}%`;}else vr.style.display='none';}
-  const st=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
-  st('modHT',qty>0?fmt(htItems):'—');st('modTVA',qty>0?fmt(tva):'—');st('modTTC',qty>0?fmt(ttc):'—');
-  const sr=document.getElementById('modShippingRow'),sv=document.getElementById('modShippingVal');if(sr&&sv&&zoneId){sr.style.display='flex';sv.textContent=ship===0?'Gratuite ✓':fmt(ship);sv.style.color=ship===0?'#4ade80':'rgba(255,255,255,.50)';}
-  const sc=document.getElementById('modSavingsCallout');if(sc&&qty>0&&(disc>0||volP>0)){const saved=(p.price-effUnit)*qty;sc.style.display='block';sc.innerHTML=`<p style="font-family:'Bebas Neue',sans-serif;font-size:.78rem;letter-spacing:.14em;color:rgba(74,222,128,.60);text-transform:uppercase;margin-bottom:.25rem">💸 Économie sur cette commande</p><p style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:#4ade80;letter-spacing:.06em">−${fmt(saved)} HT</p>`;}else if(sc)sc.style.display='none';
+
+  var st=function(id,val){var el=document.getElementById(id);if(el)el.textContent=val;};
+  var mu=document.getElementById('modUnit');
+  if(mu)mu.textContent=qty>0?fmt(effUnit)+' HT':'—';
+
+  /* Prix TTC unitaire sous le prix HT */
+  var modTTCUnit=document.getElementById('modTTCUnit');
+  if(modTTCUnit)modTTCUnit.textContent=qty>0?fmt(calculerPrix(effUnit,taxRate).ttc)+' TTC':'';
+
+  var cross=document.getElementById('modCrossPrice');
+  if(cross){
+    if((disc>0||volP>0)&&qty>0){cross.textContent=fmt(p.price)+' HT';cross.style.display='inline';}
+    else cross.style.display='none';
+  }
+  var dr=document.getElementById('modDiscRow'),dv=document.getElementById('modDiscVal');
+  if(dr&&dv){if(disc>0&&qty>0){dr.style.display='flex';dv.textContent='−'+(disc*100).toFixed(1)+'%';}else dr.style.display='none';}
+  var vr=document.getElementById('modVolRow'),vv=document.getElementById('modVolVal');
+  if(vr&&vv){if(volP>0&&qty>0){vr.style.display='flex';vv.textContent='−'+(volP*100).toFixed(1)+'%';}else vr.style.display='none';}
+
+  st('modHT',  qty>0?fmt(htItems)+' €':'—');
+  /* Mettre à jour le label TVA dynamiquement */
+  var tvLabel=document.querySelector('[id="modTVARow"] .price-label, .price-row .price-label');
+  var modTVALabel=document.getElementById('modTVALabel');
+  if(modTVALabel)modTVALabel.textContent='TVA '+tauxLabel+'%';
+  st('modTVA', qty>0?fmt(tva)+' €':'—');
+  st('modTTC', qty>0?fmt(ttc)+' €':'—');
+
+  var sr=document.getElementById('modShippingRow'),sv=document.getElementById('modShippingVal');
+  if(sr&&sv&&zoneId){sr.style.display='flex';sv.textContent=ship===0?'Gratuite ✓':fmt(ship)+' HT';sv.style.color=ship===0?'#4ade80':'rgba(255,255,255,.50)';}
+
+  var sc=document.getElementById('modSavingsCallout');
+  if(sc&&qty>0&&(disc>0||volP>0)){
+    var saved=(p.price-effUnit)*qty;
+    sc.style.display='block';
+    sc.innerHTML='<p style="font-family:\'Bebas Neue\',sans-serif;font-size:.78rem;letter-spacing:.14em;color:rgba(74,222,128,.60);text-transform:uppercase;margin-bottom:.25rem">💸 Économie sur cette commande</p>'
+      +'<p style="font-family:\'Bebas Neue\',sans-serif;font-size:1.5rem;color:#4ade80;letter-spacing:.06em">−'+fmt(saved)+' HT</p>';
+  }else if(sc)sc.style.display='none';
 }
 function addQty(n){const inp=document.getElementById('qtyInput');if(!inp)return;inp.value=(parseInt(inp.value)||0)+n;calcModalPrices(parseInt(inp.value));}
 function adjustQty(d){const inp=document.getElementById('qtyInput');if(!inp)return;const v=Math.max(0,(parseInt(inp.value)||0)+d);inp.value=v;calcModalPrices(v);}
@@ -1843,10 +1945,82 @@ function cartTVA(){return cartHT()*TVA;}
 function cartTTC(){var rate=getUserTaxRate(currentUser);return cartHT()*(1+rate);}
 function updateCartBadge(){const total=cart.reduce((s,i)=>s+i.qty,0);const badge=document.getElementById('cartCount');if(!badge)return;badge.textContent=total;badge.classList.toggle('hidden',total===0);if(total>0)badge.classList.add('bump');setTimeout(()=>badge.classList.remove('bump'),300);}
 function renderCart(){
-  const el=document.getElementById('cartPanelInner');if(!el)return;
-  if(!cart.length){el.innerHTML=`<div class="empty-state"><svg class="w-16 h-16 mx-auto mb-3" fill="none" stroke="rgba(0,168,243,.22)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg><p style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:rgba(255,255,255,.38);letter-spacing:.08em">Panier vide</p><p>Ajoutez des produits depuis le catalogue.</p><button class="btn btn-outline mt-4" onclick="closePanel('cart');showView('catalogue')">Voir le catalogue</button></div>`;return;}
-  let totalGross=0;cart.forEach(item=>{const p=item.product;if(p)totalGross+=p.price*item.qty;});const totalSaved=totalGross-cartHT();
-  el.innerHTML=`<div class="mb-4">${cart.map(item=>{const p=item.product;const catPrice=p?p.price:item.unitPrice;const cD=currentUser?(currentUser.discount||0)/100:0;const vP=p?getVolumePct(p,item.qty)/100:0;const hasDisco=item.unitPrice<catPrice-0.001;let badges='';if(cD>0)badges+=`<span style="background:rgba(34,197,94,.12);color:#4ade80;border-radius:4px;padding:1px 6px;font-size:.60rem;font-weight:700;margin-right:3px">−${(cD*100).toFixed(0)}% client</span>`;if(vP>0)badges+=`<span style="background:rgba(0,168,243,.12);color:#00a8f3;border-radius:4px;padding:1px 6px;font-size:.60rem;font-weight:700">−${(vP*100).toFixed(0)}% vol.</span>`;return `<div class="cart-item"><img src="${p&&p.img?p.img:PHOLDER}" alt="${p?.name||''}" class="cart-item-img" onerror="this.src='${PHOLDER}'"/><div style="flex:1;min-width:0"><p style="font-weight:600;color:white;font-size:.84rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${p?.name||'Produit'}</p>${badges?`<div style="margin-top:3px">${badges}</div>`:''}<p style="color:rgba(255,255,255,.40);font-size:.70rem;margin-top:1px">${fmt(item.unitPrice)}/u. HT</p></div><div style="display:flex;align-items:center;gap:.35rem;flex-shrink:0"><button class="qty-btn" style="width:26px;height:26px" onclick="cartChange(${item.pid},-1)">−</button><span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:white;width:52px;text-align:center">${fmtN(item.qty)}</span><button class="qty-btn" style="width:26px;height:26px" onclick="cartChange(${item.pid},1)">+</button></div><div style="flex-shrink:0;text-align:right;min-width:80px">${hasDisco?`<p style="font-size:.63rem;color:rgba(255,255,255,.25);text-decoration:line-through">${fmt(catPrice*item.qty)} HT</p>`:''}<p style="font-family:'Bebas Neue',sans-serif;color:var(--gold);font-size:.94rem">${fmt(item.unitPrice*item.qty)}</p><p style="font-size:.62rem;color:rgba(255,255,255,.22)">HT</p></div><button onclick="cartRemove(${item.pid})" style="color:rgba(255,255,255,.20);background:none;border:none;cursor:pointer;flex-shrink:0;font-size:1.1rem;padding:0 2px" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='rgba(255,255,255,.20)'">✕</button></div>`;}).join('')}</div><div class="price-box mb-5">${totalSaved>0.01?`<div class="price-row" style="background:rgba(34,197,94,.05);border-radius:6px;padding:.35rem .5rem;border:none"><span class="price-label" style="color:#4ade80">💸 Économie totale</span><span style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:#4ade80">−${fmt(totalSaved)}</span></div>`:''}<div class="price-row"><span class="price-label">Sous-total HT</span><span class="price-val ht">${fmt(cartHT())}</span></div><div class="price-row"><span class="price-label">TVA ${(getUserTaxRate(currentUser)*100).toFixed(0)}%</span><span class="price-val tva">${fmt(cartTVA())}</span></div><div class="price-row" style="border-bottom:none"><span class="price-label" style="color:rgba(255,255,255,.72);font-weight:600">Total TTC</span><span class="price-val ttc">${fmt(cartTTC())}</span></div></div><div style="display:flex;gap:.65rem"><button class="btn btn-danger" onclick="cart=[];updateCartBadge();renderCart()">Vider</button><button class="btn btn-primary flex-1" onclick="closePanel('cart');openCheckout()">Commander →</button></div>`;
+  var el=document.getElementById('cartPanelInner');if(!el)return;
+  if(!cart.length){
+    el.innerHTML='<div class="empty-state"><svg class="w-16 h-16 mx-auto mb-3" fill="none" stroke="rgba(0,168,243,.22)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg><p style="font-family:\'Bebas Neue\',sans-serif;font-size:1.3rem;color:rgba(255,255,255,.38);letter-spacing:.08em">Panier vide</p><p>Ajoutez des produits depuis le catalogue.</p><button class="btn btn-outline mt-4" onclick="closePanel(\'cart\');showView(\'catalogue\')">Voir le catalogue</button></div>';
+    return;
+  }
+
+  var taxRate=getUserTaxRate(currentUser);
+  var tauxLabel=Math.round(taxRate*10000)/100;
+  var htArticles=cartHT();
+  /* Livraison estimée (zone par défaut) */
+  var zoneId=DB_CONFIG.shipping?DB_CONFIG.shipping.defaultZone:'z-be';
+  var shipHT=calcShipping(htArticles, zoneId);
+  var htTotal=htArticles+shipHT;
+  var pc=calculerPrix(htTotal, taxRate);
+  var tvaArticles=calculerPrix(htArticles, taxRate).tva;
+  var tvaShip=calculerPrix(shipHT, taxRate).tva;
+
+  /* Économies remises */
+  var totalGross=0;
+  cart.forEach(function(item){var p=item.product;if(p)totalGross+=p.price*item.qty;});
+  var totalSaved=totalGross-htArticles;
+
+  /* Lignes articles */
+  var itemsHtml=cart.map(function(item){
+    var p=item.product;
+    var catPrice=p?p.price:item.unitPrice;
+    var cD=currentUser?(currentUser.discount||0)/100:0;
+    var vP=p?getVolumePct(p,item.qty)/100:0;
+    var hasDisco=item.unitPrice<catPrice-0.001;
+    var prixLigne=calculerPrix(item.unitPrice*item.qty, taxRate);
+    var badges='';
+    if(cD>0)badges+='<span style="background:rgba(34,197,94,.12);color:#4ade80;border-radius:4px;padding:1px 6px;font-size:.60rem;font-weight:700;margin-right:3px">−'+(cD*100).toFixed(0)+'% client</span>';
+    if(vP>0)badges+='<span style="background:rgba(0,168,243,.12);color:#00a8f3;border-radius:4px;padding:1px 6px;font-size:.60rem;font-weight:700">−'+(vP*100).toFixed(0)+'% vol.</span>';
+    return '<div class="cart-item">'
+      +'<img src="'+(p&&p.img?p.img:PHOLDER)+'" alt="'+(p?p.name:'')+'" class="cart-item-img" onerror="this.src=\''+PHOLDER+'\'"/>'
+      +'<div style="flex:1;min-width:0">'
+        +'<p style="font-weight:600;color:white;font-size:.84rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">'+(p?p.name:'Produit')+'</p>'
+        +(badges?'<div style="margin-top:3px">'+badges+'</div>':'')
+        +'<p style="color:rgba(255,255,255,.40);font-size:.70rem;margin-top:1px">'+fmt(item.unitPrice)+' HT/u. · '+fmt(prixLigne.ht)+' HT</p>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:.35rem;flex-shrink:0">'
+        +'<button class="qty-btn" style="width:26px;height:26px" onclick="cartChange('+item.pid+',-1)">−</button>'
+        +'<span style="font-family:\'Bebas Neue\',sans-serif;font-size:1.1rem;color:white;width:52px;text-align:center">'+fmtN(item.qty)+'</span>'
+        +'<button class="qty-btn" style="width:26px;height:26px" onclick="cartChange('+item.pid+',1)">+</button>'
+      +'</div>'
+      +'<div style="flex-shrink:0;text-align:right;min-width:85px">'
+        +(hasDisco?'<p style="font-size:.63rem;color:rgba(255,255,255,.25);text-decoration:line-through">'+fmt(catPrice*item.qty)+' HT</p>':'')
+        +'<p style="font-family:\'Bebas Neue\',sans-serif;color:var(--gold);font-size:.94rem">'+fmt(prixLigne.ttc)+'</p>'
+        +'<p style="font-size:.60rem;color:rgba(255,255,255,.25)">TTC</p>'
+      +'</div>'
+      +'<button onclick="cartRemove('+item.pid+')" style="color:rgba(255,255,255,.20);background:none;border:none;cursor:pointer;flex-shrink:0;font-size:1.1rem;padding:0 2px" onmouseover="this.style.color=\'#ef4444\'" onmouseout="this.style.color=\'rgba(255,255,255,.20)\'">✕</button>'
+    +'</div>';
+  }).join('');
+
+  /* Récapitulatif fiscal complet */
+  var summaryHtml='<div class="price-box mb-5">'
+    +(totalSaved>0.01?'<div class="price-row" style="background:rgba(34,197,94,.05);border-radius:6px;padding:.35rem .5rem;border:none"><span class="price-label" style="color:#4ade80">💸 Économie remises</span><span style="font-family:\'Bebas Neue\',sans-serif;font-size:1rem;color:#4ade80">−'+fmt(totalSaved)+'</span></div>':'')
+    +'<div class="price-row"><span class="price-label">Sous-total articles HT</span><span class="price-val ht">'+fmt(htArticles)+'</span></div>'
+    +(shipHT>0
+      ?'<div class="price-row"><span class="price-label">Livraison HT</span><span class="price-val" style="color:rgba(255,255,255,.5)">'+fmt(shipHT)+'</span></div>'
+      :(zoneId?'<div class="price-row"><span class="price-label">Livraison</span><span class="price-val" style="color:#4ade80">Gratuite ✓</span></div>':''))
+    +'<div class="price-row"><span class="price-label" style="font-size:.72rem">TVA '+tauxLabel+'% (articles)</span><span class="price-val tva" style="font-size:.78rem">'+fmt(tvaArticles)+'</span></div>'
+    +(shipHT>0?'<div class="price-row"><span class="price-label" style="font-size:.72rem">TVA '+tauxLabel+'% (livraison)</span><span class="price-val tva" style="font-size:.78rem">'+fmt(tvaShip)+'</span></div>':'')
+    +'<div class="price-row" style="border-top:1px solid rgba(255,255,255,.12);padding-top:.5rem;margin-top:.3rem;border-bottom:none">'
+      +'<span class="price-label" style="color:rgba(255,255,255,.72);font-weight:600">Total TTC</span>'
+      +'<span class="price-val ttc">'+fmt(pc.ttc)+'</span>'
+    +'</div>'
+    +'<p style="font-family:Inter,sans-serif;font-size:.6rem;color:rgba(255,255,255,.25);text-align:right;margin-top:.25rem">TVA '+tauxLabel+'% incluse · Total HT : '+fmt(htTotal)+'</p>'
+  +'</div>';
+
+  el.innerHTML='<div class="mb-4">'+itemsHtml+'</div>'
+    +summaryHtml
+    +'<div style="display:flex;gap:.65rem">'
+      +'<button class="btn btn-danger" onclick="cart=[];updateCartBadge();renderCart()">Vider</button>'
+      +'<button class="btn btn-primary flex-1" onclick="closePanel(\'cart\');openCheckout()">Commander →</button>'
+    +'</div>';
 }
 function cartChange(pid,d){const item=cart.find(c=>c.pid===pid);if(!item)return;item.qty=Math.max(1,item.qty+d);const p=item.product;if(p){const disc=currentUser?userDiscount(currentUser):0;item.unitPrice=p.price*(1-disc)*(1-getVolumePct(p,item.qty)/100);}updateCartBadge();renderCart();}
 function cartRemove(pid){cart=cart.filter(c=>c.pid!==pid);updateCartBadge();renderCart();}
@@ -2133,7 +2307,7 @@ ${_renderWorkflowStepper(o,isAdmin)}
 <div class="glow-line mb-4" style="margin-top:1rem"></div>
 <label class="fl mb-2">Articles commandés</label>
 <div class="mb-4">${(o.items||[]).map(i=>`<div class="co-row"><div style="flex:1;min-width:0"><p style="font-size:.84rem;color:white;font-weight:600">${i.name}</p><p style="font-size:.68rem;color:rgba(255,255,255,.32)">${fmt(i.unitPrice)}/u. HT</p></div><span class="chip">×${fmtN(i.qty)}</span><p style="font-family:'Bebas Neue',sans-serif;color:var(--gold);font-size:.9rem">${fmt(i.unitPrice*i.qty)}</p></div>`).join('')}</div>
-<div class="price-box mb-4"><div class="price-row"><span class="price-label">HT articles</span><span class="price-val ht">${fmt(ht)}</span></div><div class="price-row"><span class="price-label">Livraison HT${o.shippingZoneLabel?' ('+o.shippingZoneLabel+')':''}</span><span style="font-size:.82rem;font-weight:600;color:${ship===0?'#4ade80':'rgba(255,255,255,.60)'}">${ship===0?'Gratuite ✓':fmt(ship)}</span></div><div class="price-row"><span class="price-label">TVA 21%</span><span class="price-val tva">${fmt(tva)}</span></div><div class="price-row" style="border-bottom:none"><span class="price-label" style="font-weight:600;color:rgba(255,255,255,.75)">Total TTC</span><span class="price-val ttc">${fmt(ttc)}</span></div></div>
+<div class="price-box mb-4">   ${(()=>{     var _taxRate=getOrderTaxRate(o);     var _tauxPct=Math.round(_taxRate*10000)/100;     var _pc=calculerPrix(ht+ship, _taxRate);     return '<div class="price-row"><span class="price-label">HT articles</span><span class="price-val ht">'+fmt(ht)+'</span></div>'       +(ship>0?'<div class="price-row"><span class="price-label">Livraison HT</span><span class="price-val ht">'+fmt(ship)+'</span></div>':'')       +'<div class="price-row"><span class="price-label">TVA '+_tauxPct+'% '+(o.taxRate?'(taux figé)':'(taux courant)')+'</span><span class="price-val tva">'+fmt(_pc.tva)+'</span></div>'       +'<div class="price-row" style="border-bottom:none"><span class="price-label" style="font-weight:600;color:rgba(255,255,255,.72)">Total TTC</span><span class="price-val ttc">'+fmt(_pc.ttc)+'</span></div>';   })()} </div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1rem"><div><label class="fl">Adresse</label><p style="font-size:.78rem;color:rgba(255,255,255,.52)">${o.addr}</p></div><div><label class="fl">Notes</label><p style="font-size:.78rem;color:rgba(255,255,255,.52)">${o.notes||'—'}</p></div></div>
 <label class="fl mb-2">Historique</label><div class="timeline mb-4">${(o.history||[]).map(h=>`<div class="tl-item"><div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.2rem">${sBadge(h.s)}<span style="font-size:.65rem;color:rgba(255,255,255,.28)">${h.date}</span></div><p style="font-size:.78rem;color:rgba(255,255,255,.50)">${h.n}</p></div>`).join('')}</div>
 ${isAdmin?`<div style="border-top:1px solid rgba(255,255,255,.06);padding-top:.9rem;margin-bottom:1rem"><label class="fl mb-2">Changer le statut</label><div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.75rem">${Object.entries(SL).map(([s,l])=>`<button class="btn btn-ghost btn-xs ${o.status===s?'ring-1 ring-accent/50':''}" onclick="adminUpdateStatus('${o.id}','${s}')">${l}</button>`).join('')}</div><div style="display:flex;gap:.4rem;flex-wrap:wrap"><button class="btn btn-orange btn-xs" onclick="openEditOrder('${o.id}')">✏ Modifier</button></div></div>`:''}
@@ -3290,6 +3464,8 @@ function resoudreVarsEmail(tpl, o, user, docNum){
     '{total_ttc}':      fmt(oTTC(o)),
     '{total_ht}':       oHT(o).toFixed(2)+' €',
     '{total_tva}':      oTVA(o).toFixed(2)+' €',
+      '{montant_tva}':  oTVA(o).toFixed(2)+' €',
+      '{taux_tva}':     (Math.round(getOrderTaxRate(o)*10000)/100)+'%',
     '{lignes_articles}':lignes,
     '{client_email}':   user.email||o.userEmail||'',
     '{client_tel}':     user.tel||'Non renseigné',
@@ -3565,7 +3741,7 @@ function genererTemplateHTML(type, orderId, acomptePct){
     +(showPrices
       ?'<div class="pdf-totals"><div class="pdf-totals-inner">'
           +(totalSaved>0.01?'<div class="pdf-total-row savings"><span>💸 Économie remises</span><span>−'+totalSaved.toFixed(2)+' €</span></div>':'')
-          +'<div class="pdf-total-row ht"><span>Sous-total HT</span><span>'+ht.toFixed(2)+' €</span></div>'
+          +'<div class="pdf-total-row ht"><span>Sous-total HT articles</span><span>'+ht.toFixed(2)+' €</span></div>'+(ship>0?'<div class="pdf-total-row ship"><span>Livraison HT</span><span>'+ship.toFixed(2)+' €</span></div>':'')+'<div class="pdf-total-row" style="font-size:8pt;color:#64748b"><span>Base imposable HT</span><span>'+(ht+ship).toFixed(2)+' €</span></div>'
           +(ship>0?'<div class="pdf-total-row ship"><span>Livraison'+(o.shippingZoneLabel?' ('+o.shippingZoneLabel+')':'')+'</span><span>'+ship.toFixed(2)+' €</span></div>':'')
           +(ship===0&&o.shippingZone?'<div class="pdf-total-row ship" style="color:#059669"><span>Livraison</span><span>Gratuite ✓</span></div>':'')
           +'<div class="pdf-total-row tva"><span>TVA '+(Math.round(getOrderTaxRate(o)*10000)/100)+'%</span><span>'+tva.toFixed(2)+' €</span></div>'
@@ -6373,6 +6549,10 @@ function hideTabLoader(){
 
 
 
+
+
+/* Exports TVA v49 */
+window.calculerPrix = calculerPrix;
 
 /* Exports TVA module */
 window.TAX_RATES=TAX_RATES;
