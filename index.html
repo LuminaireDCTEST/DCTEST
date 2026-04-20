@@ -1703,7 +1703,7 @@ function selectCatalog(id){
     backBtn.style.display='block';
     /* Afficher uniquement si ≥ 2 catalogues disponibles */
     var available=_getAvailableCatalogs();
-    backBtn.style.visibility=available.length>1?'visible':'hidden';
+    /* Toujours visible — même avec 1 seul catalogue */
   }
 
   renderSidebar();
@@ -1737,8 +1737,12 @@ function backToCatalogChooser(){
 }
 
 /* Alias exact demandé — pointe vers backToCatalogChooser */
-function retourChoixCatalogue(){backToCatalogChooser();}
-window.retourChoixCatalogue =retourChoixCatalogue;
+function retourChoixCatalogue(){
+  backToCatalogChooser();
+  /* Remonter en haut de la section catalogue */
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+window.retourChoixCatalogue=retourChoixCatalogue;
 window.backToCatalogChooser=backToCatalogChooser;
 function renderSidebar(){
   const sb=document.getElementById('catalogSidebar');if(!sb)return;
@@ -6631,7 +6635,7 @@ window.closeUserDrop      = closeUserDrop;
 window.openPanel          = openPanel;
 window.closePanel         = closePanel;
 window.selectCatalog      = selectCatalog;
-window.backToCatalogChooser = backToCatalogChooser;
+/* window.backToCatalogChooser — voir L1197 */
 window.filterCatalog      = filterCatalog;
 window.filterTech         = filterTech;
 window.addToCartFromModal = addToCartFromModal;
